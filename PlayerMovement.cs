@@ -21,19 +21,27 @@ public class PlayerMovement : MonoBehaviour
     private bool canJmp_ = true;
     private bool _jumping = false;
     private bool dbl_jump_ = false;
-    private Collider[] plyr_cldrs = new Collider[1];
+    public Transform[] fix_trnsfrms;
+    public GameObject[] fix_objs;
     private bool wt_fr_DblJmp = false;
     private bool plyr_flying = false;
+    public float plyr_speed = 0;
+    private Vector3 lastPosition = Vector3.zero;
+    
 
     private void Start()
     {
        _anim = GetComponentInChildren<Animator>();
        //_controller = GetComponent<CharacterController>();
-       plyr_cldrs = gameObject.transform.GetComponentsInChildren<Collider>();
        //Debug.Log(plyr_cldrs.Length);
        if (_anim == null){
          Debug.Log("nul animtor");
        }
+    }
+
+    private void FixedUpdate() {
+        plyr_speed = (transform.position - lastPosition).magnitude;
+        lastPosition = transform.position;
     }
 
     // Update is called once per frame
@@ -52,15 +60,17 @@ public class PlayerMovement : MonoBehaviour
             StartCoroutine(Dly_bool_anm(0.4f, "DoubleJump"));
         }
 
+        // MVMNT SPEED
         // ForceMode.VelocityChange for persistant movementspeed
-        plyr_rb.AddForce( new Vector3(0, 0, player_speed), ForceMode.VelocityChange);
-        float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
+        plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? player_speed/2 : player_speed)), ForceMode.VelocityChange);
+        /////
 
         if (Input.GetKeyDown(KeyCode.Space) && (canJmp_ || wt_fr_DblJmp) && (jumpCnt > 0) ){
+            float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
             jumpCnt--;
             // ForceMode.VelocityChange for jump strength
-            //plyr_rb.AddForce( new Vector3(0, jumpForce, 0), ForceMode.VelocityChange);
-            plyr_rb.velocity = new Vector3(plyr_rb.position.x, jumpForce, plyr_rb.position.z);
+            plyr_rb.AddForce( new Vector3(0, (wt_fr_DblJmp ? (jumpForce * 2) : jumpForce), 0), ForceMode.VelocityChange);
+            //plyr_rb.velocity = new Vector3(plyr_rb.position.x, jumpForce, plyr_rb.position.z);
             if (wt_fr_DblJmp == true){ dbl_jump_ = true;}
             
             if(wt_fr_DblJmp == false){
@@ -71,14 +81,14 @@ public class PlayerMovement : MonoBehaviour
         }
 
         if (Input.GetKey("q")){
-            if(plyr_trsnfm.rotation.eulerAngles.y > (360.0f - 70.0f) ){
+            if ( (plyr_trsnfm.rotation.eulerAngles.y > 270.0f && plyr_trsnfm.rotation.eulerAngles.y < 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y > 0.0f && plyr_trsnfm.rotation.eulerAngles.y < 60.0f) ){
                 plyr_.transform.Rotate(0, -1, 0, Space.Self);
             } 
             plyr_rb.AddForce( -5 * (Vector3.right * strafe_speed), ForceMode.VelocityChange);
         }
 
         if (Input.GetKey("d")){ 
-            if(plyr_trsnfm.rotation.eulerAngles.y > 360.0f - 270.0f){
+            if ( (plyr_trsnfm.rotation.eulerAngles.y > 270.0f && plyr_trsnfm.rotation.eulerAngles.y < 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y > 0.0f && plyr_trsnfm.rotation.eulerAngles.y < 60.0f) ){
                 plyr_.transform.Rotate(0, 1, 0, Space.Self);
             }
             plyr_rb.AddForce( 5 * (Vector3.right * strafe_speed), ForceMode.VelocityChange);
@@ -90,11 +100,17 @@ public class PlayerMovement : MonoBehaviour
         switch(cls_type){
             case "groundLeave":
                 _anim.SetBool("Flying", true);
+                fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.28f);
+                plyr_flying = true;
                 break;
             case "groundHit":
-                jumpCnt = 2;
                 _anim.SetBool("Flying", false);
-               // StartCoroutine(Dly_bool_anm(0.4f, "Roll"));
+                StopCoroutine(Dbl_Jmp_Tm(1)); wt_fr_DblJmp = false;
+                if(plyr_flying){
+                    fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.28f);
+                }
+                StartCoroutine(Dly_bool_anm(0.3f, "GroundHit"));
+                plyr_flying = false;
                 break; 
             default:
                 
@@ -105,7 +121,6 @@ public class PlayerMovement : MonoBehaviour
     // WAIT for dbl Jump
     private IEnumerator Dbl_Jmp_Tm(float delay)
     {
-        Debug.Log("wait for dbl jmp");
         wt_fr_DblJmp = true;
         //yield on a new YieldInstruction that waits for 5 seconds.
         yield return new WaitForSeconds(delay);
@@ -115,13 +130,38 @@ public class PlayerMovement : MonoBehaviour
 
     private IEnumerator Dly_bool_anm(float delay, string anim_bool)
     {
-        //_anim.SetFloat("fastRun", 0.99f); // End Ru n Animation Cycle
         _anim.SetBool(anim_bool, true);
         if (anim_bool == "DoubleJump" || anim_bool == "jump"){canJmp_ = false;}
-        Debug.Log(anim_bool);
+
         //yield on a new YieldInstruction that waits for 5 seconds.
         yield return new WaitForSeconds(delay);
+        
         if (anim_bool == "DoubleJump" || anim_bool == "jump"){canJmp_ = true;}
+        if (anim_bool == "GroundHit"){jumpCnt = 2;}
+        
         _anim.SetBool(anim_bool, false);
+    }
+
+    private void fix_Cldrs_pos(Transform trnsfrm_, GameObject gm_obj, float y_off_pos){
+        Collider[] colList = trnsfrm_.GetComponentsInChildren<Collider>();
+        for (int i = 0; i < colList.Length; i ++){
+            string[] coldr_type = colList[i].GetType().ToString().Split('.');
+            BoxCollider b_cldr; SphereCollider s_cldr; MeshCollider m_cldr;
+            switch(coldr_type[1]){
+                case "BoxCollider" :
+                    b_cldr = gm_obj.GetComponent<BoxCollider>();
+                    b_cldr.center = new Vector3(b_cldr.center.x, b_cldr.center.y + y_off_pos, b_cldr.center.z);
+                    break;
+                case "SphereCollider" : 
+                    s_cldr = gm_obj.GetComponent<SphereCollider>();
+                    s_cldr.center = new Vector3(s_cldr.center.x, s_cldr.center.y + y_off_pos, s_cldr.center.z);
+                    break;
+                case "MeshCollider" : 
+                    m_cldr = gm_obj.GetComponent<MeshCollider>();
+                    //m_cldr.center = new Vector3(m_cldr.center.x, m_cldr.center.y + y_off_pos, m_cldr.center.z);
+                    break;
+            }
+            //colList[i].GetType().center = new Vector3 (colList[i].bounds.center.x, colList[i].bounds.center.y + y_off_pos, colList[i].bounds.center.z);
+        }
     }
 }
