@@ -21,13 +21,17 @@ public class PlayerMovement : MonoBehaviour
     private bool canJmp_ = true;
     private bool _jumping = false;
     private bool dbl_jump_ = false;
+
     public Transform[] fix_trnsfrms;
     public GameObject[] fix_objs;
+    private string[] mdfied_cldrs_nm = {"","","",""};
+
     private bool wt_fr_DblJmp = false;
     private bool plyr_flying = false;
     public float plyr_speed = 0;
     private Vector3 lastPosition = Vector3.zero;
     
+    private bool jmp_auth = true;
 
     private void Start()
     {
@@ -62,10 +66,11 @@ public class PlayerMovement : MonoBehaviour
 
         // MVMNT SPEED
         // ForceMode.VelocityChange for persistant movementspeed
-        plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? player_speed/2 : player_speed)), ForceMode.VelocityChange);
+        plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? player_speed/1.5f : player_speed)), ForceMode.VelocityChange);
         /////
 
-        if (Input.GetKeyDown(KeyCode.Space) && (canJmp_ || wt_fr_DblJmp) && (jumpCnt > 0) ){
+        if (Input.GetKeyDown(KeyCode.Space) && (canJmp_ || wt_fr_DblJmp) && (jumpCnt > 0) && jmp_auth){
+            StartCoroutine(delay_input(jmp_auth, 0.25f));
             float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
             jumpCnt--;
             // ForceMode.VelocityChange for jump strength
@@ -81,14 +86,14 @@ public class PlayerMovement : MonoBehaviour
         }
 
         if (Input.GetKey("q")){
-            if ( (plyr_trsnfm.rotation.eulerAngles.y > 270.0f && plyr_trsnfm.rotation.eulerAngles.y < 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y > 0.0f && plyr_trsnfm.rotation.eulerAngles.y < 60.0f) ){
+            if ( (plyr_trsnfm.rotation.eulerAngles.y >= 300.0f && plyr_trsnfm.rotation.eulerAngles.y <= 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y <= 70.0f) ){
                 plyr_.transform.Rotate(0, -1, 0, Space.Self);
             } 
             plyr_rb.AddForce( -5 * (Vector3.right * strafe_speed), ForceMode.VelocityChange);
         }
 
         if (Input.GetKey("d")){ 
-            if ( (plyr_trsnfm.rotation.eulerAngles.y > 270.0f && plyr_trsnfm.rotation.eulerAngles.y < 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y > 0.0f && plyr_trsnfm.rotation.eulerAngles.y < 60.0f) ){
+            if ( (plyr_trsnfm.rotation.eulerAngles.y >= 297.0f) || (plyr_trsnfm.rotation.eulerAngles.y >= 0.0f && plyr_trsnfm.rotation.eulerAngles.y <= 60.0f) ){
                 plyr_.transform.Rotate(0, 1, 0, Space.Self);
             }
             plyr_rb.AddForce( 5 * (Vector3.right * strafe_speed), ForceMode.VelocityChange);
@@ -100,16 +105,23 @@ public class PlayerMovement : MonoBehaviour
         switch(cls_type){
             case "groundLeave":
                 _anim.SetBool("Flying", true);
-                fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.28f);
+                if(mdfied_cldrs_nm[0] == ""){
+                    fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.15f);
+                    mdfied_cldrs_nm[0] = "Fly";
+                }
                 plyr_flying = true;
                 break;
             case "groundHit":
-                _anim.SetBool("Flying", false);
-                StopCoroutine(Dbl_Jmp_Tm(1)); wt_fr_DblJmp = false;
-                if(plyr_flying){
-                    fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.28f);
+                if (plyr_flying){
+                    StartCoroutine(delay_input(jmp_auth, 0.4f));
+                    _anim.SetBool("Flying", false);
+                    StopCoroutine(Dbl_Jmp_Tm(1)); wt_fr_DblJmp = false;
+
+                    mdfied_cldrs_nm[0] = "";
+                    if(plyr_flying){ fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.15f);}
+
+                    StartCoroutine(Dly_bool_anm(0.3f, "GroundHit"));
                 }
-                StartCoroutine(Dly_bool_anm(0.3f, "GroundHit"));
                 plyr_flying = false;
                 break; 
             default:
@@ -145,6 +157,9 @@ public class PlayerMovement : MonoBehaviour
     private void fix_Cldrs_pos(Transform trnsfrm_, GameObject gm_obj, float y_off_pos){
         Collider[] colList = trnsfrm_.GetComponentsInChildren<Collider>();
         for (int i = 0; i < colList.Length; i ++){
+            if(y_off_pos < 0 && colList[i].isTrigger){
+                StartCoroutine(disbl_cldr(colList[i], 0.3f));
+            }
             string[] coldr_type = colList[i].GetType().ToString().Split('.');
             BoxCollider b_cldr; SphereCollider s_cldr; MeshCollider m_cldr;
             switch(coldr_type[1]){
@@ -163,5 +178,15 @@ public class PlayerMovement : MonoBehaviour
             }
             //colList[i].GetType().center = new Vector3 (colList[i].bounds.center.x, colList[i].bounds.center.y + y_off_pos, colList[i].bounds.center.z);
         }
+    }
+
+    private IEnumerator disbl_cldr(Collider cld, float t_){
+        cld.enabled = false;
+        yield return new WaitForSeconds(t_);
+        cld.enabled = true;
+    }
+
+    private IEnumerator delay_input(bool inpt_bl, float t_){
+        inpt_bl = false; yield return new WaitForSeconds(t_); inpt_bl = true;
     }
 }

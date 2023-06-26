@@ -7,7 +7,7 @@ public class CameraMovement : MonoBehaviour
     public Transform player;
     public Vector3 offset;
     // Update is called once per frame
-    void Update()
+    private void Update()
     {
        // if (FindObjectOfType<GameManager>().gameHasEnded == false ){
         //    transform.position = player.position + offset;
