@@ -23,9 +23,11 @@ public class PlayerCollisions : MonoBehaviour
                     if(collision.gameObject.tag == "ground"){
                         FindObjectOfType<PlayerMovement>().animateCollision("groundHit");
                     }
+                    if(collision.gameObject.tag == "obstacle"){
+                        FindObjectOfType<PlayerMovement>().animateCollision("obstacle");
+                    }
                     break;
                 case "sidewall":
-
                     break; 
                 default:
                     break;

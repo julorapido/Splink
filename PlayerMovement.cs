@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -11,6 +12,7 @@ public class PlayerMovement : MonoBehaviour
     public Transform plyr_trsnfm;
     public float jumpAmount = 35;
     public float player_speed = 30;
+    private float svd_speed; private float uptd_speed;
     public float strafe_speed = 30;
     // public float gravityScale = 10;
     // public float fallingGravityScale = 40;
@@ -32,10 +34,17 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 lastPosition = Vector3.zero;
     
     private bool jmp_auth = true;
+    public float swipe_offst;
+
+    public ParticleSystem jump_prtcl;
+
+    private int trn_back_Lean_id;
 
     private void Start()
     {
        _anim = GetComponentInChildren<Animator>();
+       svd_speed = player_speed; uptd_speed = player_speed;
+       StartCoroutine(speed_rtn(3f));
        //_controller = GetComponent<CharacterController>();
        //Debug.Log(plyr_cldrs.Length);
        if (_anim == null){
@@ -43,14 +52,48 @@ public class PlayerMovement : MonoBehaviour
        }
     }
 
-    private void FixedUpdate() {
-        plyr_speed = (transform.position - lastPosition).magnitude;
-        lastPosition = transform.position;
-    }
-
     // Update is called once per frame
     private void Update()
     {
+        plyr_speed = (transform.position - lastPosition).magnitude;
+        lastPosition = transform.position;
+        if (!_anim.GetBool("Flying") && plyr_flying){
+            _anim.SetBool("Flying", true);
+        }
+
+        if (Input.GetKeyUp("q") || Input.GetKeyUp("d")  &&   (!(Input.GetKeyUp("q") && !Input.GetKeyUp("d"))) ){
+            rotate_bck();
+        }
+
+        if (Input.GetKeyDown(KeyCode.Space) && (canJmp_ || wt_fr_DblJmp) && (jumpCnt > 0) && (jmp_auth == true)){
+            StartCoroutine(delay_input( 0.21f));
+            float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
+            jumpCnt--;
+            // ForceMode.VelocityChange for jump strength
+            plyr_rb.AddForce( new Vector3(0, (wt_fr_DblJmp ? (jumpForce * 2) : jumpForce), 0), ForceMode.VelocityChange);
+            //plyr_rb.velocity = new Vector3(plyr_rb.position.x, jumpForce, plyr_rb.position.z);
+            if (wt_fr_DblJmp == true){ Debug.Log("double jump");dbl_jump_ = true;}
+            
+            if(wt_fr_DblJmp == false){
+                _jumping = true;
+                StartCoroutine(Dbl_Jmp_Tm(3));
+            }
+        }
+    }
+
+    private void FixedUpdate() {
+
+        if (Input.GetKey("q")){ swipe_offst += 0.01f;
+            if(trn_back_Lean_id > 0){
+                LeanTween.cancel(gameObject, trn_back_Lean_id);
+            }
+        }
+        if (Input.GetKey("d")){ swipe_offst -= 0.01f; 
+             if(trn_back_Lean_id > 0){
+                LeanTween.cancel(gameObject, trn_back_Lean_id);
+            }
+        }
+
         if(_jumping == true){
             // _anim.SetBool("Jump", true);
             // _anim.SetBool("Jump", false);
@@ -58,74 +101,80 @@ public class PlayerMovement : MonoBehaviour
             //Debug.Log(plyr_trsnfm.transform.rotation.eulerAngles);
             StartCoroutine(Dly_bool_anm(0.3f, "Jump"));
         }
+
         if(dbl_jump_ == true){
             _jumping = false; dbl_jump_ = false;
+            jump_prtcl.Play();
             StopCoroutine(Dbl_Jmp_Tm(2));
             StartCoroutine(Dly_bool_anm(0.4f, "DoubleJump"));
         }
 
         // MVMNT SPEED
         // ForceMode.VelocityChange for persistant movementspeed
-        plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? player_speed/1.5f : player_speed)), ForceMode.VelocityChange);
+        if (!Input.GetKey("q") && !Input.GetKey("d")){
+            plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? uptd_speed/1.7f : uptd_speed)), ForceMode.VelocityChange);
+        }
+        if (Input.GetKey("q") || Input.GetKey("d")){
+            plyr_rb.AddForce( new Vector3(0, 0, (uptd_speed/5f)), ForceMode.VelocityChange);
+        }
         /////
 
-        if (Input.GetKeyDown(KeyCode.Space) && (canJmp_ || wt_fr_DblJmp) && (jumpCnt > 0) && jmp_auth){
-            StartCoroutine(delay_input(jmp_auth, 0.25f));
-            float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
-            jumpCnt--;
-            // ForceMode.VelocityChange for jump strength
-            plyr_rb.AddForce( new Vector3(0, (wt_fr_DblJmp ? (jumpForce * 2) : jumpForce), 0), ForceMode.VelocityChange);
-            //plyr_rb.velocity = new Vector3(plyr_rb.position.x, jumpForce, plyr_rb.position.z);
-            if (wt_fr_DblJmp == true){ dbl_jump_ = true;}
-            
-            if(wt_fr_DblJmp == false){
-                _jumping = true;
-                StartCoroutine(Dbl_Jmp_Tm(3));
-            }
-      
-        }
 
         if (Input.GetKey("q")){
-            if ( (plyr_trsnfm.rotation.eulerAngles.y >= 300.0f && plyr_trsnfm.rotation.eulerAngles.y <= 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y <= 70.0f) ){
-                plyr_.transform.Rotate(0, -1, 0, Space.Self);
+            if ( (plyr_trsnfm.rotation.eulerAngles.y >= 320.0f && plyr_trsnfm.rotation.eulerAngles.y <= 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y <= 45.0f) ){
+                plyr_.transform.Rotate(0, -3, 0, Space.Self);
             } 
-            plyr_rb.AddForce( -5 * (Vector3.right * strafe_speed), ForceMode.VelocityChange);
+            plyr_rb.AddForce((plyr_flying ?  -2f * (Vector3.right * strafe_speed) :  -5 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
         }
 
         if (Input.GetKey("d")){ 
-            if ( (plyr_trsnfm.rotation.eulerAngles.y >= 297.0f) || (plyr_trsnfm.rotation.eulerAngles.y >= 0.0f && plyr_trsnfm.rotation.eulerAngles.y <= 60.0f) ){
-                plyr_.transform.Rotate(0, 1, 0, Space.Self);
+            if ( (plyr_trsnfm.rotation.eulerAngles.y >= 317.0f) || (plyr_trsnfm.rotation.eulerAngles.y >= 0.0f && plyr_trsnfm.rotation.eulerAngles.y <= 40.0f) ){
+                plyr_.transform.Rotate(0, 3, 0, Space.Self);
             }
-            plyr_rb.AddForce( 5 * (Vector3.right * strafe_speed), ForceMode.VelocityChange);
+            plyr_rb.AddForce((plyr_flying ? 2f * (Vector3.right * strafe_speed) : 5 * (Vector3.right * strafe_speed)), ForceMode.VelocityChange);
         }
+
+    
     }
+
 
     // Public fnc for cllision 
     public void animateCollision(string cls_type){
         switch(cls_type){
             case "groundLeave":
+                uptd_speed = svd_speed - (svd_speed/5);
+                StopCoroutine(speed_rtn(3f));
                 _anim.SetBool("Flying", true);
                 if(mdfied_cldrs_nm[0] == ""){
-                    fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.15f);
+                    fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.12f);
                     mdfied_cldrs_nm[0] = "Fly";
                 }
                 plyr_flying = true;
                 break;
             case "groundHit":
+                _anim.SetBool("Flying", false);
+                StopCoroutine(speed_rtn(3f)); StartCoroutine(speed_rtn(3f));
+                StopCoroutine(Dbl_Jmp_Tm(1)); wt_fr_DblJmp = false;
                 if (plyr_flying){
-                    StartCoroutine(delay_input(jmp_auth, 0.4f));
-                    _anim.SetBool("Flying", false);
-                    StopCoroutine(Dbl_Jmp_Tm(1)); wt_fr_DblJmp = false;
+                    StopCoroutine(delay_input(0.0f));
+                    StartCoroutine(delay_input(0.3f));
 
                     mdfied_cldrs_nm[0] = "";
-                    if(plyr_flying){ fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.15f);}
+                    if(plyr_flying){ fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.12f);}
 
                     StartCoroutine(Dly_bool_anm(0.3f, "GroundHit"));
                 }
                 plyr_flying = false;
                 break; 
+            case "obstacle":
+                _anim.SetBool("Flying", false);
+                StartCoroutine(Dly_bool_anm(0.3f, "obstacleJump"));
+                StopCoroutine(delay_input( 0.24f)); StartCoroutine(delay_input( 0.24f));
+
+                float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
+                plyr_rb.AddForce( new Vector3(0, jumpForce/ 1.25f, 1), ForceMode.VelocityChange);
+                break;
             default:
-                
                 break;
         }
     }
@@ -186,7 +235,30 @@ public class PlayerMovement : MonoBehaviour
         cld.enabled = true;
     }
 
-    private IEnumerator delay_input(bool inpt_bl, float t_){
-        inpt_bl = false; yield return new WaitForSeconds(t_); inpt_bl = true;
+    private IEnumerator delay_input(float t_){
+        jmp_auth = false; yield return new WaitForSeconds(t_); jmp_auth = true;
+    }
+    
+    private void rotate_bck(){
+        float y_to_apply = (plyr_trsnfm.rotation.eulerAngles.y > 70.0f ?  (plyr_trsnfm.rotation.eulerAngles.y-269.0f) : -plyr_trsnfm.rotation.eulerAngles.y);
+        float twn_t = y_to_apply / 120;
+        //Debug.Log(y_to_apply);
+        float rt_bk_tm =  (Math.Abs(y_to_apply) / 120) * 1.5f;
+        trn_back_Lean_id = LeanTween.rotateLocal(gameObject, new Vector3(plyr_trsnfm.rotation.eulerAngles.x , 0.0f, plyr_trsnfm.rotation.eulerAngles.z), rt_bk_tm).setEaseOutCubic().id;
+    }
+
+    private IEnumerator speed_rtn(float t_){
+        float speed_anim_spd = 0.75f;
+        float anim_tick = (1.2f - 0.75f) / 30;
+
+        uptd_speed  = 4 * (svd_speed / 5); 
+        float _spd_tick  = (svd_speed / 3) / 30;
+
+        for (int i = 0; i < 30; i ++){
+            _anim.SetFloat("speedAnim", speed_anim_spd);
+            yield return new WaitForSeconds(t_ / 30);
+            speed_anim_spd += anim_tick; uptd_speed += _spd_tick;
+        }
+
     }
 }
