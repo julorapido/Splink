@@ -44,7 +44,6 @@ public class PlayerCollisions : MonoBehaviour
                     break; 
                 case "slider":
                     if(collision.gameObject.tag == "slider"){
-                        Debug.Log("er");
                         LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.08f, 1f).setEasePunch();
                         FindObjectOfType<PlayerMovement>().animateCollision("sliderHit", _size);
                     }  

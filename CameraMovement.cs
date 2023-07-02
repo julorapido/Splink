@@ -13,7 +13,7 @@ public class CameraMovement : MonoBehaviour
     // private float updtd_plyr_offset;
     // private float prev_plyr_offset;
     // Update is called once per frame
-    private float vert_Trns = 2.0f; // VERT CLAMP TIME
+    private float vert_Trns = 0.9f; // VERT CLAMP TIME
     private float vert_y_pos = 0f;
     private float vert_y_rot = 0f;
 
@@ -40,13 +40,13 @@ public class CameraMovement : MonoBehaviour
 
             // Dampen towards the target rotation
             //Quaternion initial_rt  = new Quaternion(15, gameObject.transform.rotation.y, 0, 1);  
-            Quaternion desired_rt  = new Quaternion(gameObject.transform.rotation.x + 0.00035f + vert_y_rot, x_offst / 170, 0, 1); 
+            Quaternion desired_rt  = new Quaternion(gameObject.transform.rotation.x + 0.00035f + vert_y_rot, x_offst / 185, 0, 1); 
             transform.rotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, 0.7f);
 
             // Lerp Position
             Vector3 desired_  = player.position + offset;
-            desired_.x += -1 * (x_offst / 17);
-            desired_.z += (Math.Abs(x_offst)) / 90;
+            desired_.x += -1 * (x_offst / 18);
+            desired_.z += (Math.Abs(x_offst)) / 80;
             desired_.y += vert_y_pos;
             Vector3 smoothed_ = Vector3.Lerp(player.position, desired_, 0.6f);
             gameObject.transform.position = desired_;
