@@ -38,13 +38,12 @@ public class PlayerCollisions : MonoBehaviour
                     if(collision.gameObject.tag == "ground"){
                         Vector3 targetDir = collision.gameObject.transform.position - ply_transform.position;
                         float angle = Vector3.Angle(targetDir, transform.forward);
-                        Debug.Log(angle);
                         FindObjectOfType<PlayerMovement>().animateCollision("wallRunHit", _size);
                     }
                     break; 
                 case "slider":
                     if(collision.gameObject.tag == "slider"){
-                        LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.08f, 1f).setEasePunch();
+                        //LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.05f, 0.4f).setEasePunch();
                         FindObjectOfType<PlayerMovement>().animateCollision("sliderHit", _size);
                     }  
                     break;

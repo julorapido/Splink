@@ -48,7 +48,10 @@ public class PlayerMovement : MonoBehaviour
 
     private int trn_back_Lean_id;
     private bool gameOver_ = false;
-    
+
+    // Obstacle Cancel Running
+    private bool stopRunning_ = false;
+
     private void Start()
     {
        _anim = GetComponentInChildren<Animator>();
@@ -84,12 +87,12 @@ public class PlayerMovement : MonoBehaviour
             jumpCnt--;
 
             // reset y velocity
-            plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0f, 0f);
+            plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0f, plyr_rb.velocity.z / 2);
 
             // ForceMode.VelocityChange for jump strength
             plyr_rb.AddForce( new Vector3(0, (wt_fr_DblJmp ? (jumpForce * 2) : jumpForce), 0), ForceMode.VelocityChange);
             //plyr_rb.velocity = new Vector3(plyr_rb.position.x, jumpForce, plyr_rb.position.z);
-            if (wt_fr_DblJmp == true){ Debug.Log("double jump");dbl_jump_ = true;}
+            if (wt_fr_DblJmp == true){dbl_jump_ = true;}
             
             if(wt_fr_DblJmp == false){
                 _jumping = true;
@@ -127,15 +130,17 @@ public class PlayerMovement : MonoBehaviour
                 StartCoroutine(Dly_bool_anm(0.4f, "DoubleJump"));
             }
 
-            // MVMNT SPEED
+            // MAIN MOVMNT SPEED !
             // ForceMode.VelocityChange for persistant movementspeed
-            if (!Input.GetKey("q") && !Input.GetKey("d")){
-                plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? uptd_speed/2f : uptd_speed)), ForceMode.VelocityChange);
+            if (!stopRunning_){
+                if (!Input.GetKey("q") && !Input.GetKey("d")){
+                    plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? uptd_speed/2f : uptd_speed)), ForceMode.VelocityChange);
+                }
+                if (Input.GetKey("q") || Input.GetKey("d")){
+                    plyr_rb.AddForce( new Vector3(0, 0, (uptd_speed/2.5f)), ForceMode.VelocityChange);
+                }
             }
-            if (Input.GetKey("q") || Input.GetKey("d")){
-                plyr_rb.AddForce( new Vector3(0, 0, (uptd_speed/3.5f)), ForceMode.VelocityChange);
-            }
-            /////
+            //////////////////////////////////////////////////////////
 
 
             if (Input.GetKey("q")){
@@ -157,14 +162,14 @@ public class PlayerMovement : MonoBehaviour
 
     // Public fnc for cllision 
     public void animateCollision(string cls_type, Vector3 cls_size){
+        float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
         switch(cls_type){
             case "groundLeave":
-                Debug.Log("leave");
+                _anim.SetBool("Flying", true);
                 if(gameOver_ || plyr_sliding){return;}
                 uptd_speed = svd_speed - (svd_speed/5);
                 FindObjectOfType<CameraMovement>().fly_dynm(true);
                 StopCoroutine(speed_rtn(3f));
-                _anim.SetBool("Flying", true);
                 if(mdfied_cldrs_nm[0] == ""){
                     fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.12f);
                     mdfied_cldrs_nm[0] = "Fly";
@@ -172,7 +177,7 @@ public class PlayerMovement : MonoBehaviour
                 plyr_flying = true;
                 break;
             case "groundHit":
-                if(gameOver_ || plyr_sliding){return;}
+                if(gameOver_ || plyr_sliding || _anim.GetBool("GroundHit") == true){return;}
                 _anim.SetBool("Flying", false);
                 FindObjectOfType<CameraMovement>().fly_dynm(false);
                 StopCoroutine(speed_rtn(3f)); StartCoroutine(speed_rtn(3f));
@@ -233,23 +238,19 @@ public class PlayerMovement : MonoBehaviour
                 break;
             case "sliderHit":
                 if(gameOver_){return;}
-                Debug.Log("hit");
                 if(plyr_flying){
-                    fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.12f);
+                   // fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.12f);
                 }
                 StopCoroutine(Dbl_Jmp_Tm(1)); wt_fr_DblJmp = false;
                 jumpCnt = 2; plyr_sliding = true;
-                float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
                 plyr_rb.AddForce( new Vector3(0, jumpForce * 0.25f, -3), ForceMode.VelocityChange);
                 _anim.SetBool("Flying", false); _anim.SetBool("slide", true);
                 fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.42f);
                 break;
             case "sliderLeave":
                 plyr_sliding = false;
-                Debug.Log("leave");
                 _anim.SetBool("Flying", true); _anim.SetBool("slide", false);
-                //float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
-                //plyr_rb.AddForce( new Vector3(0, jumpForce * 0.45f, -3), ForceMode.VelocityChange);
+                plyr_rb.AddForce( new Vector3(0, jumpForce, -6), ForceMode.VelocityChange);
                 fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.42f);    
                 break;
             default:
@@ -308,15 +309,23 @@ public class PlayerMovement : MonoBehaviour
     }
 
     private IEnumerator obstcl_anim(Vector3 cls_size){
+        float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
+        stopRunning_ = true;
+        // reset Y and Z velocity (v / 10)
+        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0, 0);
+        plyr_rb.useGravity = false;
         if (plyr_flying){
-            float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
-            plyr_rb.AddForce( new Vector3(0, jumpForce * 0.25f, -5), ForceMode.VelocityChange);
+            yield return new WaitForSeconds(0.05f); 
         }else{
             Vector3 aft_jump_v3 = new Vector3(plyr_trsnfm.position.x, plyr_trsnfm.position.y + (cls_size.y + 0.5f), plyr_trsnfm.position.z);
-            LeanTween.moveY(gameObject,plyr_trsnfm.position.y + (cls_size.y  + 0.4f), 0.175f).setEaseOutCubic();      
-            yield return new WaitForSeconds(0.18f); 
-            plyr_rb.AddForce( new Vector3(0, 0, 7), ForceMode.VelocityChange);             
+            plyr_rb.AddForce( new Vector3(0, 0, -4), ForceMode.VelocityChange);             
+            LeanTween.moveY(gameObject,plyr_trsnfm.position.y + (cls_size.y  + 0.1f), 0.60f).setEaseInSine();      
+            yield return new WaitForSeconds(0.60f); 
         }
+        plyr_rb.useGravity = true;
+        // Precise [ 4 * cls_size.z ] jump dist
+        plyr_rb.AddForce( new Vector3(0, jumpForce * 0.1f, 4 * cls_size.z), ForceMode.VelocityChange);
+        //stopRunning_=false;       
     }
 
     private IEnumerator disbl_cldr(Collider cld, float t_){
@@ -333,7 +342,7 @@ public class PlayerMovement : MonoBehaviour
         float y_to_apply = (plyr_trsnfm.rotation.eulerAngles.y > 70.0f ?  (plyr_trsnfm.rotation.eulerAngles.y-269.0f) : -plyr_trsnfm.rotation.eulerAngles.y);
         float twn_t = y_to_apply / 120;
         //Debug.Log(y_to_apply);
-        float rt_bk_tm =  (Math.Abs(y_to_apply) / 120) * 5f;
+        float rt_bk_tm =  (Math.Abs(y_to_apply) / 120) * 3f;
         trn_back_Lean_id = LeanTween.rotateLocal(gameObject, new Vector3(plyr_trsnfm.rotation.eulerAngles.x , 0.0f, plyr_trsnfm.rotation.eulerAngles.z), rt_bk_tm).setEaseInOutCubic().id;
     }
 

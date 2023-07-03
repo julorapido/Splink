@@ -40,12 +40,12 @@ public class CameraMovement : MonoBehaviour
 
             // Dampen towards the target rotation
             //Quaternion initial_rt  = new Quaternion(15, gameObject.transform.rotation.y, 0, 1);  
-            Quaternion desired_rt  = new Quaternion(gameObject.transform.rotation.x + 0.00035f + vert_y_rot, x_offst / 185, 0, 1); 
+            Quaternion desired_rt  = new Quaternion(gameObject.transform.rotation.x + 0.00035f + vert_y_rot, x_offst / 173, 0, 1); 
             transform.rotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, 0.7f);
 
             // Lerp Position
             Vector3 desired_  = player.position + offset;
-            desired_.x += -1 * (x_offst / 18);
+            desired_.x += -1 * (x_offst / 17.5f);
             desired_.z += (Math.Abs(x_offst)) / 80;
             desired_.y += vert_y_pos;
             Vector3 smoothed_ = Vector3.Lerp(player.position, desired_, 0.6f);
