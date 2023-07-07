@@ -22,11 +22,9 @@ public class Grappling : MonoBehaviour
 
     private Vector3 gplr_point;
 
-
     [Header ("Cooldown")]
     public float grpl_cd;
     private float grpl_cd_timer;
-
 
     [Header ("Input")]
     public KeyCode grapplekey;
@@ -40,6 +38,8 @@ public class Grappling : MonoBehaviour
     private bool activ_grapple = false;
 
     private SpringJoint hld_joint;
+    private bool grappl_ended = false;
+    private bool can_reGrappl = true;
 
     // Start is called before the first frame update
     private void Start()
@@ -51,14 +51,13 @@ public class Grappling : MonoBehaviour
     private void Update()
     {
         if (Input.GetKeyDown("e")) StartGrapple();
-        if (Input.GetKeyUp("e")) StopGrapple();
+        if (Input.GetKeyUp("e") || grappl_ended) StopGrapple();
 
         if(grpl_dely_time > 0)
             grpl_cd_timer -= Time.deltaTime;
     }
 
     private void LateUpdate(){
-
         if (!hld_joint) return;
 
         if(is_grpling_)
@@ -71,7 +70,7 @@ public class Grappling : MonoBehaviour
     }
 
     private void StartGrapple(){
-        if(grpl_cd_timer > 0) return;
+        if(grpl_cd_timer > 0 || !can_reGrappl) return;
         is_grpling_ = true;
 
         RaycastHit hit;
@@ -107,6 +106,9 @@ public class Grappling : MonoBehaviour
             lr.enabled = true;
             lr.SetPosition(1, gplr_point);
             
+            // Delay Grapple
+            StopCoroutine(grappleDelay(3f));
+            StartCoroutine(grappleDelay(3f));
         }else{
             gplr_point = plyr_pos.position + plyr_pos.forward * mx_grappl_distance;  
             Invoke(nameof(StopGrapple), grpl_dely_time);
@@ -114,6 +116,19 @@ public class Grappling : MonoBehaviour
 
       
     }
+
+    private IEnumerator grappleDelay(float t_){
+        grappl_ended = false;
+        yield return new WaitForSeconds(t_);
+        grappl_ended = true;
+    }
+
+    private IEnumerator grappleResetDelay(float t_){
+        can_reGrappl = false;
+        yield return new WaitForSeconds(t_);
+        can_reGrappl = true;
+    }
+
 
     private void JumpToPosition (Vector3 targetPos, float traj_height){
         activ_grapple = true;
@@ -147,6 +162,7 @@ public class Grappling : MonoBehaviour
         is_grpling_ = false;
         grpl_cd_timer = grpl_cd;
         Destroy(hld_joint);
+        StartCoroutine(grappleResetDelay(2f));
         //lr.positionCount = 0;
         lr.enabled = false;
     }

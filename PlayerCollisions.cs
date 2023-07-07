@@ -24,6 +24,7 @@ public class PlayerCollisions : MonoBehaviour
                 case "ground":
                     if(collision.gameObject.tag == "ground"){
                         FindObjectOfType<PlayerMovement>().animateCollision("groundHit", _size);
+                        FindObjectOfType<CameraMovement>().fly_dynm(false);
                     }
                     if(collision.gameObject.tag == "obstacle"){
                         FindObjectOfType<PlayerMovement>().animateCollision("obstacleHit", _size);
@@ -61,6 +62,7 @@ public class PlayerCollisions : MonoBehaviour
                 case "ground":
                     if(collision.gameObject.tag == "ground"){
                         FindObjectOfType<PlayerMovement>().animateCollision("groundLeave", _size);
+                        FindObjectOfType<CameraMovement>().fly_dynm(true);
                         //FindObjectOfType<PlayerMovement>().animateCollision("groundLeave");
                     }
                     if(collision.gameObject.tag == "obstacle"){
