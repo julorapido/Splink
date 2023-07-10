@@ -133,6 +133,7 @@ public class PlayerMovement : MonoBehaviour
                 _jumping = false; dbl_jump_ = false;
                 jump_prtcl.Play();
                 StopCoroutine(Dbl_Jmp_Tm(2));
+                StopCoroutine(Dly_bool_anm(0.3f, "Jump"));
                 StartCoroutine(Dly_bool_anm(0.4f, "DoubleJump"));
             }
 
@@ -141,10 +142,10 @@ public class PlayerMovement : MonoBehaviour
                 // MAIN MOVMNT SPEED !
                 // ForceMode.VelocityChange for persistant movementspeed
                 if (!Input.GetKey("q") && !Input.GetKey("d")){
-                    plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? uptd_speed/2.5f : uptd_speed)), ForceMode.VelocityChange);
+                    plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying && !plyr_sliding ? uptd_speed/2f : uptd_speed)), ForceMode.VelocityChange);
                 }
                 if (Input.GetKey("q") || Input.GetKey("d")){
-                    //plyr_rb.AddForce( new Vector3(0, 0, (uptd_speed/2.5f)), ForceMode.VelocityChange);
+                    plyr_rb.AddForce( new Vector3(0, 0, (uptd_speed / 4f)), ForceMode.VelocityChange);
                 }
                 //////////////////////////////////////////////////////////
                 // 
@@ -184,7 +185,7 @@ public class PlayerMovement : MonoBehaviour
             case "groundHit":
                 wait_obstcl_aft = false;
                 StopCoroutine(obstcl_aft());
-                if(gameOver_ || plyr_sliding || _anim.GetBool("GroundHit") == true){return;}
+                if(gameOver_ || plyr_sliding || _anim.GetBool("GroundHit") == true){Debug.Log("prblem catch");return;}
                 _anim.SetBool("Flying", false);
                 StopCoroutine(speed_rtn(3f)); StartCoroutine(speed_rtn(3f));
                 StopCoroutine(Dbl_Jmp_Tm(1)); wt_fr_DblJmp = false;
@@ -253,13 +254,13 @@ public class PlayerMovement : MonoBehaviour
                 StopCoroutine(Dbl_Jmp_Tm(1)); wt_fr_DblJmp = false;
                 jumpCnt = 2; plyr_sliding = true;
                 plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0, plyr_rb.velocity.z / 3);
-                plyr_rb.AddForce( new Vector3(0, jumpForce * 0.15f, 0), ForceMode.VelocityChange);
+                plyr_rb.AddForce( new Vector3(0, jumpForce * 0.15f, 3), ForceMode.VelocityChange);
                 _anim.SetBool("Flying", false); _anim.SetBool("slide", true);
                 fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.42f);
                 break;
             case "sliderLeave":
                 plyr_sliding = false;
-                Debug.Log("slider leave");
+                plyr_flying = true;
                 _anim.SetBool("Flying", true); _anim.SetBool("slide", false);
                 plyr_rb.AddForce( new Vector3(0, jumpForce, -6), ForceMode.VelocityChange);
                 fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.42f);    
@@ -295,6 +296,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void fix_Cldrs_pos(Transform trnsfrm_, GameObject gm_obj, float y_off_pos){
         Collider[] colList = trnsfrm_.GetComponentsInChildren<Collider>();
+        // gm_obj is only first 3 coldrs !
         for (int i = 0; i < colList.Length; i ++){
             if(y_off_pos < 0 && colList[i].isTrigger){
                 StartCoroutine(disbl_cldr(colList[i], 0.3f));
@@ -340,7 +342,7 @@ public class PlayerMovement : MonoBehaviour
             LeanTween.moveY(gameObject,plyr_trsnfm.position.y + (cls_size.y  + 0.15f), 0.44f).setEaseInSine();      
             yield return new WaitForSeconds(0.40f); 
             // Precise [ 8 * cls_size.z ] jump dist
-            plyr_rb.AddForce( new Vector3(0, -1  * (jumpForce * 0.15f), 8f * cls_size.z), ForceMode.VelocityChange);
+            plyr_rb.AddForce( new Vector3(0, -1  * (jumpForce * 0.15f), 7f * cls_size.z), ForceMode.VelocityChange);
         }
         yield return new WaitForSeconds(0.45f); 
             // RE-Reset velocity
@@ -350,7 +352,7 @@ public class PlayerMovement : MonoBehaviour
         yield return new WaitForSeconds(0.15f); 
             plyr_rb.AddForce( new Vector3(0, 0, 6), ForceMode.VelocityChange);
         yield return new WaitForSeconds(0.25f); 
-            plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0, plyr_rb.velocity.z / 5);
+            plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0, plyr_rb.velocity.z / 4);
             //StartCoroutine(obstcl_aft());
             _anim.SetBool("Flying", true);
             uptd_speed  = 4 * (svd_speed / 5); 

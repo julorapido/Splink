@@ -69,7 +69,7 @@ public class CameraMovement : MonoBehaviour
             transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, 0.1f);
 
             // Smooth Damp
-            Vector3 smoothFollow = Vector3.SmoothDamp(transform.position, desired_, ref currentVelocity, 0.050f); 
+            Vector3 smoothFollow = Vector3.SmoothDamp(transform.position, desired_, ref currentVelocity, 0.070f); 
             // Vector3 smoothFollow = Vector3.SmoothDamp(transform.position, desired_, ref currentVelocity, smoothTime *   Time.fixedDeltaTime); 
 
             transform.position = smoothFollow;

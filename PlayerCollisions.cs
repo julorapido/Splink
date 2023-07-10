@@ -8,10 +8,13 @@ public class PlayerCollisions : MonoBehaviour
     // Start is called before the first frame update
     //public Collider mmbr_collider;
     public  string[] colsions_values = new string[4]{"ground", "frontwall","sidewall", "slider"};
+    [Header ("Selected Collision")]
     public string slcted_clsion;
+    [Header ("Start Delay")]
     public float strt_delay;
     private bool can_trgr = false;
     public Transform ply_transform;
+    private Vector3 currentVelocity;
     //ImmutableList<string> colors = ImmutableList.Create("Red", "Green", "Blue");
     private void Start(){
         StartCoroutine(delay_trgrs(strt_delay));
@@ -45,6 +48,9 @@ public class PlayerCollisions : MonoBehaviour
                 case "slider":
                     if(collision.gameObject.tag == "slider"){
                         //LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.05f, 0.4f).setEasePunch();
+                        Vector3 dwned = collision.gameObject.transform.position;
+                        dwned.y -= 0.1f;
+                        Vector3 smoothDwn_ = Vector3.SmoothDamp(collision.gameObject.transform.position, dwned, ref currentVelocity, 0.4f); 
                         FindObjectOfType<PlayerMovement>().animateCollision("sliderHit", _size);
                     }  
                     break;
@@ -77,6 +83,9 @@ public class PlayerCollisions : MonoBehaviour
                 case "slider":
                     if(collision.gameObject.tag == "slider"){
                         LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.08f, 1f).setEasePunch();
+                        Vector3 upped = collision.gameObject.transform.position;
+                        upped.y += 0.1f;
+                        Vector3 smoothUp_ = Vector3.SmoothDamp(collision.gameObject.transform.position, upped, ref currentVelocity, 0.4f); 
                         FindObjectOfType<PlayerMovement>().animateCollision("sliderLeave", _size);
                     }  
                     break;

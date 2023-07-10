@@ -92,6 +92,8 @@ public class Grappling : MonoBehaviour
 
             float dist_frm_point = Vector3.Distance(plyr_pos.position, gplr_point);
 
+            if(dist_frm_point < mx_grappl_distance / 4){return;}
+
             // the distance grapple try to keep from grappl point
             hld_joint.maxDistance = dist_frm_point * 0.8f;
             hld_joint.minDistance = dist_frm_point * 0.25f;
