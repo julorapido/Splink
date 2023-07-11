@@ -92,7 +92,7 @@ public class Grappling : MonoBehaviour
 
             float dist_frm_point = Vector3.Distance(plyr_pos.position, gplr_point);
 
-            if(dist_frm_point < mx_grappl_distance / 4){return;}
+            if(dist_frm_point < mx_grappl_distance / 4){lr.enabled = false;return;}
 
             // the distance grapple try to keep from grappl point
             hld_joint.maxDistance = dist_frm_point * 0.8f;
@@ -112,8 +112,7 @@ public class Grappling : MonoBehaviour
             StopCoroutine(grappleDelay(3f));
             StartCoroutine(grappleDelay(3f));
         }else{
-            gplr_point = plyr_pos.position + plyr_pos.forward * mx_grappl_distance;  
-            Invoke(nameof(StopGrapple), grpl_dely_time);
+            lr.enabled = false;
         }
 
       

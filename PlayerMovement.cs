@@ -94,7 +94,7 @@ public class PlayerMovement : MonoBehaviour
                     _anim.SetBool("slide", false);
                     _anim.SetBool("Flying", true);
                 }
-                StartCoroutine(delay_input( 0.21f));
+                StartCoroutine(delay_input( 0.42f));
                 float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
                 jumpCnt--;
 
@@ -145,7 +145,7 @@ public class PlayerMovement : MonoBehaviour
                     plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying && !plyr_sliding ? uptd_speed/2f : uptd_speed)), ForceMode.VelocityChange);
                 }
                 if (Input.GetKey("q") || Input.GetKey("d")){
-                    plyr_rb.AddForce( new Vector3(0, 0, (uptd_speed / 4f)), ForceMode.VelocityChange);
+                    plyr_rb.AddForce( new Vector3(0, 0, (uptd_speed / 2.5f)), ForceMode.VelocityChange);
                 }
                 //////////////////////////////////////////////////////////
                 // 
@@ -185,13 +185,13 @@ public class PlayerMovement : MonoBehaviour
             case "groundHit":
                 wait_obstcl_aft = false;
                 StopCoroutine(obstcl_aft());
-                if(gameOver_ || plyr_sliding || _anim.GetBool("GroundHit") == true){Debug.Log("prblem catch");return;}
+                if(gameOver_ || plyr_sliding || _anim.GetBool("GroundHit") == true){return;}
                 _anim.SetBool("Flying", false);
                 StopCoroutine(speed_rtn(3f)); StartCoroutine(speed_rtn(3f));
                 StopCoroutine(Dbl_Jmp_Tm(1)); wt_fr_DblJmp = false;
                 if (plyr_flying){
                     StopCoroutine(delay_input(0.0f));
-                    StartCoroutine(delay_input(0.3f));
+                    StartCoroutine(delay_input(0.4f));
                     mdfied_cldrs_nm[0] = "";
                     if(plyr_flying){ fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.12f);}
 
@@ -201,9 +201,12 @@ public class PlayerMovement : MonoBehaviour
                 break; 
             case "obstacleHit":
                 wait_obstcl_aft = false;
+                //if(plyr_flying){_anim.SetBool("skipObstAnim", true);}
                 if(_anim.GetBool("obstacleJump") == false && !gameOver_){
                     _anim.SetBool("Flying", false);
-                    StartCoroutine(Dly_bool_anm(1.25f, "obstacleJump"));
+                    if(!plyr_flying){
+                        StartCoroutine(Dly_bool_anm(1.25f, "obstacleJump"));
+                    }
                     //StopCoroutine(delay_input( 0.46f)); StartCoroutine(delay_input( 0.46f));
                     StartCoroutine(obstcl_anim(cls_size));
                 }
@@ -327,37 +330,36 @@ public class PlayerMovement : MonoBehaviour
         stopRunning_ = true;
         plyr_obstclJmping = true;
         // reset Y and Z velocity (v / 10)
-        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0, 0);
-        //
-        plyr_rb.useGravity = false;
-        //StopCoroutine(obstcl_aft());
+        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x / 20, 0, 0);
         //
         if (plyr_flying){
             // Precise [ 5 * cls_size.z ] cause alrdy flying
-            plyr_rb.AddForce( new Vector3(0, jumpForce * 0.05f, 5 * cls_size.z), ForceMode.VelocityChange);
+            plyr_rb.AddForce( new Vector3(0, jumpForce * 0.3f, 6 * cls_size.z), ForceMode.VelocityChange);
             yield return new WaitForSeconds(0.15f); 
         }else{
+            plyr_rb.useGravity = false;
             Vector3 aft_jump_v3 = new Vector3(plyr_trsnfm.position.x, plyr_trsnfm.position.y + (cls_size.y + 0.5f), plyr_trsnfm.position.z);
             plyr_rb.AddForce( new Vector3(0, 0, -1), ForceMode.VelocityChange);             
             LeanTween.moveY(gameObject,plyr_trsnfm.position.y + (cls_size.y  + 0.15f), 0.44f).setEaseInSine();      
             yield return new WaitForSeconds(0.40f); 
             // Precise [ 8 * cls_size.z ] jump dist
             plyr_rb.AddForce( new Vector3(0, -1  * (jumpForce * 0.15f), 7f * cls_size.z), ForceMode.VelocityChange);
+            yield return new WaitForSeconds(0.45f); 
+                // RE-Reset velocity
+                plyr_obstclJmping = false;
+                plyr_rb.useGravity = true;
+                plyr_rb.AddForce( new Vector3(0, jumpForce * 2.70f, 0), ForceMode.VelocityChange);
+            yield return new WaitForSeconds(0.15f); 
+                plyr_rb.AddForce( new Vector3(0, 0, 6), ForceMode.VelocityChange);
         }
-        yield return new WaitForSeconds(0.45f); 
-            // RE-Reset velocity
-            plyr_obstclJmping = false;
-            plyr_rb.useGravity = true;
-            plyr_rb.AddForce( new Vector3(0, jumpForce * 2.70f, 0), ForceMode.VelocityChange);
-        yield return new WaitForSeconds(0.15f); 
-            plyr_rb.AddForce( new Vector3(0, 0, 6), ForceMode.VelocityChange);
         yield return new WaitForSeconds(0.25f); 
             plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0, plyr_rb.velocity.z / 4);
             //StartCoroutine(obstcl_aft());
             _anim.SetBool("Flying", true);
             uptd_speed  = 4 * (svd_speed / 5); 
             plyr_flying = true;
-            stopRunning_=false;       
+            stopRunning_=false;    
+
     }
 
     // OBSTACLE WAIT FOR RE-HIT GROUND
