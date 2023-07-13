@@ -65,7 +65,7 @@ public class CameraMovement : MonoBehaviour
         if (!game_Over_){
             // Dampen towards the target rotation
             //Quaternion initial_rt  = new Quaternion(15, gameObject.transform.rotation.y, 0, 1);  
-            Quaternion desired_rt  = new Quaternion(gameObject.transform.rotation.x + 0.000325f, (x_offst / 220.0f), 0, 1);
+            Quaternion desired_rt  = new Quaternion(gameObject.transform.rotation.x + 0.000325f, (x_offst / 220.0f), x_offst / 2000.0f, 1);
             transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, 0.1f);
 
             // Smooth Damp

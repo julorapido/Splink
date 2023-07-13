@@ -131,9 +131,9 @@ public class Buildings : MonoBehaviour
                 Vector3 sl_size = sl.GetComponent<BoxCollider>().size;
                 
                 Instantiate(sl, new Vector3(x_pos - sl_size.x/2, 0 + y_, z_pos + sl_size.z / 2 + 20f), new Quaternion(0f, 0f, 0f, 1), bldg_parent);
-                x_pos += sl_size.x / 2;
+                x_pos += sl_size.x;
                 svd_z = sl_size.z;
-                y_ -= 10.0f;
+                y_ -= 7.5f;
             }
             z_pos += svd_z + 10.0f;
         }

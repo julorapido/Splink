@@ -98,8 +98,8 @@ public class PlayerMovement : MonoBehaviour
                 float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
                 jumpCnt--;
 
-                // reset y velocity
-                plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0f, plyr_rb.velocity.z / 2);
+                // reset y velocity for jump
+                plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0f, plyr_rb.velocity.z / 1.25f);
 
                 // ForceMode.VelocityChange for jump strength
                 plyr_rb.AddForce( new Vector3(0, (wt_fr_DblJmp ? (jumpForce * 2) : jumpForce), 0), ForceMode.VelocityChange);
@@ -151,13 +151,15 @@ public class PlayerMovement : MonoBehaviour
                 // 
                 if (Input.GetKey("q")){
                     if ( (plyr_trsnfm.rotation.eulerAngles.y >= 325.0f && plyr_trsnfm.rotation.eulerAngles.y <= 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y <= 37.0f) ){
-                        plyr_.transform.Rotate(0, -2.75f, 0, Space.Self);
+                        plyr_.transform.Rotate(0, -3.5f, 0, Space.Self);
                     } 
                     plyr_rb.AddForce((plyr_flying ?  -2f * (Vector3.right * strafe_speed) :  -5 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
                 }
                 if (Input.GetKey("d")){ 
-                    if ( (plyr_trsnfm.rotation.eulerAngles.y >= 323.0f) || (plyr_trsnfm.rotation.eulerAngles.y >= 0.0f && plyr_trsnfm.rotation.eulerAngles.y <= 35.0f) ){
-                        plyr_.transform.Rotate(0, 2.75f, 0, Space.Self);
+                    if ( (plyr_trsnfm.rotation.eulerAngles.y >= 321.0f) || ( Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) >= 0.0f && Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) <= 34.0f) ){
+                        plyr_.transform.Rotate(0, 3.5f, 0, Space.Self);
+                    }else{
+                        //Debug.Log("right blocked");
                     }
                     plyr_rb.AddForce((plyr_flying ? 2f * (Vector3.right * strafe_speed) : 5 * (Vector3.right * strafe_speed)), ForceMode.VelocityChange);
                 }
@@ -256,8 +258,8 @@ public class PlayerMovement : MonoBehaviour
                 }
                 StopCoroutine(Dbl_Jmp_Tm(1)); wt_fr_DblJmp = false;
                 jumpCnt = 2; plyr_sliding = true;
-                plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0, plyr_rb.velocity.z / 3);
-                plyr_rb.AddForce( new Vector3(0, jumpForce * 0.15f, 3), ForceMode.VelocityChange);
+                plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y / 2, plyr_rb.velocity.z / 1.5f);
+                plyr_rb.AddForce( new Vector3(0, -1*( jumpForce * 0.3f), 5), ForceMode.VelocityChange);
                 _anim.SetBool("Flying", false); _anim.SetBool("slide", true);
                 fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.42f);
                 break;
@@ -360,6 +362,16 @@ public class PlayerMovement : MonoBehaviour
             plyr_flying = true;
             stopRunning_=false;    
 
+    }
+
+    public void grapple_anim(bool stop_grapple){
+        if(!stop_grapple){
+            _anim.SetBool("swing", true);
+
+        }else{
+            _anim.SetBool("swing", false);
+
+        }
     }
 
     // OBSTACLE WAIT FOR RE-HIT GROUND

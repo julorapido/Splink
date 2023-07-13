@@ -72,49 +72,70 @@ public class Grappling : MonoBehaviour
     private void StartGrapple(){
         if(grpl_cd_timer > 0 || !can_reGrappl) return;
         is_grpling_ = true;
+        bool trgrd_ = false;
 
         RaycastHit hit;
         RaycastHit sphereCastHit;
         Physics.Raycast(plyr_pos.position, plyr_pos.forward, out hit, mx_grappl_distance, wt_grappleable);
         Physics.SphereCast(plyr_pos.position, predictionSphereCastRadius, plyr_pos.forward, out sphereCastHit, mx_grappl_distance, wt_grappleable);
-        if(hit.point != Vector3.zero || sphereCastHit.point != Vector3.zero)
-        {
+        for(int i = 0; i < 15; i++){// LEFT
+            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(-i, -i/2 ,0), out hit, mx_grappl_distance, wt_grappleable);
+            Physics.SphereCast(plyr_pos.position, predictionSphereCastRadius, plyr_pos.forward + new Vector3(-i, -i/2, 0), out sphereCastHit, mx_grappl_distance, wt_grappleable);
+            if(hit.point != Vector3.zero || sphereCastHit.point != Vector3.zero){
+                trgrd_ = true;
+                Debug.Log(i + "left hit");
+                break;
+            }
+        }
+        if(!trgrd_){
+            for(int j = 0; j < 15; j++){// RIGHT
+                Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(j, j/2 ,0), out hit, mx_grappl_distance, wt_grappleable);
+                Physics.SphereCast(plyr_pos.position, predictionSphereCastRadius, plyr_pos.forward + new Vector3(j, j/2 ,0), out sphereCastHit, mx_grappl_distance, wt_grappleable);
+                if(hit.point != Vector3.zero || sphereCastHit.point != Vector3.zero){
+                    trgrd_ = true;
+                    Debug.Log(j + "left hit");
+                    break; 
+                }
+            }
+        }
+  
+        // DEFINE GRPL POINT
+        gplr_point = hit.point != Vector3.zero ? hit.point : sphereCastHit.point;
+        // GRAPPLE JUMP
+            // Invoke(nameof(ExecuteGrapple), grpl_dely_time);
 
-            // DEFINE GRPL POINT
-            gplr_point = hit.point != Vector3.zero ? hit.point : sphereCastHit.point;
-            // GRAPPLE JUMP
-               // Invoke(nameof(ExecuteGrapple), grpl_dely_time);
-    
-            // GRAPPLE HOLD
-            hld_joint  = gameObject.AddComponent<SpringJoint>();
-            hld_joint.autoConfigureConnectedAnchor = false;
-            hld_joint.connectedAnchor = gplr_point;
+        // GRAPPLE HOLD
+        hld_joint  = gameObject.AddComponent<SpringJoint>();
+        hld_joint.autoConfigureConnectedAnchor = false;
+        hld_joint.connectedAnchor = gplr_point;
 
-            float dist_frm_point = Vector3.Distance(plyr_pos.position, gplr_point);
+        float dist_frm_point = Vector3.Distance(plyr_pos.position, gplr_point);
 
-            if(dist_frm_point < mx_grappl_distance / 4){lr.enabled = false;return;}
+        if(dist_frm_point < mx_grappl_distance / 4){lr.enabled = false;return;}
 
-            // the distance grapple try to keep from grappl point
-            hld_joint.maxDistance = dist_frm_point * 0.8f;
-            hld_joint.minDistance = dist_frm_point * 0.25f;
+        // Player Mvmnt fnc call
+        //FindObjectOfType<PlayerMovement>().grapple_anim(true);
 
-            // cutsom values
-            hld_joint.spring = 700f;
-            hld_joint.damper = 7f;
-            hld_joint.massScale = 8.5f;
+        // the distance grapple try to keep from grappl point
+        hld_joint.maxDistance = dist_frm_point * 0.8f;
+        hld_joint.minDistance = dist_frm_point * 0.25f;
 
-            //
-            //lr.positionCount = 2;
-            lr.enabled = true;
-            lr.SetPosition(1, gplr_point);
-            
-            // Delay Grapple
-            StopCoroutine(grappleDelay(3f));
-            StartCoroutine(grappleDelay(3f));
-        }else{
+        // cutsom values
+        hld_joint.spring = 700f;
+        hld_joint.damper = 7f;
+        hld_joint.massScale = 8.5f;
+
+        //
+        //lr.positionCount = 2;
+        lr.enabled = true;
+        lr.SetPosition(1, gplr_point);
+        
+        // Delay Grapple
+        StopCoroutine(grappleDelay(3f));
+        StartCoroutine(grappleDelay(3f));
+        if(!trgrd_){
             lr.enabled = false;
         }
-
       
     }
 
@@ -165,6 +186,8 @@ public class Grappling : MonoBehaviour
         Destroy(hld_joint);
         StartCoroutine(grappleResetDelay(2f));
         //lr.positionCount = 0;
+        // Player Mvmnt fnc call
+        FindObjectOfType<PlayerMovement>().grapple_anim(false);
         lr.enabled = false;
     }
 
