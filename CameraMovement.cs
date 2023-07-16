@@ -16,11 +16,12 @@ public class CameraMovement : MonoBehaviour
     private const float vert_Trns = 2.00f; // VERT CAMERA CLAMP TIME
     private float vert_y_pos = 0f;
     private float vert_y_rot = 0f;
-    private float xRot = 13.0f;
+    private float xRot;
     private Vector3 def_offset;
     private void Start(){
         def_offset = offset;
         //Application.targetFrameRate = 60;
+        xRot = gameObject.transform.rotation.x;
         gameObject.transform.position = player.position + offset;
         desired_  = (player.position + offset);
 
@@ -50,11 +51,11 @@ public class CameraMovement : MonoBehaviour
     private void FixedUpdate(){
         x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ? -1 *   (60 - (player_rb.rotation.eulerAngles.y - 300.0f)) : player_rb.rotation.eulerAngles.y);
         // Lerp Position
-        if(((-0.035f * x_offst)) != lst_offst_x){
+        if(((-0.036f * x_offst)) != lst_offst_x){
             desired_  = (player.position + offset);
-            desired_.x = desired_.x +  ((-0.035f * x_offst));
+            desired_.x = desired_.x +  ((-0.036f * x_offst));
             desired_.z = desired_.z +  (Math.Abs(x_offst)) / 150;
-            lst_offst_x = ((-0.035f * x_offst));
+            lst_offst_x = ((-0.036f * x_offst));
         }
         //lst_frm_desired_ = desired_;
         //desired_.y += vert_y_pos;
@@ -65,7 +66,7 @@ public class CameraMovement : MonoBehaviour
         if (!game_Over_){
             // Dampen towards the target rotation
             //Quaternion initial_rt  = new Quaternion(15, gameObject.transform.rotation.y, 0, 1);  
-            Quaternion desired_rt  = new Quaternion(gameObject.transform.rotation.x + 0.000325f, (x_offst / 220.0f), x_offst / 2000.0f, 1);
+            Quaternion desired_rt  = new Quaternion(xRot, (x_offst / 220.0f), x_offst / 2000.0f, 1);
             transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, 0.1f);
 
             // Smooth Damp

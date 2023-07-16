@@ -55,6 +55,15 @@ public class Grappling : MonoBehaviour
 
         if(grpl_dely_time > 0)
             grpl_cd_timer -= Time.deltaTime;
+
+        // Detect Grapple Ballz
+        Collider[] hitColliders = Physics.OverlapSphere(plyr_pos.position, 20f);
+        foreach (var hitCollider in hitColliders)
+        {
+            if(hitCollider.gameObject.tag == "grapple_ball"){
+                Debug.Log("grappl ball in sight");
+            }
+        }
     }
 
     private void LateUpdate(){
@@ -74,35 +83,36 @@ public class Grappling : MonoBehaviour
         is_grpling_ = true;
         bool trgrd_ = false;
 
-        RaycastHit hit;
-        RaycastHit sphereCastHit;
-        Physics.Raycast(plyr_pos.position, plyr_pos.forward, out hit, mx_grappl_distance, wt_grappleable);
-        Physics.SphereCast(plyr_pos.position, predictionSphereCastRadius, plyr_pos.forward, out sphereCastHit, mx_grappl_distance, wt_grappleable);
-        for(int i = 0; i < 15; i++){// LEFT
-            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(-i, -i/2 ,0), out hit, mx_grappl_distance, wt_grappleable);
-            Physics.SphereCast(plyr_pos.position, predictionSphereCastRadius, plyr_pos.forward + new Vector3(-i, -i/2, 0), out sphereCastHit, mx_grappl_distance, wt_grappleable);
-            if(hit.point != Vector3.zero || sphereCastHit.point != Vector3.zero){
+        RaycastHit[] ray_hits = new RaycastHit[(15 * 2) + 1];
+        int indx_ = 1;
+        Physics.Raycast(plyr_pos.position, plyr_pos.forward, out ray_hits[0], mx_grappl_distance, wt_grappleable);
+        //Physics.SphereCast(plyr_pos.position, predictionSphereCastRadius, plyr_pos.forward, out sphereCastHit, mx_grappl_distance, wt_grappleable);
+        for(int i = 1; i < 15; i++){// LEFT
+            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(-i, -i/2 ,0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
+            if(ray_hits[indx_].point != Vector3.zero){
                 trgrd_ = true;
-                Debug.Log(i + "left hit");
-                break;
+                //break;
             }
+            indx_++;
         }
-        if(!trgrd_){
-            for(int j = 0; j < 15; j++){// RIGHT
-                Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(j, j/2 ,0), out hit, mx_grappl_distance, wt_grappleable);
-                Physics.SphereCast(plyr_pos.position, predictionSphereCastRadius, plyr_pos.forward + new Vector3(j, j/2 ,0), out sphereCastHit, mx_grappl_distance, wt_grappleable);
-                if(hit.point != Vector3.zero || sphereCastHit.point != Vector3.zero){
-                    trgrd_ = true;
-                    Debug.Log(j + "left hit");
-                    break; 
-                }
+        for(int j = 1; j < 15; j++){// RIGHT
+            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(j, j/2 ,0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
+            if(ray_hits[indx_].point != Vector3.zero){
+                trgrd_ = true;
+                //break; 
             }
+            indx_++;
         }
+        
   
         // DEFINE GRPL POINT
-        gplr_point = hit.point != Vector3.zero ? hit.point : sphereCastHit.point;
+        int pt_ = Random.Range(1, 30);
+        Debug.Log("gpl indx : " + pt_);
+        gplr_point = ray_hits[pt_].point;
+        if(gplr_point == Vector3.zero){return;}
+
         // GRAPPLE JUMP
-            // Invoke(nameof(ExecuteGrapple), grpl_dely_time);
+        // Invoke(nameof(ExecuteGrapple), grpl_dely_time);
 
         // GRAPPLE HOLD
         hld_joint  = gameObject.AddComponent<SpringJoint>();

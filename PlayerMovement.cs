@@ -89,7 +89,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
         if(!stopRunning_){
-            if (Input.GetKeyDown(KeyCode.Space) && (canJmp_ || wt_fr_DblJmp) && (jumpCnt > 0) && (jmp_auth == true)){
+            if (Input.GetKeyDown(KeyCode.Space) && (canJmp_ || wt_fr_DblJmp) && (jumpCnt > 0) && (jmp_auth == true) &&  !_anim.GetBool("GroundHit") ){
                 if(_anim.GetBool("slide")){
                     _anim.SetBool("slide", false);
                     _anim.SetBool("Flying", true);
@@ -139,24 +139,29 @@ public class PlayerMovement : MonoBehaviour
 
             // Obstacl Jumping ==> stopRunning_ bool
             if (!stopRunning_){
-                // MAIN MOVMNT SPEED !
+                // MAIN MOVMNT SPEED !  MAIN MOVMNT SPEED  //
                 // ForceMode.VelocityChange for persistant movementspeed
-                if (!Input.GetKey("q") && !Input.GetKey("d")){
-                    plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying && !plyr_sliding ? uptd_speed/2f : uptd_speed)), ForceMode.VelocityChange);
+                if(plyr_sliding){
+                        plyr_rb.AddForce( new Vector3(0, 0, 2 * uptd_speed), ForceMode.VelocityChange);
+                }else{
+                    if (!Input.GetKey("q") && !Input.GetKey("d")){
+                        plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying && !plyr_sliding ? uptd_speed/2f : uptd_speed)), ForceMode.VelocityChange);
+                    }
+                    if (Input.GetKey("q") || Input.GetKey("d")){
+                        plyr_rb.AddForce( new Vector3(0, 0, (uptd_speed / 2.5f)), ForceMode.VelocityChange);
+                    }
                 }
-                if (Input.GetKey("q") || Input.GetKey("d")){
-                    plyr_rb.AddForce( new Vector3(0, 0, (uptd_speed / 2.5f)), ForceMode.VelocityChange);
-                }
+ 
                 //////////////////////////////////////////////////////////
                 // 
                 if (Input.GetKey("q")){
-                    if ( (plyr_trsnfm.rotation.eulerAngles.y >= 325.0f && plyr_trsnfm.rotation.eulerAngles.y <= 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y <= 37.0f) ){
+                    if ( (plyr_trsnfm.rotation.eulerAngles.y >= 315.0f && plyr_trsnfm.rotation.eulerAngles.y <= 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y <= 47.0f) ){
                         plyr_.transform.Rotate(0, -3.5f, 0, Space.Self);
                     } 
                     plyr_rb.AddForce((plyr_flying ?  -2f * (Vector3.right * strafe_speed) :  -5 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
                 }
                 if (Input.GetKey("d")){ 
-                    if ( (plyr_trsnfm.rotation.eulerAngles.y >= 321.0f) || ( Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) >= 0.0f && Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) <= 34.0f) ){
+                    if ( (plyr_trsnfm.rotation.eulerAngles.y >= 311.0f) || ( Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) >= 0.0f && Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) <= 44.0f) ){
                         plyr_.transform.Rotate(0, 3.5f, 0, Space.Self);
                     }else{
                         //Debug.Log("right blocked");
