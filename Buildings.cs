@@ -16,7 +16,7 @@ public class Buildings : MonoBehaviour
     // Start is called before the first frame update
     private void Start(){
         //Gen_Bldngs(20);
-        Gen_PrefbSections(10);
+        Gen_PrefbSections(5);
     }
 
     private void Gen_Bldngs(int z_len)

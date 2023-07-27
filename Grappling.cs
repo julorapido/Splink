@@ -58,10 +58,12 @@ public class Grappling : MonoBehaviour
 
         // Detect Grapple Ballz
         Collider[] hitColliders = Physics.OverlapSphere(plyr_pos.position, 20f);
-        foreach (var hitCollider in hitColliders)
-        {
-            if(hitCollider.gameObject.tag == "grapple_ball"){
-                Debug.Log("grappl ball in sight");
+        if(hitColliders.Length > 0){
+            foreach (var hitCollider in hitColliders)
+            {
+                if(hitCollider.gameObject.tag == "grapple_ball"){
+                    //Debug.Log("grappl ball in sight");
+                }
             }
         }
     }
@@ -83,20 +85,20 @@ public class Grappling : MonoBehaviour
         is_grpling_ = true;
         bool trgrd_ = false;
 
-        RaycastHit[] ray_hits = new RaycastHit[(15 * 2) + 1];
+        RaycastHit[] ray_hits = new RaycastHit[(30 * 2) + 1];
         int indx_ = 1;
         Physics.Raycast(plyr_pos.position, plyr_pos.forward, out ray_hits[0], mx_grappl_distance, wt_grappleable);
         //Physics.SphereCast(plyr_pos.position, predictionSphereCastRadius, plyr_pos.forward, out sphereCastHit, mx_grappl_distance, wt_grappleable);
-        for(int i = 1; i < 15; i++){// LEFT
-            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(-i, -i/2 ,0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
+        for(int i = 1; i < 30; i++){// LEFT
+            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(-i/2, 2 + i/2, 0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
             if(ray_hits[indx_].point != Vector3.zero){
                 trgrd_ = true;
                 //break;
             }
             indx_++;
         }
-        for(int j = 1; j < 15; j++){// RIGHT
-            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(j, j/2 ,0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
+        for(int j = 1; j < 30; j++){// RIGHT
+            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(j/2, 2 + j/2 ,0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
             if(ray_hits[indx_].point != Vector3.zero){
                 trgrd_ = true;
                 //break; 
@@ -106,9 +108,14 @@ public class Grappling : MonoBehaviour
         
   
         // DEFINE GRPL POINT
-        int pt_ = Random.Range(1, 30);
-        Debug.Log("gpl indx : " + pt_);
-        gplr_point = ray_hits[pt_].point;
+        for(int k = 0; k < ray_hits.Length; k++){
+            int pt_ = Random.Range(1, ray_hits.Length);
+            if(ray_hits[pt_].point != Vector3.zero){
+                gplr_point = ray_hits[pt_].point;
+                break;
+            }
+        }
+        Debug.Log("gpl indx :   " + gplr_point);
         if(gplr_point == Vector3.zero){return;}
 
         // GRAPPLE JUMP
@@ -124,7 +131,7 @@ public class Grappling : MonoBehaviour
         if(dist_frm_point < mx_grappl_distance / 4){lr.enabled = false;return;}
 
         // Player Mvmnt fnc call
-        //FindObjectOfType<PlayerMovement>().grapple_anim(true);
+        //FindObjectOfType<PlayerMovement>().grapple_anim(false);
 
         // the distance grapple try to keep from grappl point
         hld_joint.maxDistance = dist_frm_point * 0.8f;
@@ -197,7 +204,7 @@ public class Grappling : MonoBehaviour
         StartCoroutine(grappleResetDelay(2f));
         //lr.positionCount = 0;
         // Player Mvmnt fnc call
-        FindObjectOfType<PlayerMovement>().grapple_anim(false);
+        FindObjectOfType<PlayerMovement>().grapple_anim(true);
         lr.enabled = false;
     }
 
