@@ -53,7 +53,9 @@ public class PlayerCollisions : MonoBehaviour
                     if(collision.gameObject.tag == "ground"){
                         Vector3 targetDir = collision.gameObject.transform.position - ply_transform.position;
                         float angle = Vector3.Angle(targetDir, transform.forward);
+                        Debug.Log(collision.gameObject);
                         FindObjectOfType<PlayerMovement>().animateCollision("wallRunHit", _size);
+                        FindObjectOfType<PlayerVectors>().slippery_trigr(false, collision.gameObject);
                     }
                     break; 
                 case "slider":
@@ -89,6 +91,7 @@ public class PlayerCollisions : MonoBehaviour
                 case "sidewall":
                     if(collision.gameObject.tag == "ground"){
                         FindObjectOfType<PlayerMovement>().animateCollision("wallRunExit", _size);
+                        FindObjectOfType<PlayerVectors>().slippery_trigr(true, collision.gameObject);
                     }
                     break; 
                 case "slider":
