@@ -69,6 +69,7 @@ public class PlayerMovement : MonoBehaviour
     // Bool to rotate bock confrm in [Update()]
     private bool rt_back_cnfrm = false;
     private Vector3[] cons_coldrs = new Vector3[10];
+
     private void Start()
     {
        _anim = GetComponentInChildren<Animator>();
@@ -208,18 +209,28 @@ public class PlayerMovement : MonoBehaviour
                 //////////////////////////////////////////////////////////
                 // 
                 if (Input.GetKey("q")){
-                    if ( (plyr_trsnfm.rotation.eulerAngles.y >= 315.0f && plyr_trsnfm.rotation.eulerAngles.y <= 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y <= 47.0f) ){
-                        plyr_.transform.Rotate(0, -3.5f, 0, Space.Self);
-                    } 
+
+                    // LEFT ROTATION
+                    if(!plyr_wallRninng){
+                        if ( (plyr_trsnfm.rotation.eulerAngles.y >= 315.0f && plyr_trsnfm.rotation.eulerAngles.y <= 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y <= 47.0f) ){
+                            plyr_.transform.Rotate(0, -3.5f, 0, Space.Self);
+                        } 
+                    }
+                    
                     // LEFT STRAFE
                     plyr_rb.AddForce((plyr_flying ?  -2.5f * (Vector3.right * strafe_speed) :  -5 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
                 }
                 if (Input.GetKey("d")){ 
-                    if ( (plyr_trsnfm.rotation.eulerAngles.y >= 311.0f) || ( Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) >= 0.0f && Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) <= 44.0f) ){
-                        plyr_.transform.Rotate(0, 3.5f, 0, Space.Self);
-                    }else{
-                        //Debug.Log("right blocked");
+
+                    // RIGHT ROTATION
+                    if(!plyr_wallRninng){
+                        if ( (plyr_trsnfm.rotation.eulerAngles.y >= 311.0f) || ( Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) >= 0.0f && Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) <= 44.0f) ){
+                            plyr_.transform.Rotate(0, 3.5f, 0, Space.Self);
+                        }else{
+                            //Debug.Log("right blocked");
+                        }
                     }
+
                     // RIGHT STRAFE
                     plyr_rb.AddForce((plyr_flying ? 2.5f * (Vector3.right * strafe_speed) : 5 * (Vector3.right * strafe_speed)), ForceMode.VelocityChange);
                 }

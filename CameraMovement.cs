@@ -5,19 +5,31 @@ using System;
 
 public class CameraMovement : MonoBehaviour
 {
+    [Header ("Player Inspector Values")]
     public Transform player;
     public Rigidbody player_rb;
+
+    [Header ("Camera Offset Value")]
     public Vector3 offset;
+    
     private float smoothTrans_  = 2.5f;
     private bool game_Over_ = false;
+
     // private float updtd_plyr_offset;
     // private float prev_plyr_offset;
-    // Update is called once per frame
+
     private const float vert_Trns = 2.00f; // VERT CAMERA CLAMP TIME
     private float vert_y_pos = 0f;
     private float vert_y_rot = 0f;
     private float xRot;
     private Vector3 def_offset;
+
+    [Header ("Player Side Htboxs")]
+    private float side_x_offst = 0.0f;
+    private float side_y_offst = 0.0f;
+    private float side_rot_y_offst = 0.0f;
+
+
     private void Start(){
         def_offset = offset;
         //Application.targetFrameRate = 60;
@@ -83,7 +95,11 @@ public class CameraMovement : MonoBehaviour
             transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, 0.11f);
 
             // Smooth Damp
-            Vector3 smoothFollow = Vector3.SmoothDamp(transform.position, desired_ + (tyro_on ? new Vector3(0f, 0.5f, 1.5f) : new Vector3(0f,0f,0f)), ref currentVelocity, tyro_on ? 0.21f : 0.10f); 
+            Vector3 smoothFollow = Vector3.SmoothDamp(
+                transform.position,
+                desired_ + (tyro_on ? new Vector3(0f, 0.5f, 1.5f) : new Vector3(0f,0f,0f)) + new Vector3(side_x_offst, side_y_offst, 0f),
+                ref currentVelocity, tyro_on ? 0.21f : 0.10f
+            ); 
             // Vector3 smoothFollow = Vector3.SmoothDamp(transform.position, desired_, ref currentVelocity, smoothTime *   Time.fixedDeltaTime); 
 
             transform.position = smoothFollow;
@@ -135,5 +151,20 @@ public class CameraMovement : MonoBehaviour
 
     private IEnumerator rtation(){
       yield return new WaitForSeconds(1f);
+    }
+
+    public void wal_rn_offset(bool is_ext, Transform gm_){
+        if(is_ext){
+            side_x_offst = 0.0f; side_rot_y_offst = 0.0f;
+            side_y_offst = 0.0f;
+        }else{
+            side_y_offst = -1.5f;
+            float sns =  player.position.x - gm_.position.x;
+            if(sns < 0 ){
+                side_x_offst = -1.0f;
+            }else{
+                side_x_offst = 1.0f;
+            }
+        }
     }
 }
