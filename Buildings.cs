@@ -116,7 +116,7 @@ public class Buildings : MonoBehaviour
 
     private void Gen_PrefbSections(int z_len){
         int ln_ = sections_prefb.Length;
-        float z_step = 20.0f; // STEP ON Z-AXIS
+        float z_step = 19.0f; // STEP ON Z-AXIS
         float svd_z = 0.0f;
         float y_ = 0.0f;
         // Z MAP

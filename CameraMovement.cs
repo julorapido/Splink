@@ -72,11 +72,11 @@ public class CameraMovement : MonoBehaviour
     private void FixedUpdate(){
         x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ? -1 *   (60 - (player_rb.rotation.eulerAngles.y - 300.0f)) : player_rb.rotation.eulerAngles.y);
         // Lerp Position
-        if(((-0.037f * x_offst)) != lst_offst_x){
+        if(((-0.050f * x_offst)) != lst_offst_x){
             desired_  = (player.position + offset);
-            desired_.x = desired_.x +  ((-0.037f * x_offst));
-            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 150;
-            lst_offst_x = ((-0.037f * x_offst));
+            desired_.x = desired_.x +  ((-0.050f * x_offst));
+            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 100;
+            lst_offst_x = ((-0.050f * x_offst));
         }
 
         tyro_on = FindObjectOfType<PlayerMovement>().plyr_tyro;
@@ -91,14 +91,15 @@ public class CameraMovement : MonoBehaviour
         if (!game_Over_){
             // Dampen towards the target rotation
             //Quaternion initial_rt  = new Quaternion(15, gameObject.transform.rotation.y, 0, 1);  
-            Quaternion desired_rt  = new Quaternion(xRot, (x_offst / 160.0f), (x_offst / 1500.0f), 1);
-            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, 0.11f);
+            Quaternion desired_rt  = new Quaternion(xRot, (x_offst / 130.0f) + side_rot_y_offst, (x_offst / 1500.0f), 1);
+            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, 0.09f);
 
             // Smooth Damp
             Vector3 smoothFollow = Vector3.SmoothDamp(
                 transform.position,
-                desired_ + (tyro_on ? new Vector3(0f, 0.5f, 1.5f) : new Vector3(0f,0f,0f)) + new Vector3(side_x_offst, side_y_offst, 0f),
-                ref currentVelocity, tyro_on ? 0.21f : 0.10f
+                desired_ + (tyro_on ? new Vector3(0f, 0.5f, 3.0f) : new Vector3(0f,0f,0f)) + new Vector3(side_x_offst, side_y_offst, 0f),
+                ref currentVelocity,
+                tyro_on ? 0.175f : 0.08f
             ); 
             // Vector3 smoothFollow = Vector3.SmoothDamp(transform.position, desired_, ref currentVelocity, smoothTime *   Time.fixedDeltaTime); 
 
@@ -155,15 +156,16 @@ public class CameraMovement : MonoBehaviour
 
     public void wal_rn_offset(bool is_ext, Transform gm_){
         if(is_ext){
-            side_x_offst = 0.0f; side_rot_y_offst = 0.0f;
-            side_y_offst = 0.0f;
+            side_x_offst = 0.0f; side_rot_y_offst = 0.0f; side_y_offst = 0.0f;
         }else{
-            side_y_offst = -1.5f;
+            side_y_offst = -1.20f;
             float sns =  player.position.x - gm_.position.x;
             if(sns < 0 ){
-                side_x_offst = -1.0f;
+                side_x_offst = -1.75f; 
+                side_rot_y_offst = 0.20f;
             }else{
-                side_x_offst = 1.0f;
+                side_x_offst = 1.75f;
+                side_rot_y_offst = -0.20f;
             }
         }
     }

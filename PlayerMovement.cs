@@ -35,11 +35,13 @@ public class PlayerMovement : MonoBehaviour
     public GameObject[] fix_objs;
     private string[] mdfied_cldrs_nm = {"","","",""};
 
+    [Header ("Player Movements Status")]
     private bool wt_fr_DblJmp = false;
     private bool plyr_flying = false;
     private bool plyr_sliding = false;
     private bool plyr_wallRninng = false;
     private bool plyr_obstclJmping = false;
+    public bool plyr_tyro = false;
 
     [Header ("Player Speed Informations")]
     public float plyr_speed = 0;
@@ -47,7 +49,6 @@ public class PlayerMovement : MonoBehaviour
     private float last_tyro_trvld = 0.05f;
     private Transform tyro_handler_child;
     private PathCreator actual_path;
-    public bool plyr_tyro = false;
     private const float tyro_speed = 12f;
     // //// ////  //
     private Vector3 lastPosition = Vector3.zero;
@@ -66,8 +67,11 @@ public class PlayerMovement : MonoBehaviour
     private bool stopRunning_ = false;
     private bool wait_obstcl_aft = false;
 
+    [Header ("Rotate booleans")]
     // Bool to rotate bock confrm in [Update()]
     private bool rt_back_cnfrm = false;
+    private bool rt_done = false;
+
     private Vector3[] cons_coldrs = new Vector3[10];
 
     private void Start()
@@ -103,8 +107,16 @@ public class PlayerMovement : MonoBehaviour
     private float r;
     private void Update()
     {
+        // RTT RE ACTIVATE
+        if (Input.GetKey("q") || Input.GetKey("d")){rt_back_cnfrm = false; rt_done = false;}
+
         // RTT CONFIRM
-        if (!Input.GetKeyDown("q") && !Input.GetKeyDown("d")){rt_back_cnfrm = true;}
+        if (!Input.GetKey("q") && !Input.GetKey("d")){
+            rt_back_cnfrm = true;
+            // float angl_ = Mathf.SmoothDampAngle(plyr_trsnfm.eulerAngles.y, 0, ref r, 0.60f);
+            // plyr_trsnfm.rotation = Quaternion.Euler(plyr_trsnfm.eulerAngles.x, angl_, plyr_trsnfm.eulerAngles.z);
+        }
+
 
         plyr_speed = (transform.position - lastPosition).magnitude;
         lastPosition = transform.position;
@@ -169,9 +181,13 @@ public class PlayerMovement : MonoBehaviour
 
         if (!gameOver_ && !plyr_tyro){
 
-            if (!Input.GetKeyDown("q") && !Input.GetKeyDown("d")){
-                //Invoke("rotate_bck", 0.2f);
-                rotate_bck();
+            if (!Input.GetKey("q") && !Input.GetKey("d")){
+                //rotate_bck();
+                if(rt_back_cnfrm && !rt_done){
+                    float angl_ = Mathf.SmoothDampAngle(plyr_trsnfm.eulerAngles.y, 0, ref r, 0.20f);
+                    plyr_trsnfm.rotation = Quaternion.Euler(plyr_trsnfm.eulerAngles.x, angl_, plyr_trsnfm.eulerAngles.z);
+                    rt_done = true;
+                }
                 // REPLACED INTO CAMERAMOVEMENT.cs
             }
 
@@ -196,7 +212,9 @@ public class PlayerMovement : MonoBehaviour
                 // MAIN MOVMNT SPEED !  MAIN MOVMNT SPEED  //
                 // ForceMode.VelocityChange for persistant movementspeed
                 if(plyr_sliding){
-                        plyr_rb.AddForce( new Vector3(0, 0, 2 * uptd_speed), ForceMode.VelocityChange);
+                    plyr_rb.AddForce( new Vector3(0, 0, 2 * uptd_speed), ForceMode.VelocityChange);
+                }else if(plyr_wallRninng){
+                    plyr_rb.AddForce( new Vector3(0, 0.4f, 1.4f * uptd_speed), ForceMode.VelocityChange);
                 }else{
                     if (!Input.GetKey("q") && !Input.GetKey("d")){
                         plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying && !plyr_sliding ? uptd_speed/2f : uptd_speed)), ForceMode.VelocityChange);
@@ -209,30 +227,28 @@ public class PlayerMovement : MonoBehaviour
                 //////////////////////////////////////////////////////////
                 // 
                 if (Input.GetKey("q")){
-
                     // LEFT ROTATION
                     if(!plyr_wallRninng){
                         if ( (plyr_trsnfm.rotation.eulerAngles.y >= 315.0f && plyr_trsnfm.rotation.eulerAngles.y <= 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y <= 47.0f) ){
-                            plyr_.transform.Rotate(0, -3.5f, 0, Space.Self);
+                            plyr_.transform.Rotate(0, -3.0f, 0, Space.Self);
                         } 
                     }
-                    
                     // LEFT STRAFE
-                    plyr_rb.AddForce((plyr_flying ?  -2.5f * (Vector3.right * strafe_speed) :  -5 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
+                    plyr_rb.AddForce((plyr_flying ?  -2.8f * (Vector3.right * strafe_speed) :  -5 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
                 }
                 if (Input.GetKey("d")){ 
-
+                    
                     // RIGHT ROTATION
                     if(!plyr_wallRninng){
                         if ( (plyr_trsnfm.rotation.eulerAngles.y >= 311.0f) || ( Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) >= 0.0f && Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) <= 44.0f) ){
-                            plyr_.transform.Rotate(0, 3.5f, 0, Space.Self);
+                            plyr_.transform.Rotate(0, 3.0f, 0, Space.Self);
                         }else{
                             //Debug.Log("right blocked");
                         }
                     }
 
                     // RIGHT STRAFE
-                    plyr_rb.AddForce((plyr_flying ? 2.5f * (Vector3.right * strafe_speed) : 5 * (Vector3.right * strafe_speed)), ForceMode.VelocityChange);
+                    plyr_rb.AddForce((plyr_flying ? 2.8f * (Vector3.right * strafe_speed) : 5 * (Vector3.right * strafe_speed)), ForceMode.VelocityChange);
                 }
             }
         }
@@ -246,17 +262,16 @@ public class PlayerMovement : MonoBehaviour
         float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
         switch(cls_type){
             case "groundLeave":
-                if(gameOver_ || plyr_obstclJmping){return;}
                 _anim.SetBool("Flying", true);
                 _anim.SetBool("groundHit", false);
-                if(plyr_sliding){return;}
+                plyr_flying = true;
+                if(gameOver_ || plyr_obstclJmping || plyr_sliding){return;}
                 uptd_speed = svd_speed - (svd_speed/5);
                 StopCoroutine(speed_rtn(3f));
                 if(mdfied_cldrs_nm[0] == ""){
                     fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.12f);
                     mdfied_cldrs_nm[0] = "Fly";
                 }
-                plyr_flying = true;
                 break;
             case "groundHit":
                 wait_obstcl_aft = false;
@@ -296,7 +311,7 @@ public class PlayerMovement : MonoBehaviour
                 //
                 break;
             case "wallRunHit":
-                if(!gameOver_){
+                if(!gameOver_ && !_anim.GetBool("GroundHit")){
                     StopCoroutine(obstcl_aft());
                     _anim.SetBool("Flying", false);
                     _anim.SetBool("wallRun", true);
@@ -305,6 +320,7 @@ public class PlayerMovement : MonoBehaviour
                 break;
             case "wallRunExit":
                 if(!gameOver_){
+                    plyr_rb.AddForce( new Vector3(0, 22.5f, 0), ForceMode.VelocityChange);
                     _anim.SetBool("Flying", true);
                     _anim.SetBool("wallRun", false);
                     plyr_wallRninng = false;
@@ -377,6 +393,8 @@ public class PlayerMovement : MonoBehaviour
         foreach(Transform child_trsf in prnt_){
             if(child_trsf.gameObject.tag == "tyro_handler"){
                 tyro_handler_child = child_trsf.gameObject.GetComponent<Transform>();
+                // 2.6 scale for tyro handler
+                tyro_handler_child.localScale = new Vector3(2.6f, 2.6f, 2.6f);
                 break;
             }
         };
@@ -508,16 +526,18 @@ public class PlayerMovement : MonoBehaviour
     }
     
     private void rotate_bck(){
-        if(!rt_back_cnfrm){return;}
-        float y_to_apply = (plyr_trsnfm.rotation.eulerAngles.y > 70.0f ?  (plyr_trsnfm.rotation.eulerAngles.y-269.0f) : -plyr_trsnfm.rotation.eulerAngles.y);
-        float twn_t = y_to_apply / 120;
-        float rt_bk_tm =  (Math.Abs(y_to_apply) / 120) * 5f;
+        if(!rt_back_cnfrm || plyr_tyro || rt_done){return;}
+        
+        // float y_to_apply = (plyr_trsnfm.rotation.eulerAngles.y > 70.0f ?  (plyr_trsnfm.rotation.eulerAngles.y-269.0f) : -plyr_trsnfm.rotation.eulerAngles.y);
+        // float twn_t = y_to_apply / 120;
+        // float rt_bk_tm =  (Math.Abs(y_to_apply) / 120) * 5f;
         // Quaternion desired_rt  = new Quaternion(plyr_cam.rotation.x, 0, plyr_cam.rotation.z, 1);
         // Debug.Log(gameObject.transform.rotation + " vs " +  desired_rt);
         // transform.localRotation = Quaternion.Lerp(plyr_cam.rotation, desired_rt, 0.5f);
         //trn_back_Lean_id = LeanTween.rotate(gameObject, new Vector3(plyr_trsnfm.rotation.eulerAngles.x , 0.0f, plyr_trsnfm.rotation.eulerAngles.z), rt_bk_tm).setEaseInOutCubic().id;
-        float angl_ = Mathf.SmoothDampAngle(plyr_trsnfm.eulerAngles.y, 0, ref r, 0.5f);
+        float angl_ = Mathf.SmoothDampAngle(plyr_trsnfm.eulerAngles.y, 0, ref r, 0.20f);
         plyr_trsnfm.rotation = Quaternion.Euler(plyr_trsnfm.eulerAngles.x, angl_, plyr_trsnfm.eulerAngles.z);
+        Debug.Log("turn back");
     }
 
     private IEnumerator speed_rtn(float t_){
