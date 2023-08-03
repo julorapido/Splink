@@ -24,19 +24,29 @@ public class CameraMovement : MonoBehaviour
     private float xRot;
     private Vector3 def_offset;
 
-    [Header ("Player Side Htboxs")]
-    private float side_x_offst = 0.0f;
-    private float side_y_offst = 0.0f;
-    private float side_rot_y_offst = 0.0f;
+    [Header ("Camera WallRun Values")]
+    private float wallR_x_offst = 0.0f;
+    private float wallR_y_offst = 0.0f;
+    private float wallR_z_offst = 0.0f;
 
+    private float wallR_rot_y_offst = 0.0f;
+    private float wallR_rot_z_offst = 0.0f;
+
+    private float start_fov;
+    private float new_fov;
+    private Camera c_;
 
     private void Start(){
         def_offset = offset;
         //Application.targetFrameRate = 60;
         xRot = gameObject.transform.rotation.x;
         gameObject.transform.position = player.position + offset;
+        
         desired_  = (player.position + offset);
 
+        c_ = gameObject.GetComponent<Camera>();
+        start_fov = gameObject.GetComponent<Camera>().fieldOfView;
+        new_fov = start_fov;
     }
     public void cam_GamerOver_(){
         game_Over_ = true;
@@ -55,7 +65,7 @@ public class CameraMovement : MonoBehaviour
     private Vector3 desired_;
     private float lst_offst_x;
     private Quaternion desired_rt;
-    private float x_offst;
+    private float x_offst = 0.0f;
     //[SerializeField] float smoothSpeed = 9.0f;
     private float smoothTime = 2f ;
     private Vector3 currentVelocity;
@@ -67,6 +77,11 @@ public class CameraMovement : MonoBehaviour
         if (!Input.GetKeyDown("q") && !Input.GetKeyDown("d") ){rotate_back = true;}else{
             rotate_back = false;
         }
+
+        if(c_.fieldOfView != new_fov){
+            c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, new_fov, 0.2f);
+        }
+
     }
 
     private void FixedUpdate(){
@@ -91,15 +106,15 @@ public class CameraMovement : MonoBehaviour
         if (!game_Over_){
             // Dampen towards the target rotation
             //Quaternion initial_rt  = new Quaternion(15, gameObject.transform.rotation.y, 0, 1);  
-            Quaternion desired_rt  = new Quaternion(xRot, (x_offst / 130.0f) + side_rot_y_offst, (x_offst / 1500.0f), 1);
-            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, 0.09f);
+            Quaternion desired_rt  = new Quaternion(xRot, (x_offst / 130.0f) + wallR_rot_y_offst, (x_offst / 1500.0f) + wallR_rot_z_offst, 1);
+            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, 0.1f);
 
             // Smooth Damp
             Vector3 smoothFollow = Vector3.SmoothDamp(
                 transform.position,
-                desired_ + (tyro_on ? new Vector3(0f, 0.5f, 3.0f) : new Vector3(0f,0f,0f)) + new Vector3(side_x_offst, side_y_offst, 0f),
+                desired_ + (tyro_on ? new Vector3(0f, 0.5f, 3.0f) : new Vector3(0f,0f,0f)) + new Vector3(wallR_x_offst, wallR_y_offst, wallR_z_offst),
                 ref currentVelocity,
-                tyro_on ? 0.175f : 0.08f
+                tyro_on ? 0.175f : 0.085f
             ); 
             // Vector3 smoothFollow = Vector3.SmoothDamp(transform.position, desired_, ref currentVelocity, smoothTime *   Time.fixedDeltaTime); 
 
@@ -154,18 +169,36 @@ public class CameraMovement : MonoBehaviour
       yield return new WaitForSeconds(1f);
     }
 
+
+    // private void FovTrans(float fov_value, float t_){
+    //     Camera c_ = gameObject.GetComponent<Camera>();
+    //     if(c_){
+    //         c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, fov_value, t_);
+    //     }
+    // }
+
+    // PUBLIC CAM VALUES TRANSITIONS FOR WALL RUN
     public void wal_rn_offset(bool is_ext, Transform gm_){
         if(is_ext){
-            side_x_offst = 0.0f; side_rot_y_offst = 0.0f; side_y_offst = 0.0f;
+            //FovTrans(85f, 0.5f);
+            new_fov = start_fov;
+            wallR_x_offst = 0.0f; wallR_y_offst = 0.0f; wallR_z_offst = 0.0f;
+
+            wallR_rot_z_offst = 0.0f; wallR_rot_y_offst = 0.0f;
         }else{
-            side_y_offst = -1.20f;
+            //FovTrans(start_fov, 0.5f);
+            new_fov = 90f;
+            wallR_y_offst = -0.55f;
+            wallR_z_offst = 1.50f;
             float sns =  player.position.x - gm_.position.x;
+            
             if(sns < 0 ){
-                side_x_offst = -1.75f; 
-                side_rot_y_offst = 0.20f;
+                wallR_x_offst = -1.35f; 
+                wallR_rot_y_offst = 0.150f; wallR_rot_z_offst = 0.14f;
+
             }else{
-                side_x_offst = 1.75f;
-                side_rot_y_offst = -0.20f;
+                wallR_x_offst = 1.35f;
+                wallR_rot_y_offst = -0.150f; wallR_rot_z_offst = -0.14f;
             }
         }
     }

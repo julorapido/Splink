@@ -11,12 +11,15 @@ public class Buildings : MonoBehaviour
     private float x_pos = 0.0f;
     private float z_pos = 0.0f;
     private float space_t_fill = 0.0f;
-    private const float fnc_gn_w = 250.0f;
+
+    // GLOBAL WIDTH OF BUILDGS GEN
+    private const float fnc_gn_w = 50.0f;
+
     public Transform bldg_parent;
     // Start is called before the first frame update
     private void Start(){
         //Gen_Bldngs(20);
-        Gen_PrefbSections(5);
+        Gen_PrefbSections(3);
     }
 
     private void Gen_Bldngs(int z_len)

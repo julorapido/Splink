@@ -6,17 +6,24 @@ using PathCreation.Utility;
 
 public class PlayerCollisions : MonoBehaviour
 {
-    // Start is called before the first frame update
     //public Collider mmbr_collider;
+
+    [Header ("Collisions Constants")]
     public string[] colsions_values = new string[4]{"ground", "frontwall","sidewall", "slider"};
+
+    [Header ("SubCollisions Constants")]
+    public string[] subcolsions_values = new string[4]{"obstacleHit", "launcherHit","tyro", "bumper"};
+
     [Header ("Selected Collision")]
     public string slcted_clsion;
+
     [Header ("Start Delay")]
     public float strt_delay;
     private bool can_trgr = false;
     public Transform ply_transform;
     private Vector3 currentVelocity;
     //ImmutableList<string> colors = ImmutableList.Create("Red", "Green", "Blue");
+
     private void Start(){
         StartCoroutine(delay_trgrs(strt_delay));
     }
@@ -32,14 +39,15 @@ public class PlayerCollisions : MonoBehaviour
                         FindObjectOfType<CameraMovement>().fly_dynm(false);
                     }
                     // Obstcl hit
-                    if(collision.gameObject.tag == "obstacle"){
-                        FindObjectOfType<PlayerMovement>().animateCollision("obstacleHit", _size);
-                    }
+                    if(collision.gameObject.tag == "obstacle"){FindObjectOfType<PlayerMovement>().animateCollision("obstacleHit", _size);}
                     // Launcher jmp
                     if(collision.gameObject.tag == "launcher"){ FindObjectOfType<PlayerMovement>().animateCollision("launcherHit", _size);}
                     // Tyro hit
-                    if(collision.gameObject.tag == "tyro"){
-                        FindObjectOfType<PlayerMovement>().tyro_movement(collision.gameObject);
+                    if(collision.gameObject.tag == "tyro"){FindObjectOfType<PlayerMovement>().tyro_movement(collision.gameObject);}
+                    // Bumper jmp
+                    if(collision.gameObject.tag == "bumper"){
+                        LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.2f, 0.4f).setEasePunch();
+                        FindObjectOfType<PlayerMovement>().animateCollision("bumperJump", _size);
                     }
                     break;
                 case "frontwall":

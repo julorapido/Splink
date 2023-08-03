@@ -149,7 +149,7 @@ public class PlayerMovement : MonoBehaviour
                 plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0f, plyr_rb.velocity.z / 1.25f);
 
                 // ForceMode.VelocityChange for jump strength
-                plyr_rb.AddForce( new Vector3(0, (wt_fr_DblJmp ? (jumpForce * 1.5f) : jumpForce), 0), ForceMode.VelocityChange);
+                plyr_rb.AddForce( new Vector3(0, (wt_fr_DblJmp ? (jumpForce * 1.7f) : jumpForce * 1.2f), 0), ForceMode.VelocityChange);
                 //plyr_rb.velocity = new Vector3(plyr_rb.position.x, jumpForce, plyr_rb.position.z);
                 if (wt_fr_DblJmp == true){dbl_jump_ = true;}
                 
@@ -211,14 +211,20 @@ public class PlayerMovement : MonoBehaviour
             if (!stopRunning_){
                 // MAIN MOVMNT SPEED !  MAIN MOVMNT SPEED  //
                 // ForceMode.VelocityChange for persistant movementspeed
+
+                // STRAFE SPEED
                 if(plyr_sliding){
                     plyr_rb.AddForce( new Vector3(0, 0, 2 * uptd_speed), ForceMode.VelocityChange);
+
+                // WALL RUN 
                 }else if(plyr_wallRninng){
-                    plyr_rb.AddForce( new Vector3(0, 0.4f, 1.4f * uptd_speed), ForceMode.VelocityChange);
+                    plyr_rb.AddForce( new Vector3(0, 0.6f, 1.25f * uptd_speed), ForceMode.VelocityChange);
                 }else{
+                    // DEFAULT SPEED
                     if (!Input.GetKey("q") && !Input.GetKey("d")){
-                        plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying && !plyr_sliding ? uptd_speed/2f : uptd_speed)), ForceMode.VelocityChange);
+                        plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying && !plyr_sliding ? uptd_speed/2f : 1.2f * uptd_speed)), ForceMode.VelocityChange);
                     }
+                    // STRAFE SPEED
                     if (Input.GetKey("q") || Input.GetKey("d")){
                         plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? uptd_speed / 3.5f : uptd_speed / 2.5f )), ForceMode.VelocityChange);
                     }
@@ -230,7 +236,7 @@ public class PlayerMovement : MonoBehaviour
                     // LEFT ROTATION
                     if(!plyr_wallRninng){
                         if ( (plyr_trsnfm.rotation.eulerAngles.y >= 315.0f && plyr_trsnfm.rotation.eulerAngles.y <= 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y <= 47.0f) ){
-                            plyr_.transform.Rotate(0, -3.0f, 0, Space.Self);
+                            plyr_.transform.Rotate(0, -2.50f, 0, Space.Self);
                         } 
                     }
                     // LEFT STRAFE
@@ -241,7 +247,7 @@ public class PlayerMovement : MonoBehaviour
                     // RIGHT ROTATION
                     if(!plyr_wallRninng){
                         if ( (plyr_trsnfm.rotation.eulerAngles.y >= 311.0f) || ( Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) >= 0.0f && Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) <= 44.0f) ){
-                            plyr_.transform.Rotate(0, 3.0f, 0, Space.Self);
+                            plyr_.transform.Rotate(0, 2.50f, 0, Space.Self);
                         }else{
                             //Debug.Log("right blocked");
                         }
@@ -263,7 +269,7 @@ public class PlayerMovement : MonoBehaviour
         switch(cls_type){
             case "groundLeave":
                 _anim.SetBool("Flying", true);
-                _anim.SetBool("groundHit", false);
+                _anim.SetBool("GroundHit", false);
                 plyr_flying = true;
                 if(gameOver_ || plyr_obstclJmping || plyr_sliding){return;}
                 uptd_speed = svd_speed - (svd_speed/5);
@@ -323,6 +329,8 @@ public class PlayerMovement : MonoBehaviour
                     plyr_rb.AddForce( new Vector3(0, 22.5f, 0), ForceMode.VelocityChange);
                     _anim.SetBool("Flying", true);
                     _anim.SetBool("wallRun", false);
+                    float angl_ = Mathf.SmoothDampAngle(plyr_trsnfm.eulerAngles.y, 0, ref r, 0.20f);
+                    plyr_trsnfm.rotation = Quaternion.Euler(plyr_trsnfm.eulerAngles.x, angl_, plyr_trsnfm.eulerAngles.z);
                     plyr_wallRninng = false;
                 }
                 break;
@@ -366,10 +374,18 @@ public class PlayerMovement : MonoBehaviour
                 break;
             case "launcherHit":
                 _anim.SetBool("groundHit", false); 
-                StopCoroutine(delay_input(0.0f));
-                StartCoroutine(delay_input(0.5f));
-                plyr_rb.AddForce( new Vector3(0, jumpForce * 2.1f, 11), ForceMode.VelocityChange);
+                StopCoroutine(delay_input(0.0f)); StartCoroutine(delay_input(0.5f));
+                plyr_rb.AddForce( new Vector3(0, jumpForce * 2.56f, 13), ForceMode.VelocityChange);
                 StartCoroutine(Dly_bool_anm(0.5f, "launcherJump"));
+                break;
+            case "bumperJump":
+                _anim.SetBool("groundHit", false); 
+                _anim.SetBool("Flying", false); 
+                StopCoroutine(delay_input(0.0f)); StartCoroutine(delay_input(0.5f));
+                plyr_rb.AddForce( new Vector3(0, jumpForce * 2.56f, 13), ForceMode.VelocityChange);
+                StartCoroutine(Dly_bool_anm(0.5f, "bumperJump"));
+                // Bonus Speed [+35%]
+                plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, plyr_rb.velocity.z * 1.35f);
                 break;
             default:
                 break;
@@ -392,7 +408,21 @@ public class PlayerMovement : MonoBehaviour
         // TYRO HANDLER Find
         foreach(Transform child_trsf in prnt_){
             if(child_trsf.gameObject.tag == "tyro_handler"){
+                // Assign transform
                 tyro_handler_child = child_trsf.gameObject.GetComponent<Transform>();
+
+                // Disable Collectible.cs
+                Collectible c_;      
+                // Component[] components =  child_trsf.gameObject.GetComponents(typeof(Component));
+                // //foreach (T component in child_trsf.gameObject.GetComponents(typeof(Component))){
+                // foreach(Component component in components) {
+                //     if (component.ToString() == "Collectible"){
+                //         c_ = component;
+                //     }
+                // }
+                c_ = tyro_handler_child.gameObject.GetComponent<Collectible>();
+                c_.isAnimated = false;
+
                 // 2.6 scale for tyro handler
                 tyro_handler_child.localScale = new Vector3(2.6f, 2.6f, 2.6f);
                 break;

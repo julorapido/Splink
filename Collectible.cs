@@ -1,9 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class AnimationScript : MonoBehaviour {
+public class Collectible : MonoBehaviour {
 
-    private const bool isAnimated = true;
+    [HideInInspector]public bool isAnimated = true;
     private const float scaleAndFloatRate = 0.5f;
 
     [Header ("Settings")]
@@ -12,7 +12,7 @@ public class AnimationScript : MonoBehaviour {
     public bool isScaling = false;
 
     public Vector3 rotationAngle;
-    public float rotationSpeed;
+    private float rotationSpeed = 1f;
 
     [Header ("Floating Settings")]
     private float floatSpeed = 1f;
@@ -28,13 +28,13 @@ public class AnimationScript : MonoBehaviour {
     private float scaleTimer;
 
 	// Use this for initialization
-	void Start () {
+	private void Start () {
         // init start scale 
         startScale = gameObject.transform.localScale;
 	}
 	
 	// Update is called once per frame
-	void Update () {       
+	private void Update () {       
         
         if(isAnimated)
         {
@@ -46,7 +46,7 @@ public class AnimationScript : MonoBehaviour {
             if(isFloating)
             {
                 floatTimer += Time.deltaTime;
-                Vector3 moveDir = new Vector3(0.0f, 0.0f, floatSpeed);
+                Vector3 moveDir = new Vector3(0.0f, floatSpeed / 140f, 0.0f);
                 transform.Translate(moveDir);
 
                 if (goingUp && floatTimer >= scaleAndFloatRate)
