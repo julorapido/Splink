@@ -46,7 +46,8 @@ public class PlayerCollisions : MonoBehaviour
                     if(collision.gameObject.tag == "tyro"){FindObjectOfType<PlayerMovement>().tyro_movement(collision.gameObject);}
                     // Bumper jmp
                     if(collision.gameObject.tag == "bumper"){
-                        LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.2f, 0.4f).setEasePunch();
+                        GameObject pr_gm = collision.gameObject.transform.parent.gameObject == null ? collision.gameObject.transform.parent.gameObject : collision.gameObject;
+                        LeanTween.scale(pr_gm, pr_gm.transform.localScale * 1.2f, 0.4f).setEasePunch();
                         FindObjectOfType<PlayerMovement>().animateCollision("bumperJump", _size);
                     }
                     break;

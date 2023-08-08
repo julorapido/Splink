@@ -4,9 +4,9 @@ using UnityEngine;
 
 public class Grappling : MonoBehaviour
 {
-    [Header ("References")]
     private PlayerMovement pm_;
     //public Transform cam;
+    [Header ("References")]
     public Rigidbody rb_;
     public Transform plyr_pos;
     public Transform gunTip;
@@ -90,7 +90,7 @@ public class Grappling : MonoBehaviour
         Physics.Raycast(plyr_pos.position, plyr_pos.forward, out ray_hits[0], mx_grappl_distance, wt_grappleable);
         //Physics.SphereCast(plyr_pos.position, predictionSphereCastRadius, plyr_pos.forward, out sphereCastHit, mx_grappl_distance, wt_grappleable);
         for(int i = 1; i < 30; i++){// LEFT
-            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(-i/2, 2 + i/2, 0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
+            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(-i/10, 1.25f + i/10, 0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
             if(ray_hits[indx_].point != Vector3.zero){
                 trgrd_ = true;
                 //break;
@@ -98,7 +98,7 @@ public class Grappling : MonoBehaviour
             indx_++;
         }
         for(int j = 1; j < 30; j++){// RIGHT
-            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(j/2, 2 + j/2 ,0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
+            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(j/10, 1.25f + j/10 ,0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
             if(ray_hits[indx_].point != Vector3.zero){
                 trgrd_ = true;
                 //break; 
@@ -111,11 +111,15 @@ public class Grappling : MonoBehaviour
         for(int k = 0; k < ray_hits.Length; k++){
             int pt_ = Random.Range(1, ray_hits.Length);
             if(ray_hits[pt_].point != Vector3.zero){
-                gplr_point = ray_hits[pt_].point;
-                break;
+                Vector3  p = ray_hits[pt_].point;
+                float d_fm_p = Vector3.Distance(plyr_pos.position, p);
+                Debug.Log(d_fm_p);
+                if(d_fm_p > 7){
+                    gplr_point = p;
+                    break;
+                }
             }
         }
-        Debug.Log("gpl indx :   " + gplr_point);
         if(gplr_point == Vector3.zero){return;}
 
         // GRAPPLE JUMP
@@ -126,9 +130,10 @@ public class Grappling : MonoBehaviour
         hld_joint.autoConfigureConnectedAnchor = false;
         hld_joint.connectedAnchor = gplr_point;
 
+    
         float dist_frm_point = Vector3.Distance(plyr_pos.position, gplr_point);
-
-        if(dist_frm_point < mx_grappl_distance / 4){lr.enabled = false;return;}
+        Debug.Log("gpl indx :   " + gplr_point + " grpl dist = " + dist_frm_point);
+        //if(dist_frm_point < mx_grappl_distance / 4){lr.enabled = false;return;}
 
         // Player Mvmnt fnc call
         //FindObjectOfType<PlayerMovement>().grapple_anim(false);

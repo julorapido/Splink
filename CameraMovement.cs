@@ -5,6 +5,11 @@ using System;
 
 public class CameraMovement : MonoBehaviour
 {
+
+    [Header ("Player Animator")]
+    public GameObject p_gm;
+    private Animator p_anim;
+
     [Header ("Player Inspector Values")]
     public Transform player;
     public Rigidbody player_rb;
@@ -24,6 +29,12 @@ public class CameraMovement : MonoBehaviour
     private float xRot;
     private Vector3 def_offset;
 
+    [Header ("Camera Jump/Fly/Slide offset values")]
+    public float supl_xRot = 0.0f;
+    public float supl_yOff = 0.0f;
+    private float mathfRef = 0.0f;
+    private string dy_cm_inf = "";
+
     [Header ("Camera WallRun Values")]
     private float wallR_x_offst = 0.0f;
     private float wallR_y_offst = 0.0f;
@@ -37,6 +48,8 @@ public class CameraMovement : MonoBehaviour
     private Camera c_;
 
     private void Start(){
+        p_anim = p_gm.GetComponentInChildren<Animator>();
+
         def_offset = offset;
         //Application.targetFrameRate = 60;
         xRot = gameObject.transform.rotation.x;
@@ -61,13 +74,13 @@ public class CameraMovement : MonoBehaviour
         StartCoroutine(vert_rt(false));
     }
 
+    [Header ("Camera FixedUpdate & Lateupdate var")]
     // FXED UPDATE for Values
     private Vector3 desired_;
     private float lst_offst_x;
     private Quaternion desired_rt;
     private float x_offst = 0.0f;
-    //[SerializeField] float smoothSpeed = 9.0f;
-    private float smoothTime = 2f ;
+    //private float smoothTime = 2f ;
     private Vector3 currentVelocity;
 
     private bool tyro_on = false;
@@ -79,9 +92,10 @@ public class CameraMovement : MonoBehaviour
         }
 
         if(c_.fieldOfView != new_fov){
-            c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, new_fov, 0.2f);
+            c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, new_fov, 0.5f);
         }
 
+        
     }
 
     private void FixedUpdate(){
@@ -95,9 +109,20 @@ public class CameraMovement : MonoBehaviour
         }
 
         tyro_on = FindObjectOfType<PlayerMovement>().plyr_tyro;
-        //lst_frm_desired_ = desired_;
-        //desired_.y += vert_y_pos;
-   
+
+
+        if(p_anim != null){
+            if(p_anim.GetBool("Jump") || p_anim.GetBool("DoubleJump")){
+                //supl_xRot = Mathf.SmoothDamp(supl_xRot, -0.07f, ref mathfRef, 0.52f);
+                //supl_yOff = Mathf.SmoothDamp(supl_yOff, -4f, ref mathfRef, 0.52f);
+            }else if(p_anim.GetBool("launcherJump") || p_anim.GetBool("bumperJump") || p_anim.GetBool("obstacleJump") || p_anim.GetBool("slide")){
+                // supl_xRot = Mathf.SmoothDamp(supl_xRot, 0.04f, ref mathfRef, 0.4f);
+                // supl_yOff = Mathf.SmoothDamp(supl_yOff, 0.25f, ref mathfRef, 0.4f);
+            }else{
+                supl_xRot = Mathf.SmoothDamp(supl_xRot, 0f, ref mathfRef, 0.52f);
+                supl_yOff = Mathf.SmoothDamp(supl_yOff, 0f, ref mathfRef, 0.52f);
+            }
+        }
     }
 
     private void LateUpdate() {
@@ -106,15 +131,15 @@ public class CameraMovement : MonoBehaviour
         if (!game_Over_){
             // Dampen towards the target rotation
             //Quaternion initial_rt  = new Quaternion(15, gameObject.transform.rotation.y, 0, 1);  
-            Quaternion desired_rt  = new Quaternion(xRot, (x_offst / 130.0f) + wallR_rot_y_offst, (x_offst / 1500.0f) + wallR_rot_z_offst, 1);
-            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, 0.1f);
+            Quaternion desired_rt  = new Quaternion(xRot + supl_xRot, (x_offst / 130.0f) + wallR_rot_y_offst, (x_offst / 1500.0f) + wallR_rot_z_offst, 1);
+            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, 0.11f);
 
             // Smooth Damp
             Vector3 smoothFollow = Vector3.SmoothDamp(
                 transform.position,
-                desired_ + (tyro_on ? new Vector3(0f, 0.5f, 3.0f) : new Vector3(0f,0f,0f)) + new Vector3(wallR_x_offst, wallR_y_offst, wallR_z_offst),
+                desired_ + (tyro_on ? new Vector3(0f, 0.5f, 3.0f) : new Vector3(0f,0f,0f)) + new Vector3(wallR_x_offst, wallR_y_offst + supl_yOff, wallR_z_offst),
                 ref currentVelocity,
-                tyro_on ? 0.175f : 0.085f
+                tyro_on ? 0.175f : 0.06f
             ); 
             // Vector3 smoothFollow = Vector3.SmoothDamp(transform.position, desired_, ref currentVelocity, smoothTime *   Time.fixedDeltaTime); 
 
@@ -124,6 +149,7 @@ public class CameraMovement : MonoBehaviour
             transform.LookAt(player);
         }
     }
+
 
     private IEnumerator vert_trns_(bool loop_sns){
         float time = 1.25f;
@@ -165,10 +191,6 @@ public class CameraMovement : MonoBehaviour
     }
 
 
-    private IEnumerator rtation(){
-      yield return new WaitForSeconds(1f);
-    }
-
 
     // private void FovTrans(float fov_value, float t_){
     //     Camera c_ = gameObject.GetComponent<Camera>();
@@ -181,6 +203,7 @@ public class CameraMovement : MonoBehaviour
     public void wal_rn_offset(bool is_ext, Transform gm_){
         if(is_ext){
             //FovTrans(85f, 0.5f);
+            supl_xRot = 0.0f;
             new_fov = start_fov;
             wallR_x_offst = 0.0f; wallR_y_offst = 0.0f; wallR_z_offst = 0.0f;
 
@@ -189,9 +212,9 @@ public class CameraMovement : MonoBehaviour
             //FovTrans(start_fov, 0.5f);
             new_fov = 90f;
             wallR_y_offst = -0.55f;
-            wallR_z_offst = 1.50f;
+            // CLOSE UP Z OFFSET
+            wallR_z_offst = 2.20f;
             float sns =  player.position.x - gm_.position.x;
-            
             if(sns < 0 ){
                 wallR_x_offst = -1.35f; 
                 wallR_rot_y_offst = 0.150f; wallR_rot_z_offst = 0.14f;

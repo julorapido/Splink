@@ -20,12 +20,40 @@ public class PlayerVectors : MonoBehaviour
     [Header ("Vector Gmobj")]
     public GameObject animated_vector;
 
-    private void Start(){}
+    [Header ("Gameobjects Vector to apply")]
+    public GameObject[] g_v;
+
+
+    private int i = 0;
+    private void Start(){
+        g_v = new GameObject[60];
+    }
+    private void FixedUpdate(){
+        // Detect Side Bldgs
+        Collider[] hitColliders = Physics.OverlapSphere(gameObject.transform.position, 30f);
+        if(hitColliders.Length > 0){
+            foreach (var cl_ in hitColliders)
+            {
+                if(cl_.gameObject.tag == "ground"){
+                    Vector3 col_sz = cl_.bounds.size;
+                    //Debug.Log(col_sz);
+                    if(col_sz.x > 20f && col_sz.y > 7f){
+                        if(cl_?.gameObject != null){
+                            g_v[i] = cl_?.gameObject;
+                            i++;
+                        }
+                    }
+                }
+            }
+            apply_vector();
+            i = 0;
+        }
+    }
 
     // Update and Replace slippery arr
     public void slippery_trigr(bool is_exit, GameObject init_gmbj){
         // Htbox I/O
-        side_plyr_cldr.enabled = true;
+        StartCoroutine(cld_reactivate(0.6f));
         if(is_exit){
             side_plyr_cldr.enabled = false;
         // make plyr rotate
@@ -73,8 +101,26 @@ public class PlayerVectors : MonoBehaviour
         }
     }
 
+    private IEnumerator cld_reactivate(float t_){
+        yield return new WaitForSeconds(t_);
+        side_plyr_cldr.enabled = true;
+    }
+
+
     // Apply vectors to near walls
     private void apply_vector(){
-        
+        for (int i = 0; i < g_v.Length; i ++){  
+            GameObject j = g_v[i];
+            if(j != null){
+                Vector3 k = j.GetComponent<Collider>().bounds.size;
+                Vector3 c_ =  j.GetComponent<Collider>().bounds.center;
+                Instantiate(
+                    animated_vector,
+                    new Vector3(c_.x + (k.x / 2), c_.y + (k.y / 2), c_.z),
+                    new Quaternion(0,0,0,1),
+                    j.transform
+                );
+            }else{ break; }
+        }
     }
 }

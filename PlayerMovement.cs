@@ -41,7 +41,8 @@ public class PlayerMovement : MonoBehaviour
     private bool plyr_sliding = false;
     private bool plyr_wallRninng = false;
     private bool plyr_obstclJmping = false;
-    public bool plyr_tyro = false;
+    [HideInInspector] public bool plyr_tyro = false;
+    private Vector3 end_tyroPos;
 
     [Header ("Player Speed Informations")]
     public float plyr_speed = 0;
@@ -168,8 +169,9 @@ public class PlayerMovement : MonoBehaviour
             Quaternion e = actual_path.path.GetRotationAtDistance(last_tyro_trvld);
             plyr_trsnfm.rotation = new Quaternion(plyr_trsnfm.rotation.x, e.y, plyr_trsnfm.rotation.z, plyr_trsnfm.rotation.w);
             tyro_handler_child.rotation = new Quaternion(tyro_handler_child.rotation.x, e.y, tyro_handler_child.rotation.z, tyro_handler_child.rotation.w);
-
-            if(last_tyro_trvld > 52.0f){
+            
+            float d_end = Vector3.Distance(plyr_trsnfm.position, end_tyroPos);
+            if(d_end < 2f){
                 plyr_tyro = false;
                 plyr_rb.AddForce( new Vector3(0, 20, 10), ForceMode.VelocityChange);
                 _anim.SetBool("tyro", false);
@@ -218,7 +220,7 @@ public class PlayerMovement : MonoBehaviour
 
                 // WALL RUN 
                 }else if(plyr_wallRninng){
-                    plyr_rb.AddForce( new Vector3(0, 0.6f, 1.25f * uptd_speed), ForceMode.VelocityChange);
+                    plyr_rb.AddForce( new Vector3(0, 0.9f, 1.25f * uptd_speed), ForceMode.VelocityChange);
                 }else{
                     // DEFAULT SPEED
                     if (!Input.GetKey("q") && !Input.GetKey("d")){
@@ -226,7 +228,7 @@ public class PlayerMovement : MonoBehaviour
                     }
                     // STRAFE SPEED
                     if (Input.GetKey("q") || Input.GetKey("d")){
-                        plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? uptd_speed / 3.5f : uptd_speed / 2.5f )), ForceMode.VelocityChange);
+                        plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? uptd_speed / 4.2f : uptd_speed / 2.5f )), ForceMode.VelocityChange);
                     }
                 }
  
@@ -382,7 +384,7 @@ public class PlayerMovement : MonoBehaviour
                 _anim.SetBool("groundHit", false); 
                 _anim.SetBool("Flying", false); 
                 StopCoroutine(delay_input(0.0f)); StartCoroutine(delay_input(0.5f));
-                plyr_rb.AddForce( new Vector3(0, jumpForce * 2.56f, 13), ForceMode.VelocityChange);
+                plyr_rb.AddForce( new Vector3(0, jumpForce * 2.85f, 16), ForceMode.VelocityChange);
                 StartCoroutine(Dly_bool_anm(0.5f, "bumperJump"));
                 // Bonus Speed [+35%]
                 plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, plyr_rb.velocity.z * 1.35f);
@@ -401,10 +403,12 @@ public class PlayerMovement : MonoBehaviour
         Transform prnt_ = path_obj.transform.parent;
         PathCreator[] paths_ = prnt_.GetComponentsInChildren<PathCreator>();
         actual_path = paths_[0];
+        end_tyroPos = actual_path.path.GetPoint(1);
+
         _anim.SetBool("tyro", true);
         _anim.SetBool("launcherJump", false);
         _anim.SetBool("GroundHit", false);
-
+        
         // TYRO HANDLER Find
         foreach(Transform child_trsf in prnt_){
             if(child_trsf.gameObject.tag == "tyro_handler"){
