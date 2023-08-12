@@ -21,8 +21,10 @@ public class PlayerVectors : MonoBehaviour
     public GameObject animated_vector;
 
     [Header ("Gameobjects Vector to apply")]
-    public GameObject[] g_v;
+    private GameObject[] g_v;
 
+    [Header ("Last inheritant Gameobject")]
+    private GameObject last_gm;
 
     private int i = 0;
     private void Start(){
@@ -45,13 +47,16 @@ public class PlayerVectors : MonoBehaviour
                     }
                 }
             }
-            apply_vector();
+            //apply_vector();
             i = 0;
         }
     }
 
     // Update and Replace slippery arr
     public void slippery_trigr(bool is_exit, GameObject init_gmbj){
+        if(init_gmbj == last_gm){return;}else{
+            last_gm = init_gmbj;
+        }
         // Htbox I/O
         StartCoroutine(cld_reactivate(0.6f));
         if(is_exit){

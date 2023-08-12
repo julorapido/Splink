@@ -40,11 +40,17 @@ public class CameraMovement : MonoBehaviour
     private float wallR_y_offst = 0.0f;
     private float wallR_z_offst = 0.0f;
 
+    public float wallR_rot_x_offst = 0.0f;
     private float wallR_rot_y_offst = 0.0f;
     private float wallR_rot_z_offst = 0.0f;
 
+    [Header ("Fov Floats")]
     private float start_fov;
     private float new_fov;
+
+    [Header ("Grappl SmoothDamp Boolean")]
+    private bool smthDmp_grpl = false;
+
     private Camera c_;
 
     private void Start(){
@@ -84,6 +90,7 @@ public class CameraMovement : MonoBehaviour
     private Vector3 currentVelocity;
 
     private bool tyro_on = false;
+    private bool sliding_on = false;
     private bool rotate_back = false;
 
     private void Update(){
@@ -95,7 +102,9 @@ public class CameraMovement : MonoBehaviour
             c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, new_fov, 0.5f);
         }
 
-        
+        if(smthDmp_grpl){
+            wallR_rot_x_offst = Mathf.SmoothDamp(wallR_rot_x_offst, -0.10f, ref mathfRef, 0.25f);
+        }
     }
 
     private void FixedUpdate(){
@@ -109,12 +118,12 @@ public class CameraMovement : MonoBehaviour
         }
 
         tyro_on = FindObjectOfType<PlayerMovement>().plyr_tyro;
-
+        sliding_on =  FindObjectOfType<PlayerMovement>().plyr_sliding;
 
         if(p_anim != null){
             if(p_anim.GetBool("Jump") || p_anim.GetBool("DoubleJump")){
                 //supl_xRot = Mathf.SmoothDamp(supl_xRot, -0.07f, ref mathfRef, 0.52f);
-                //supl_yOff = Mathf.SmoothDamp(supl_yOff, -4f, ref mathfRef, 0.52f);
+                //supl_yOff = Mathf.SmoothDamp(supl_yOff, -2f, ref mathfRef, 0.52f);
             }else if(p_anim.GetBool("launcherJump") || p_anim.GetBool("bumperJump") || p_anim.GetBool("obstacleJump") || p_anim.GetBool("slide")){
                 // supl_xRot = Mathf.SmoothDamp(supl_xRot, 0.04f, ref mathfRef, 0.4f);
                 // supl_yOff = Mathf.SmoothDamp(supl_yOff, 0.25f, ref mathfRef, 0.4f);
@@ -131,15 +140,15 @@ public class CameraMovement : MonoBehaviour
         if (!game_Over_){
             // Dampen towards the target rotation
             //Quaternion initial_rt  = new Quaternion(15, gameObject.transform.rotation.y, 0, 1);  
-            Quaternion desired_rt  = new Quaternion(xRot + supl_xRot, (x_offst / 130.0f) + wallR_rot_y_offst, (x_offst / 1500.0f) + wallR_rot_z_offst, 1);
-            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, 0.11f);
+            Quaternion desired_rt  = new Quaternion(xRot + supl_xRot + wallR_rot_x_offst, (x_offst / 130.0f) + wallR_rot_y_offst, (x_offst / 1500.0f) + wallR_rot_z_offst, 1);
+            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, tyro_on ? 0.07f : 0.14f);
 
             // Smooth Damp
             Vector3 smoothFollow = Vector3.SmoothDamp(
                 transform.position,
                 desired_ + (tyro_on ? new Vector3(0f, 0.5f, 3.0f) : new Vector3(0f,0f,0f)) + new Vector3(wallR_x_offst, wallR_y_offst + supl_yOff, wallR_z_offst),
                 ref currentVelocity,
-                tyro_on ? 0.175f : 0.06f
+                tyro_on ? 0.15f : 0.07f
             ); 
             // Vector3 smoothFollow = Vector3.SmoothDamp(transform.position, desired_, ref currentVelocity, smoothTime *   Time.fixedDeltaTime); 
 
@@ -207,7 +216,7 @@ public class CameraMovement : MonoBehaviour
             new_fov = start_fov;
             wallR_x_offst = 0.0f; wallR_y_offst = 0.0f; wallR_z_offst = 0.0f;
 
-            wallR_rot_z_offst = 0.0f; wallR_rot_y_offst = 0.0f;
+            wallR_rot_z_offst = 0.0f; wallR_rot_y_offst = 0.0f; wallR_rot_x_offst = 0.0f;
         }else{
             //FovTrans(start_fov, 0.5f);
             new_fov = 90f;
@@ -223,6 +232,54 @@ public class CameraMovement : MonoBehaviour
                 wallR_x_offst = 1.35f;
                 wallR_rot_y_offst = -0.150f; wallR_rot_z_offst = -0.14f;
             }
+        }
+    }
+
+
+    // PUBLIC CAM VALUES TRANS FOR GRAPPLING
+    public void grpl_offset(bool is_ext, Transform gm_ = null){
+        if(is_ext){
+            //FovTrans(85f, 0.5f);
+            supl_xRot = 0.0f;
+            new_fov = start_fov;
+            wallR_x_offst = 0.0f; wallR_y_offst = 0.0f; wallR_z_offst = 0.0f; wallR_rot_z_offst = 0.0f; wallR_rot_y_offst = 0.0f;wallR_rot_x_offst = 0.0f;
+        }else{
+            if(gm_){
+                new_fov = 100f;
+                float sns =  player.position.x - gm_.position.x;
+                // CLOSE UP Z OFFSET
+                wallR_z_offst = 2.20f;
+                wallR_y_offst = -0.6f;
+
+                wallR_rot_x_offst = 0.20f;
+
+                // SMOOTH DAMP FOR X ROTATION boolean
+                //wallR_rot_x_offst = Mathf.SmoothDamp(wallR_rot_x_offst, -0.10f, ref mathfRef, 3f);
+                smthDmp_grpl = true;
+
+                if(sns < 0 ) {wallR_x_offst = 0.3f; wallR_rot_z_offst = -0.07f;} else{
+                    wallR_rot_z_offst = 0.07f;
+                    wallR_x_offst = -0.3f; 
+                }
+            }
+        }
+    }
+
+    // PUBLIC CAM VALUES TRANS FOR SLIDING
+    public void sld_offset(bool is_ext){
+        if(is_ext){
+            //FovTrans(85f, 0.5f);
+            supl_xRot = 0.0f;
+            new_fov = start_fov;
+            wallR_x_offst = 0.0f; wallR_y_offst = 0.0f; wallR_z_offst = 0.0f; wallR_rot_z_offst = 0.0f; wallR_rot_y_offst = 0.0f;wallR_rot_x_offst = 0.0f;
+        }else{
+            new_fov = 86f;
+            // CLOSE UP Z OFFSET
+            wallR_z_offst = 1.40f;
+            wallR_y_offst = -0.35f;
+
+            // SMOOTH DAMP FOR X ROTATION
+            wallR_rot_x_offst = -0.090f;       
         }
     }
 }

@@ -20,10 +20,13 @@ public class Grappling : MonoBehaviour
     [Header ("Grappnling Jump Overshoot")]
     public float overshootYAxis;
 
+    [Header ("Grappnling Point & GM")]
     private Vector3 gplr_point;
+    private GameObject gplr_gm;
 
     [Header ("Cooldown")]
     public float grpl_cd;
+    public float max_grpl_time;
     private float grpl_cd_timer;
 
     [Header ("Input")]
@@ -74,10 +77,6 @@ public class Grappling : MonoBehaviour
         if(is_grpling_)
             lr.SetPosition(0, gunTip.position);
 
-        // if(is_grpling_)
-        //     currentGrplPosition = Vector3.Lerp(currentGrplPosition, gplr_point, Time.deltaTime * 8f);
-        //     lr.SetPosition(0, gunTip.position);
-        //     lr.SetPosition(1, currentGrplPosition);
     }
 
     private void StartGrapple(){
@@ -85,20 +84,20 @@ public class Grappling : MonoBehaviour
         is_grpling_ = true;
         bool trgrd_ = false;
 
-        RaycastHit[] ray_hits = new RaycastHit[(30 * 2) + 1];
+        RaycastHit[] ray_hits = new RaycastHit[(75 * 2) + 1];
         int indx_ = 1;
         Physics.Raycast(plyr_pos.position, plyr_pos.forward, out ray_hits[0], mx_grappl_distance, wt_grappleable);
         //Physics.SphereCast(plyr_pos.position, predictionSphereCastRadius, plyr_pos.forward, out sphereCastHit, mx_grappl_distance, wt_grappleable);
-        for(int i = 1; i < 30; i++){// LEFT
-            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(-i/10, 1.25f + i/10, 0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
+        for(int i = 1; i < 75; i++){// LEFT
+            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(-i/10, 1.25f + i/8, 0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
             if(ray_hits[indx_].point != Vector3.zero){
                 trgrd_ = true;
                 //break;
             }
             indx_++;
         }
-        for(int j = 1; j < 30; j++){// RIGHT
-            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(j/10, 1.25f + j/10 ,0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
+        for(int j = 1; j < 75; j++){// RIGHT
+            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(j/10, 1.25f + j/8 ,0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
             if(ray_hits[indx_].point != Vector3.zero){
                 trgrd_ = true;
                 //break; 
@@ -108,15 +107,19 @@ public class Grappling : MonoBehaviour
         
   
         // DEFINE GRPL POINT
+        // var rng = new Random();
+        // ray_hits = ray_hits.OrderBy(e => rng.NextDouble()).ToArray();
         for(int k = 0; k < ray_hits.Length; k++){
             int pt_ = Random.Range(1, ray_hits.Length);
-            if(ray_hits[pt_].point != Vector3.zero){
-                Vector3  p = ray_hits[pt_].point;
+            if(ray_hits[k].point != Vector3.zero){
+                Vector3  p = ray_hits[k].point;
                 float d_fm_p = Vector3.Distance(plyr_pos.position, p);
-                Debug.Log(d_fm_p);
-                if(d_fm_p > 7){
-                    gplr_point = p;
-                    break;
+                if(d_fm_p > 12){
+                    //if(ray_hits[k].transform.gameObject.collider.tag == "ground"){
+                        gplr_point = p;
+                        gplr_gm = ray_hits[k].transform.gameObject;
+                        break;
+                    //}
                 }
             }
         }
@@ -143,9 +146,9 @@ public class Grappling : MonoBehaviour
         hld_joint.minDistance = dist_frm_point * 0.25f;
 
         // cutsom values
-        hld_joint.spring = 700f;
-        hld_joint.damper = 7f;
-        hld_joint.massScale = 8.5f;
+        hld_joint.spring = 200f; // ELASTIC STRENGTH
+        hld_joint.damper = 10f;
+        hld_joint.massScale = 10f;
 
         //
         //lr.positionCount = 2;
@@ -153,10 +156,16 @@ public class Grappling : MonoBehaviour
         lr.SetPosition(1, gplr_point);
         
         // Delay Grapple
-        StopCoroutine(grappleDelay(3f));
-        StartCoroutine(grappleDelay(3f));
+        StopCoroutine(grappleDelay(max_grpl_time));
+        grappl_ended = false;
+        StartCoroutine(grappleDelay(max_grpl_time));
+
         if(!trgrd_){
             lr.enabled = false;
+        }else{
+            // CALL PLAYER MOVEMENT GRAPPLE ANIMATION
+            FindObjectOfType<PlayerMovement>().swing_anm(false, gplr_point);
+            FindObjectOfType<CameraMovement>().grpl_offset(false, gplr_gm.transform);
         }
       
     }
@@ -174,6 +183,7 @@ public class Grappling : MonoBehaviour
     }
 
 
+    // // // // // // // GRAPPLE DASH // // // // // // // // // // 
     private void JumpToPosition (Vector3 targetPos, float traj_height){
         activ_grapple = true;
         rb_.velocity = CalculateJumpVelocity(plyr_pos.position, targetPos, traj_height);
@@ -192,7 +202,7 @@ public class Grappling : MonoBehaviour
         return velocityXZ + velocityY;
     }
 
-    private void ExecuteGrapple(){
+    private void ExecuteGrapple(){  
         Vector3 lowestPoint = new Vector3(plyr_pos.transform.position.x, plyr_pos.transform.position.y - 1.5f, plyr_pos.transform.position.z);
         float grapplePointRelativeYPos = gplr_point.y - lowestPoint.y;
         float highestPointOnArc = grapplePointRelativeYPos + overshootYAxis; // ADDING THE Y AXIS ARC VALUE
@@ -201,7 +211,10 @@ public class Grappling : MonoBehaviour
 
         JumpToPosition(gplr_point,  highestPointOnArc); 
     }
+    // // // // // // // // // // // // // // // // // // // // // // // // 
 
+
+    
     private void StopGrapple(){
         is_grpling_ = false;
         grpl_cd_timer = grpl_cd;
@@ -209,7 +222,8 @@ public class Grappling : MonoBehaviour
         StartCoroutine(grappleResetDelay(2f));
         //lr.positionCount = 0;
         // Player Mvmnt fnc call
-        FindObjectOfType<PlayerMovement>().grapple_anim(true);
+        FindObjectOfType<PlayerMovement>().swing_anm(true, new Vector3(0,0,0));
+        FindObjectOfType<CameraMovement>().grpl_offset(true);
         lr.enabled = false;
     }
 

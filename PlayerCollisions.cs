@@ -12,7 +12,7 @@ public class PlayerCollisions : MonoBehaviour
     public string[] colsions_values = new string[4]{"ground", "frontwall","sidewall", "slider"};
 
     [Header ("SubCollisions Constants")]
-    public string[] subcolsions_values = new string[4]{"obstacleHit", "launcherHit","tyro", "bumper"};
+    public string[] subcolsions_values = new string[5]{"obstacleHit", "launcherHit","tyro", "bumper", "tapTapJump"};
 
     [Header ("Selected Collision")]
     public string slcted_clsion;
@@ -50,6 +50,10 @@ public class PlayerCollisions : MonoBehaviour
                         LeanTween.scale(pr_gm, pr_gm.transform.localScale * 1.2f, 0.4f).setEasePunch();
                         FindObjectOfType<PlayerMovement>().animateCollision("bumperJump", _size);
                     }
+                    // Tap Tap Jump
+                    if(collision.gameObject.tag == "tapTapJump"){
+                         FindObjectOfType<PlayerMovement>().animateCollision("tapTapJump", _size, collision.gameObject);
+                    }
                     break;
                 case "frontwall":
                     // front wall gameover
@@ -74,6 +78,7 @@ public class PlayerCollisions : MonoBehaviour
                         dwned.y -= 0.1f;
                         Vector3 smoothDwn_ = Vector3.SmoothDamp(collision.gameObject.transform.position, dwned, ref currentVelocity, 0.4f); 
                         FindObjectOfType<PlayerMovement>().animateCollision("sliderHit", _size);
+                        FindObjectOfType<CameraMovement>().sld_offset(false);
                     }  
                     break;
                 default:
@@ -111,6 +116,7 @@ public class PlayerCollisions : MonoBehaviour
                         upped.y += 0.1f;
                         Vector3 smoothUp_ = Vector3.SmoothDamp(collision.gameObject.transform.position, upped, ref currentVelocity, 0.4f); 
                         FindObjectOfType<PlayerMovement>().animateCollision("sliderLeave", _size);
+                        FindObjectOfType<CameraMovement>().sld_offset(true);
                     }  
                     break;
                 default:
