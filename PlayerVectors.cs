@@ -62,7 +62,21 @@ public class PlayerVectors : MonoBehaviour
         if(is_exit){
             side_plyr_cldr.enabled = false;
         // make plyr rotate
-        }else{ plyr_trsnfm.localRotation = Quaternion.Slerp(plyr_trsnfm.rotation, init_gmbj.transform.rotation, 0.4f);}
+        }else{
+            float y_rt = init_gmbj.transform.rotation.eulerAngles.y;
+            // if(! ((y_rt > 260f && y_rt < 360f) ||  (y_rt < 45f)) ){
+            //     //y_rt = y_rt > 46f ? 40f : 
+            // }
+            Quaternion p_  = new Quaternion(plyr_trsnfm.rotation.eulerAngles.x, y_rt, plyr_trsnfm.rotation.eulerAngles.z, 0);
+            plyr_trsnfm.localRotation = Quaternion.Slerp(plyr_trsnfm.rotation, init_gmbj.transform.rotation, 0.3f);
+            y_rt = plyr_trsnfm.localRotation.eulerAngles.y;
+
+            if(! ((y_rt < 0f && y_rt < -47.0f) ||  (y_rt >= 0 && y_rt > 46.0f)) ){
+                // Quaternion n_ =  new Quaternion(plyr_trsnfm.rotation.eulerAngles.x, y_rt < 0f ?  -47.0f : 45.0f, plyr_trsnfm.rotation.eulerAngles.z, 0);
+                // plyr_trsnfm.localRotation = Quaternion.Slerp(plyr_trsnfm.rotation, n_, 0.4f);
+            }
+
+        }
 
         // Disable previous slippery arr
         if(acutal_grnds[0] != null){

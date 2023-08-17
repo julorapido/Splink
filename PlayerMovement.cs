@@ -222,7 +222,7 @@ public class PlayerMovement : MonoBehaviour
 
                 // WALL RUN 
                 }else if(plyr_wallRninng){
-                    plyr_rb.AddForce( new Vector3(0, 0.9f, 1.10f * uptd_speed), ForceMode.VelocityChange);
+                    plyr_rb.AddForce( new Vector3(0, 1.05f, 1.10f * uptd_speed), ForceMode.VelocityChange);
                 }else{
                     // DEFAULT SPEED
                     if (!Input.GetKey("q") && !Input.GetKey("d")){
@@ -230,7 +230,7 @@ public class PlayerMovement : MonoBehaviour
                     }
                     // STRAFE SPEED
                     if (Input.GetKey("q") || Input.GetKey("d")){
-                        plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? uptd_speed / 4.2f : uptd_speed / 2.5f )), ForceMode.VelocityChange);
+                        plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? uptd_speed / 4.2f : uptd_speed / 2.15f )), ForceMode.VelocityChange);
                     }
                 }
  
@@ -268,10 +268,10 @@ public class PlayerMovement : MonoBehaviour
                 if (Input.GetKey("d")){plyr_rb.AddForce((0.6f * (Vector3.right * strafe_speed)), ForceMode.VelocityChange);}
                 if (Input.GetKey("d") || Input.GetKey("q")){plyr_rb.AddForce( new Vector3(0f, 0.32f, 0f), ForceMode.VelocityChange);}
                 if (grap_pnt != new Vector3(0,0,0)){
-                    if(plyr_trsnfm.position.z < grap_pnt.z - 0.3f){
+                    if(plyr_trsnfm.position.z < grap_pnt.z - 0.75f){
                         plyr_rb.AddForce( new Vector3(0, -0.20f,  0.8f * uptd_speed), ForceMode.VelocityChange);
                     }else{
-                        plyr_rb.AddForce( new Vector3(0, 0.20f,  0.8f * uptd_speed), ForceMode.VelocityChange);
+                        plyr_rb.AddForce( new Vector3(0, 0.20f,  1.2f * uptd_speed), ForceMode.VelocityChange);
                     }
                 }
             }
@@ -346,7 +346,8 @@ public class PlayerMovement : MonoBehaviour
                 break;
             case "wallRunExit":
                 if(!gameOver_){
-                    plyr_rb.AddForce( new Vector3(0, 21f, 0), ForceMode.VelocityChange);
+                    plyr_rb.velocity = new Vector3(plyr_rb.velocity.x / 2, plyr_rb.velocity.y, plyr_rb.velocity.z / 1.5f);
+                    plyr_rb.AddForce( new Vector3(0, 19f, 0), ForceMode.VelocityChange);
                     _anim.SetBool("Flying", true);
                     _anim.SetBool("wallRun", false);
                     plyr_wallRninng = false;

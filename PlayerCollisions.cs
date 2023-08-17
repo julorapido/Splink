@@ -17,12 +17,18 @@ public class PlayerCollisions : MonoBehaviour
     [Header ("Selected Collision")]
     public string slcted_clsion;
 
+    [Header ("Ground Physical Mat")]
+    public PhysicMaterial grnd_mat;
+
     [Header ("Start Delay")]
     public float strt_delay;
     private bool can_trgr = false;
     public Transform ply_transform;
     private Vector3 currentVelocity;
     //ImmutableList<string> colors = ImmutableList.Create("Red", "Green", "Blue");
+
+    [Header ("Sider Wall last_registered_gm")]
+    private int lst_wall;
 
     private void Start(){
         StartCoroutine(delay_trgrs(strt_delay));
@@ -37,6 +43,10 @@ public class PlayerCollisions : MonoBehaviour
                     if(collision.gameObject.tag == "ground"){
                         FindObjectOfType<PlayerMovement>().animateCollision("groundHit", _size);
                         FindObjectOfType<CameraMovement>().fly_dynm(false);
+                        if(grnd_mat != null){
+                            Collider p =  collision.gameObject.GetComponent<Collider>();
+                            if(p){ p.sharedMaterial = grnd_mat;}
+                        }
                     }
                     // Obstcl hit
                     if(collision.gameObject.tag == "obstacle"){FindObjectOfType<PlayerMovement>().animateCollision("obstacleHit", _size);}
@@ -55,22 +65,28 @@ public class PlayerCollisions : MonoBehaviour
                          FindObjectOfType<PlayerMovement>().animateCollision("tapTapJump", _size, collision.gameObject);
                     }
                     break;
+
                 case "frontwall":
                     // front wall gameover
                     if(collision.gameObject.tag == "ground"){
                         FindObjectOfType<PlayerMovement>().animateCollision("frontWallHit", _size);
                     }
                     break;
+
                 case "sidewall":
                     // Sidewall hit
                     if(collision.gameObject.tag == "ground"){
-                        Vector3 targetDir = collision.gameObject.transform.position - ply_transform.position;
-                        float angle = Vector3.Angle(targetDir, transform.forward);
-                        FindObjectOfType<PlayerMovement>().animateCollision("wallRunHit", _size);
-                        FindObjectOfType<PlayerVectors>().slippery_trigr(false, collision.gameObject);
-                        FindObjectOfType<CameraMovement>().wal_rn_offset(false, collision.gameObject.transform);
+                        if(lst_wall != null && lst_wall != collision.gameObject.GetInstanceID()){
+                            lst_wall = (collision.gameObject.GetInstanceID());
+                            Vector3 targetDir = collision.gameObject.transform.position - ply_transform.position;
+                            float angle = Vector3.Angle(targetDir, transform.forward);
+                            FindObjectOfType<PlayerMovement>().animateCollision("wallRunHit", _size);
+                            FindObjectOfType<PlayerVectors>().slippery_trigr(false, collision.gameObject);
+                            FindObjectOfType<CameraMovement>().wal_rn_offset(false, collision.gameObject.transform);
+                        }
                     }
                     break; 
+
                 case "slider":
                     if(collision.gameObject.tag == "slider"){
                         //LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.05f, 0.4f).setEasePunch();
@@ -81,6 +97,7 @@ public class PlayerCollisions : MonoBehaviour
                         FindObjectOfType<CameraMovement>().sld_offset(false);
                     }  
                     break;
+
                 default:
                     break;
             }
@@ -102,6 +119,7 @@ public class PlayerCollisions : MonoBehaviour
                         FindObjectOfType<PlayerMovement>().animateCollision("obstacleLeave", _size);
                     }
                     break;
+
                 case "sidewall":
                     if(collision.gameObject.tag == "ground"){
                         FindObjectOfType<PlayerMovement>().animateCollision("wallRunExit", _size);
@@ -109,6 +127,7 @@ public class PlayerCollisions : MonoBehaviour
                         FindObjectOfType<CameraMovement>().wal_rn_offset(true, collision.gameObject.transform);
                     }
                     break; 
+
                 case "slider":
                     if(collision.gameObject.tag == "slider"){
                         LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.08f, 1f).setEasePunch();
@@ -119,6 +138,7 @@ public class PlayerCollisions : MonoBehaviour
                         FindObjectOfType<CameraMovement>().sld_offset(true);
                     }  
                     break;
+
                 default:
                     break;
             }
@@ -129,5 +149,8 @@ public class PlayerCollisions : MonoBehaviour
         yield return new WaitForSeconds(dl);
         can_trgr = true;
     }
- 
+    
+    private IEnumerator sid_wl_delay(){
+        yield return new WaitForSeconds(0.6f);
+    }
 }

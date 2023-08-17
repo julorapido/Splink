@@ -32,10 +32,7 @@ public class Grappling : MonoBehaviour
     [Header ("Input")]
     public KeyCode grapplekey;
 
-    [Header ("Prediction Radius")]
-    //public RaycastHit PredictionHit;
-    public float predictionSphereCastRadius;
-    //public Transform predictionPoint;
+    [Header ("Delay Booleans")]
 
     private bool is_grpling_;
     private bool activ_grapple = false;
@@ -84,37 +81,40 @@ public class Grappling : MonoBehaviour
         is_grpling_ = true;
         bool trgrd_ = false;
 
-        RaycastHit[] ray_hits = new RaycastHit[(75 * 2) + 1];
+        RaycastHit[] ray_hits = new RaycastHit[(155 * 2) + 1];
         int indx_ = 1;
         Physics.Raycast(plyr_pos.position, plyr_pos.forward, out ray_hits[0], mx_grappl_distance, wt_grappleable);
         //Physics.SphereCast(plyr_pos.position, predictionSphereCastRadius, plyr_pos.forward, out sphereCastHit, mx_grappl_distance, wt_grappleable);
-        for(int i = 1; i < 75; i++){// LEFT
-            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(-i/10, 1.25f + i/8, 0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
-            if(ray_hits[indx_].point != Vector3.zero){
+        for(int i = 1; i < 155; i++){// LEFT
+            Physics.Raycast(plyr_pos.position + new Vector3(-i/12, 0.65f + (i/12), 0.2f), plyr_pos.forward, out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
+            if(ray_hits[indx_].point != Vector3.zero ){
                 trgrd_ = true;
                 //break;
+                indx_++;
             }
-            indx_++;
         }
-        for(int j = 1; j < 75; j++){// RIGHT
-            Physics.Raycast(plyr_pos.position, plyr_pos.forward + new Vector3(j/10, 1.25f + j/8 ,0), out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
+        for(int j = 1; j < 155; j++){// RIGHT
+            Physics.Raycast(plyr_pos.position + new Vector3(j/12, 0.65f + (j/12), 0.2f), plyr_pos.forward , out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
             if(ray_hits[indx_].point != Vector3.zero){
                 trgrd_ = true;
                 //break; 
+                indx_++;
             }
-            indx_++;
         }
-        
+        for(int k = 0; k < indx_; k++){
+            Vector3  p = ray_hits[k].point;
+            Debug.Log(p);
+        }
   
         // DEFINE GRPL POINT
         // var rng = new Random();
         // ray_hits = ray_hits.OrderBy(e => rng.NextDouble()).ToArray();
-        for(int k = 0; k < ray_hits.Length; k++){
-            int pt_ = Random.Range(1, ray_hits.Length);
+        for(int k = 0; k < indx_; k++){
+            int pt_ = Random.Range(1, indx_);
             if(ray_hits[k].point != Vector3.zero){
                 Vector3  p = ray_hits[k].point;
                 float d_fm_p = Vector3.Distance(plyr_pos.position, p);
-                if(d_fm_p > 12){
+                if(d_fm_p > 10){
                     //if(ray_hits[k].transform.gameObject.collider.tag == "ground"){
                         gplr_point = p;
                         gplr_gm = ray_hits[k].transform.gameObject;
@@ -146,12 +146,13 @@ public class Grappling : MonoBehaviour
         hld_joint.minDistance = dist_frm_point * 0.25f;
 
         // cutsom values
-        hld_joint.spring = 200f; // ELASTIC STRENGTH
-        hld_joint.damper = 10f;
+        hld_joint.spring = 120f; // ELASTIC STRENGTH
+        hld_joint.damper = 100f;
         hld_joint.massScale = 10f;
 
         //
         //lr.positionCount = 2;
+
         lr.enabled = true;
         lr.SetPosition(1, gplr_point);
         
