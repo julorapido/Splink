@@ -99,11 +99,11 @@ public class CameraMovement : MonoBehaviour
         }
 
         if(c_.fieldOfView != new_fov){
-            c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, new_fov, 0.5f);
+            c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, new_fov, 0.85f);
         }
 
         if(smthDmp_grpl){
-            wallR_rot_x_offst = Mathf.SmoothDamp(wallR_rot_x_offst, -0.08f, ref mathfRef, 0.275f);
+            wallR_rot_x_offst = Mathf.SmoothDamp(wallR_rot_x_offst, -0.08f, ref mathfRef, 0.295f);
         }
     }
 
@@ -113,7 +113,7 @@ public class CameraMovement : MonoBehaviour
         if(((-0.050f * x_offst)) != lst_offst_x){
             desired_  = (player.position + offset);
             desired_.x = desired_.x +  ((-0.050f * x_offst));
-            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 85;
+            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 60;
             lst_offst_x = ((-0.050f * x_offst));
         }
 
@@ -140,8 +140,8 @@ public class CameraMovement : MonoBehaviour
         if (!game_Over_){
             // Dampen towards the target rotation
             //Quaternion initial_rt  = new Quaternion(15, gameObject.transform.rotation.y, 0, 1);  
-            Quaternion desired_rt  = new Quaternion(xRot + supl_xRot + wallR_rot_x_offst, (x_offst / 130.0f) + wallR_rot_y_offst, (x_offst / 1500.0f) + wallR_rot_z_offst, 1);
-            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt, tyro_on ? 0.07f : 0.11f);
+            Quaternion desired_rt  = new Quaternion(xRot + supl_xRot + wallR_rot_x_offst, (x_offst / 130.0f) + wallR_rot_y_offst, (x_offst / 10000.0f) + wallR_rot_z_offst, 1);
+            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt,  tyro_on ? 0.07f : 0.15f);
 
             // Smooth Damp
             Vector3 smoothFollow = Vector3.SmoothDamp(
@@ -218,7 +218,6 @@ public class CameraMovement : MonoBehaviour
 
             wallR_rot_z_offst = 0.0f; wallR_rot_y_offst = 0.0f; wallR_rot_x_offst = 0.0f;
         }else{
-            Debug.Log("WALL RUN CAMERA TRANSITION CALL !");
             //FovTrans(start_fov, 0.5f);
             new_fov = 90f;
             wallR_y_offst = -0.55f;
@@ -243,16 +242,16 @@ public class CameraMovement : MonoBehaviour
             //FovTrans(85f, 0.5f);
             supl_xRot = 0.0f;
             new_fov = start_fov;
-            wallR_x_offst = 0.0f; wallR_y_offst = 0.0f; wallR_z_offst = 0.0f; wallR_rot_z_offst = 0.0f; wallR_rot_y_offst = 0.0f;wallR_rot_x_offst = 0.0f;
+            wallR_x_offst = 0.0f; Invoke("delay_yOf_grpl", 0.55f); wallR_z_offst = 0.0f; wallR_rot_z_offst = 0.0f; wallR_rot_y_offst = 0.0f;wallR_rot_x_offst = 0.0f;
         }else{
             if(gm_){
-                new_fov = 100f;
+                new_fov = 95f;
                 float sns =  player.position.x - gm_.position.x;
                 // CLOSE UP Z OFFSET
-                wallR_z_offst = 2.20f;
-                wallR_y_offst = -0.6f;
+                wallR_z_offst = 1.50f;
+                wallR_y_offst = -0.5f;
 
-                wallR_rot_x_offst = 0.20f;
+                wallR_rot_x_offst = 0.25f;
 
                 // SMOOTH DAMP FOR X ROTATION boolean
                 //wallR_rot_x_offst = Mathf.SmoothDamp(wallR_rot_x_offst, -0.10f, ref mathfRef, 3f);
@@ -265,6 +264,7 @@ public class CameraMovement : MonoBehaviour
             }
         }
     }
+    private void delay_yOf_grpl(){smthDmp_grpl = false;wallR_y_offst = 0.0f;}
 
     // PUBLIC CAM VALUES TRANS FOR SLIDING
     public void sld_offset(bool is_ext){
@@ -282,5 +282,16 @@ public class CameraMovement : MonoBehaviour
             // SMOOTH DAMP FOR X ROTATION
             wallR_rot_x_offst = -0.090f;       
         }
+    }
+
+    // PUBLIC CAM VALUES TRANS FOR OBSTCL JMP
+    public void obs_offset(){
+        // SMOOTH DAMP FOR X ROTATION
+        wallR_y_offst = 0.35f;
+        wallR_rot_x_offst = 0.14f;    
+        Invoke("obst_rst", 0.75f);   
+    }
+    private void obst_rst(){
+        supl_xRot = 0.0f; wallR_x_offst = 0.0f; wallR_y_offst = 0.0f; wallR_z_offst = 0.0f; wallR_rot_z_offst = 0.0f; wallR_rot_y_offst = 0.0f;wallR_rot_x_offst = 0.0f;
     }
 }

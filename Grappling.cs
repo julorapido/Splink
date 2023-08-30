@@ -40,6 +40,7 @@ public class Grappling : MonoBehaviour
     private SpringJoint hld_joint;
     private bool grappl_ended = false;
     private bool can_reGrappl = true;
+    private bool can_stopGrappl = true;
 
     // Start is called before the first frame update
     private void Start()
@@ -51,7 +52,11 @@ public class Grappling : MonoBehaviour
     private void Update()
     {
         if (Input.GetKeyDown("e")) StartGrapple();
-        if (Input.GetKeyUp("e") || grappl_ended) StopGrapple();
+        if (Input.GetKeyUp("e") || grappl_ended){
+            if(can_stopGrappl){
+                StopGrapple();
+            }
+        }
 
         if(grpl_dely_time > 0)
             grpl_cd_timer -= Time.deltaTime;
@@ -101,10 +106,10 @@ public class Grappling : MonoBehaviour
                 indx_++;
             }
         }
-        for(int k = 0; k < indx_; k++){
-            Vector3  p = ray_hits[k].point;
-            Debug.Log(p);
-        }
+        //Debug.Log(indx_ + " points found");
+        // for(int k = 0; k < indx_; k++){
+        //     Vector3  p = ray_hits[k].point;
+        // }
   
         // DEFINE GRPL POINT
         // var rng = new Random();
@@ -114,12 +119,16 @@ public class Grappling : MonoBehaviour
             if(ray_hits[k].point != Vector3.zero){
                 Vector3  p = ray_hits[k].point;
                 float d_fm_p = Vector3.Distance(plyr_pos.position, p);
-                if(d_fm_p > 10){
-                    //if(ray_hits[k].transform.gameObject.collider.tag == "ground"){
-                        gplr_point = p;
-                        gplr_gm = ray_hits[k].transform.gameObject;
-                        break;
-                    //}
+                float z_dst = p.z - plyr_pos.position.z;
+                if(d_fm_p > 10 && z_dst >= 2){
+                    // 3f height minimum
+                    if( (p.y - plyr_pos.position.y) >= 5f){
+                        //if(ray_hits[k].transform.gameObject.collider.tag == "ground"){
+                            gplr_point = p;
+                            gplr_gm = ray_hits[k].transform.gameObject;
+                            break;
+                        //}
+                    }
                 }
             }
         }
@@ -135,7 +144,7 @@ public class Grappling : MonoBehaviour
 
     
         float dist_frm_point = Vector3.Distance(plyr_pos.position, gplr_point);
-        Debug.Log("gpl indx :   " + gplr_point + " grpl dist = " + dist_frm_point);
+        //Debug.Log("grpl dist = " + dist_frm_point);
         //if(dist_frm_point < mx_grappl_distance / 4){lr.enabled = false;return;}
 
         // Player Mvmnt fnc call
@@ -146,7 +155,7 @@ public class Grappling : MonoBehaviour
         hld_joint.minDistance = dist_frm_point * 0.25f;
 
         // cutsom values
-        hld_joint.spring = 120f; // ELASTIC STRENGTH
+        hld_joint.spring = 360f; // ELASTIC STRENGTH
         hld_joint.damper = 100f;
         hld_joint.massScale = 10f;
 
@@ -154,6 +163,7 @@ public class Grappling : MonoBehaviour
         //lr.positionCount = 2;
 
         lr.enabled = true;
+        can_stopGrappl = true;
         lr.SetPosition(1, gplr_point);
         
         // Delay Grapple
@@ -166,6 +176,7 @@ public class Grappling : MonoBehaviour
         }else{
             // CALL PLAYER MOVEMENT GRAPPLE ANIMATION
             FindObjectOfType<PlayerMovement>().swing_anm(false, gplr_point);
+            FindObjectOfType<PlayerMovement>().rotate_bck();
             FindObjectOfType<CameraMovement>().grpl_offset(false, gplr_gm.transform);
         }
       
@@ -218,6 +229,7 @@ public class Grappling : MonoBehaviour
     
     private void StopGrapple(){
         is_grpling_ = false;
+        can_stopGrappl = false;
         grpl_cd_timer = grpl_cd;
         Destroy(hld_joint);
         StartCoroutine(grappleResetDelay(2f));
@@ -225,6 +237,9 @@ public class Grappling : MonoBehaviour
         // Player Mvmnt fnc call
         FindObjectOfType<PlayerMovement>().swing_anm(true, new Vector3(0,0,0));
         FindObjectOfType<CameraMovement>().grpl_offset(true);
+        Rigidbody ply_r = plyr_pos.gameObject.GetComponent<Rigidbody>();
+        ply_r.velocity = new Vector3(ply_r.velocity.x, ply_r.velocity.y, ply_r.velocity.z / 1.5f);
+        ply_r.AddForce( new Vector3(0, 10, 2), ForceMode.VelocityChange);
         lr.enabled = false;
     }
 
