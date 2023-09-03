@@ -238,7 +238,7 @@ public class Grappling : MonoBehaviour
         FindObjectOfType<PlayerMovement>().swing_anm(true, new Vector3(0,0,0));
         FindObjectOfType<CameraMovement>().grpl_offset(true);
         Rigidbody ply_r = plyr_pos.gameObject.GetComponent<Rigidbody>();
-        ply_r.velocity = new Vector3(ply_r.velocity.x, ply_r.velocity.y, ply_r.velocity.z / 1.5f);
+        ply_r.velocity = new Vector3(ply_r.velocity.x, ply_r.velocity.y, ply_r.velocity.z / 1.75f);
         ply_r.AddForce( new Vector3(0, 10, 2), ForceMode.VelocityChange);
         lr.enabled = false;
     }

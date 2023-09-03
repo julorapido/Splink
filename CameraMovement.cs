@@ -140,7 +140,7 @@ public class CameraMovement : MonoBehaviour
         if (!game_Over_){
             // Dampen towards the target rotation
             //Quaternion initial_rt  = new Quaternion(15, gameObject.transform.rotation.y, 0, 1);  
-            Quaternion desired_rt  = new Quaternion(xRot + supl_xRot + wallR_rot_x_offst, (x_offst / 130.0f) + wallR_rot_y_offst, (x_offst / 10000.0f) + wallR_rot_z_offst, 1);
+            Quaternion desired_rt  = new Quaternion(xRot + supl_xRot + wallR_rot_x_offst, (x_offst / 112.0f) + wallR_rot_y_offst, (x_offst / 10000.0f) + wallR_rot_z_offst, 1);
             transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt,  tyro_on ? 0.07f : 0.15f);
 
             // Smooth Damp
@@ -266,6 +266,8 @@ public class CameraMovement : MonoBehaviour
     }
     private void delay_yOf_grpl(){smthDmp_grpl = false;wallR_y_offst = 0.0f;}
 
+
+
     // PUBLIC CAM VALUES TRANS FOR SLIDING
     public void sld_offset(bool is_ext){
         if(is_ext){
@@ -283,6 +285,8 @@ public class CameraMovement : MonoBehaviour
             wallR_rot_x_offst = -0.090f;       
         }
     }
+
+
 
     // PUBLIC CAM VALUES TRANS FOR OBSTCL JMP
     public void obs_offset(){

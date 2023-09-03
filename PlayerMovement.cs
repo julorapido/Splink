@@ -261,9 +261,9 @@ public class PlayerMovement : MonoBehaviour
                 if (Input.GetKey("d") || Input.GetKey("q")){plyr_rb.AddForce( new Vector3(0f, 0.32f, 0f), ForceMode.VelocityChange);}
                 if (grap_pnt != new Vector3(0,0,0)){
                     if(plyr_trsnfm.position.z < grap_pnt.z - 3.5f){
-                        plyr_rb.AddForce( new Vector3(0, 0.15f,  0.9f * uptd_speed), ForceMode.VelocityChange);
+                        plyr_rb.AddForce( new Vector3(0, 0.175f,  0.95f * uptd_speed), ForceMode.VelocityChange);
                     }else{
-                        plyr_rb.AddForce( new Vector3(0, 0.35f,  1.15f * uptd_speed), ForceMode.VelocityChange);
+                        plyr_rb.AddForce( new Vector3(0, 0.35f,  1.30f * uptd_speed), ForceMode.VelocityChange);
                     }
                 }
             }
@@ -345,7 +345,7 @@ public class PlayerMovement : MonoBehaviour
                 if(!gameOver_){
                     StopCoroutine(delay_input(0.0f)); StartCoroutine(delay_input(0.5f));
                     plyr_rb.velocity = new Vector3(plyr_rb.velocity.x / 2, plyr_rb.velocity.y, plyr_rb.velocity.z / 1.5f);
-                    plyr_rb.AddForce( new Vector3(0, 19f, 0), ForceMode.VelocityChange);
+                    plyr_rb.AddForce( new Vector3(0, 17f, 0), ForceMode.VelocityChange);
                     _anim.SetBool("Flying", true);
                     _anim.SetBool("wallRun", false);
                     plyr_wallRninng = false;
