@@ -80,6 +80,10 @@ public class Grappling : MonoBehaviour
             lr.SetPosition(0, gunTip.position);
 
     }
+    public void soft_Grapple(){
+        hld_joint.spring = 300f; // ELASTIC STRENGTH
+        hld_joint.damper = 80f;
+    }
 
     private void StartGrapple(){
         if(grpl_cd_timer > 0 || !can_reGrappl) return;
@@ -176,6 +180,7 @@ public class Grappling : MonoBehaviour
         }else{
             // CALL PLAYER MOVEMENT GRAPPLE ANIMATION
             FindObjectOfType<PlayerMovement>().swing_anm(false, gplr_point);
+            FindObjectOfType<CameraMovement>()._grplPoint_ = gplr_point;
             FindObjectOfType<PlayerMovement>().rotate_bck();
             FindObjectOfType<CameraMovement>().grpl_offset(false, gplr_gm.transform);
         }

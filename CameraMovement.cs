@@ -48,8 +48,9 @@ public class CameraMovement : MonoBehaviour
     private float start_fov;
     private float new_fov;
 
-    [Header ("Grappl SmoothDamp Boolean")]
+    [Header ("Grappl SmoothDamp Booleans")]
     private bool smthDmp_grpl = false;
+    private bool smthDmp_grpl_end = false;
 
     private Camera c_;
 
@@ -93,6 +94,10 @@ public class CameraMovement : MonoBehaviour
     private bool sliding_on = false;
     private bool rotate_back = false;
 
+    [Header ("Grapple Point Position")]
+    public Vector3 _grplPoint_;
+    private bool end_trans_called = false;
+
     private void Update(){
         if (!Input.GetKeyDown("q") && !Input.GetKeyDown("d") ){rotate_back = true;}else{
             rotate_back = false;
@@ -102,9 +107,9 @@ public class CameraMovement : MonoBehaviour
             c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, new_fov, 0.85f);
         }
 
-        if(smthDmp_grpl){
-            wallR_rot_x_offst = Mathf.SmoothDamp(wallR_rot_x_offst, -0.08f, ref mathfRef, 0.295f);
-        }
+        if(smthDmp_grpl) wallR_rot_x_offst = Mathf.SmoothDamp(wallR_rot_x_offst, -0.08f, ref mathfRef, 0.295f);
+        if(smthDmp_grpl_end) wallR_rot_x_offst = Mathf.SmoothDamp(wallR_rot_x_offst, -0.74f, ref mathfRef, 0.295f);
+
     }
 
     private void FixedUpdate(){
@@ -116,6 +121,13 @@ public class CameraMovement : MonoBehaviour
             desired_.z = desired_.z +  (Math.Abs(x_offst)) / 60;
             lst_offst_x = ((-0.050f * x_offst));
         }
+
+        if(_grplPoint_ != new Vector3(0,0,0)){
+            if( !end_trans_called && (player.position.z > _grplPoint_.z + 2.0f) )
+            {
+                end_grpl_Cm();
+            }
+        } else { end_trans_called = false; }
 
         tyro_on = FindObjectOfType<PlayerMovement>().plyr_tyro;
         sliding_on =  FindObjectOfType<PlayerMovement>().plyr_sliding;
@@ -245,11 +257,11 @@ public class CameraMovement : MonoBehaviour
             wallR_x_offst = 0.0f; Invoke("delay_yOf_grpl", 0.55f); wallR_z_offst = 0.0f; wallR_rot_z_offst = 0.0f; wallR_rot_y_offst = 0.0f;wallR_rot_x_offst = 0.0f;
         }else{
             if(gm_){
-                new_fov = 95f;
+                new_fov = 87f;
                 float sns =  player.position.x - gm_.position.x;
                 // CLOSE UP Z OFFSET
-                wallR_z_offst = 1.50f;
-                wallR_y_offst = -0.5f;
+                wallR_z_offst = 1.45f;
+                wallR_y_offst = -0.65f;
 
                 wallR_rot_x_offst = 0.25f;
 
@@ -257,14 +269,30 @@ public class CameraMovement : MonoBehaviour
                 //wallR_rot_x_offst = Mathf.SmoothDamp(wallR_rot_x_offst, -0.10f, ref mathfRef, 3f);
                 smthDmp_grpl = true;
 
-                if(sns < 0 ) {wallR_x_offst = 0.3f; wallR_rot_z_offst = -0.07f;} else{
-                    wallR_rot_z_offst = 0.07f;
+                if(sns < 0 ) {wallR_x_offst = 0.3f; wallR_rot_z_offst = -0.055f;} else{
+                    wallR_rot_z_offst = 0.055f;
                     wallR_x_offst = -0.3f; 
                 }
             }
         }
     }
-    private void delay_yOf_grpl(){smthDmp_grpl = false;wallR_y_offst = 0.0f;}
+    private void delay_yOf_grpl(){
+        _grplPoint_ = new Vector3(0,0,0);
+        smthDmp_grpl_end = false; smthDmp_grpl = false;
+        wallR_y_offst = 0.0f; 
+    }
+    // END GRAPPLING CAMERA MOVEMENT TRANSITION
+    private void end_grpl_Cm(){
+        FindObjectOfType<Grappling>().soft_Grapple();
+        end_trans_called = true;
+        // SPACE UP Z OFFSET
+            wallR_z_offst = 0.60f;
+
+        wallR_y_offst = -1.70f;
+        // CANCEL smthDmp_grpl PREVIOUS SMOOTH DAMP X ROTATION
+        smthDmp_grpl = false;
+        smthDmp_grpl_end = true;
+    }
 
 
 

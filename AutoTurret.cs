@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,7 +8,8 @@ public class AutoTurret : MonoBehaviour
     [Header ("Turret Type")]
     public static List<string> turret_types = new List<string>(new string[] {"Normal","Double","Catapult", "Heavy", "Sniper","Gattling"});
     private bool plyr_n_sight = false;
-    private GameObject plyr_gm;
+    public GameObject plyr_gm;
+
     private enum turret_Type{
         Normal,
         Double,
@@ -27,8 +29,8 @@ public class AutoTurret : MonoBehaviour
     private List<Transform> tr_stand = new List<Transform>(new Transform[] {null, null, null});
 
     [Header ("Turret FireRate")]
+    public float shootCoolDown;
     private float timer;
-    private float shootCoolDown;
 
     [Header ("Turret Rotations")]
     private float randomRot_a;
@@ -38,13 +40,16 @@ public class AutoTurret : MonoBehaviour
     private bool vrt_sens = false;
 
     private float tr_aimSpeed = 60.2f;
-    
+    private Vector3 strt_rt;
+
     [Header ("Turret Projectile")]
-    private Quaternion strt_rt;
-    public GameObject turret_projectiles;
+    public GameObject turret_bullet;
 
     [Header ("Turret Orientation")]
     public bool is_horizontal;
+    private bool reset_bl = false;
+
+
     private void Start()
     {
         InvokeRepeating("target_check", 0, 0.25f);
@@ -58,7 +63,7 @@ public class AutoTurret : MonoBehaviour
                 tr_barrels[i] = chld_.gameObject;
                  i++;
             }  
-            if(chld_g?.tag == "tr_ShootP"){
+            if(chld_g?.tag == "tr_Shootp"){
                 tr_sht_points[j] = chld_g; 
                  j++;
             }
@@ -79,13 +84,13 @@ public class AutoTurret : MonoBehaviour
             }
         }
         // HORIZONTAL START X-AXIS DEGREE GAP
-        randomRot_a = is_horizontal ?  (Random.Range(25f, 50f)): Random.Range(tr_body[k-1].rotation.y + 35, tr_body[k-1].rotation.y + 70);
-        randomRot_vrt = Random.Range(tr_body[k-1].rotation.x + 15, tr_body[k-1].rotation.x + 32);
+        randomRot_a = is_horizontal ?  (UnityEngine.Random.Range(25f, 50f)): UnityEngine.Random.Range(tr_body[k-1].rotation.y + 35, tr_body[k-1].rotation.y + 70);
+        randomRot_vrt = UnityEngine.Random.Range(tr_body[k-1].rotation.x + 15, tr_body[k-1].rotation.x + 32);
 
-        // Reset X-Axis 20deg rotation [Horizontal]
+        // Reset X-Axis 0deg rotation [Horizontal]
         if(is_horizontal) tr_body[k - 1].localRotation = Quaternion.Euler(0, tr_body[k - 1].localRotation.y, 0);
-
-        strt_rt = tr_body[k-1].rotation;
+        strt_rt = tr_body[k-1].eulerAngles;
+        Debug.Log(strt_rt);
     }
 
     // FixedUpdate is called for physics (around 3x time per frame)
@@ -106,7 +111,15 @@ public class AutoTurret : MonoBehaviour
             if (plyr_n_sight)
             {
                 timer = 0;
+                reset_bl = false;
                 shoot_prjcle();
+            }
+        }
+
+        if(!plyr_n_sight){
+            if(!reset_bl){
+                tr_body[k-1].rotation = Quaternion.Euler(strt_rt.x , -180, strt_rt.z);
+                reset_bl = true;
             }
         }
     }
@@ -143,12 +156,13 @@ public class AutoTurret : MonoBehaviour
 
             float v_agl_add = vrt_sens ? -0.50f : 0.50f; // VERT
 
-            //tr_body[k - 1].Rotate(v_agl_add, 0f, 0f, Space.World);
+            
+            if(!is_horizontal) tr_body[k - 1].Rotate(v_agl_add, 0f, 0f, Space.World);
 
             
             return;
         }
-        
+        //////////////////
         // TURRET AUTO-AIM
         Vector3 target_Dir = new Vector3(0,0,0);
         if(is_horizontal){
@@ -167,19 +181,46 @@ public class AutoTurret : MonoBehaviour
     private void shoot_prjcle(){
         if(plyr_n_sight){
             try{
+                Vector3 msl_scale = turret_bullet.transform.localScale;
+
                 switch(t_type){
                     case turret_Type.Normal:
+                        //Instantiate()
+                        LeanTween.scale(tr_barrels[0], tr_barrels[0].transform.localScale * 1.2f, shootCoolDown - 0.2f).setEasePunch();
+                        GameObject missle_Go = Instantiate(turret_bullet, tr_sht_points[0].transform.position, tr_sht_points[0].transform.rotation);
+                        //typeof(GameObject) as GameObject;
+                        missle_Go.transform.localScale = new Vector3(msl_scale.x * (4*(gameObject.transform.localScale.x / 5)), msl_scale.y * (4*(gameObject.transform.localScale.y / 5)),
+                            msl_scale.z * (4*(gameObject.transform.localScale.z / 5))
+                        );
+                        if(!missle_Go) return;
+
+                        A_T_Projectile projectile_scrpt = missle_Go.GetComponent<A_T_Projectile>();
+                        projectile_scrpt.plyr_target = plyr_gm.transform;
+                        projectile_scrpt.blt_type = A_T_Projectile.turret_Type.Normal;
                         break;
                     case turret_Type.Double:
+                        for(int i = 0; i < k; i ++){
+                            LeanTween.scale(tr_barrels[i], tr_barrels[i].transform.localScale * 1.2f, shootCoolDown - 0.2f).setEasePunch();
+
+                            GameObject m_Go = Instantiate(turret_bullet, tr_sht_points[i].transform.position, tr_sht_points[i].transform.rotation);
+                            A_T_Projectile pj_scrpt = m_Go.GetComponent<A_T_Projectile>();
+                            pj_scrpt.plyr_target = plyr_gm.transform;
+                            pj_scrpt.blt_type = A_T_Projectile.turret_Type.Normal;
+                        }
+                        break;
+                    case turret_Type.Heavy:
+                        break;
+                    case turret_Type.Sniper:
                         break;
                     case turret_Type.Gattling:
                         break;
                     case turret_Type.Catapult:
-                        Vector3 throw_dst = CalculateCatapult(plyr_gm.transform.position, gameObject.transform.position, 1f);
+                        //Vector3 throw_dst = CalculateCatapult(plyr_gm.transform.position, gameObject.transform.position, 1f);
                         break;
                 }
-            }catch{
-                Debug.Log("no turret type");
+            }catch(Exception err){
+                Debug.Log(err);
+                //Debug.Log("no turret type");
             }
         }
     }
@@ -191,7 +232,7 @@ public class AutoTurret : MonoBehaviour
         bool s = false;
         for (int i = 0; i < colls.Length; i++)
         {
-            if (colls[i].tag == "Player")
+            if (colls[i].tag == "player_hitbx")
             {
                 plyr_gm = colls[i].gameObject;
                 plyr_n_sight = true; s = true;
@@ -202,22 +243,4 @@ public class AutoTurret : MonoBehaviour
     }
 
     
-    private Vector3 CalculateCatapult(Vector3 target, Vector3 origen, float time)
-    {
-        Vector3 distance = target - origen;
-        Vector3 distanceXZ = distance;
-        distanceXZ.y = 0;
-
-        float Sy = distance.y;
-        float Sxz = distanceXZ.magnitude;
-
-        float Vxz = Sxz / time;
-        float Vy = Sy / time + 0.5f * Mathf.Abs(Physics.gravity.y) * time;
-
-        Vector3 result = distanceXZ.normalized;
-        result *= Vxz;
-        result.y = Vy;
-
-        return result;
-    }
 }
