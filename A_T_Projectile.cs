@@ -26,11 +26,15 @@ public class A_T_Projectile : MonoBehaviour
 
     [Header ("Attached Objects")]
     [HideInInspector] public Transform plyr_target;
+    //[HideInInspector] public Transform prnt_turret;
     private MeshRenderer bullet_msh;
 
     [Header ("Projectile_Speeds")]
-    private float speed = 14f;
+    private float speed = 15f;
     private float turnSpeed = 12f;
+    private bool plyr_passed = false;
+
+    private int z_ = 0;
 
     // Start is called before the first frame update
     private void Start()
@@ -41,21 +45,25 @@ public class A_T_Projectile : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
-        transform.Rotate(0,0,1, Space.Self);
         //gameObject.transform.LookAt(plyr_trnsfrm);
+        float dst_ = Vector3.Distance(transform.position, plyr_target.position);
+        if( (dst_ < 8) && !plyr_passed) {plyr_passed = true; speed *= 1.3f;}
+
         try{
+            Vector3 dir = plyr_target.position - transform.position;
+            Vector3 newDirection = Vector3.RotateTowards(transform.forward, dir, Time.deltaTime * turnSpeed, 0.0f);
             switch(blt_type){
                 case turret_Type.Normal:
                 case turret_Type.Double:
-                    Vector3 dir = plyr_target.position - transform.position;
-
-                    Vector3 newDirection = Vector3.RotateTowards(transform.forward, dir, Time.deltaTime * turnSpeed, 0.0f);
-                    Debug.DrawRay(transform.position, newDirection, Color.red);
+                    //Debug.DrawRay(transform.position, newDirection, Color.red);
 
                     transform.Translate(Vector3.forward * Time.deltaTime * speed);
                     transform.rotation = Quaternion.LookRotation(newDirection);
+                    transform.rotation = Quaternion.Euler(transform.eulerAngles.x, transform.eulerAngles.y, z_);
+                    z_+= 2;
                     break;
                 case turret_Type.Heavy:
+                    transform.Translate(Vector3.forward * Time.deltaTime * speed);
 
                     break;
                 case turret_Type.Sniper:
@@ -73,8 +81,16 @@ public class A_T_Projectile : MonoBehaviour
         }
     }
 
+    private void FixedUpdate(){
+        transform.Rotate(0,0,10f, Space.Self);
+    }
+
+
     private void OnTriggerEnter(Collider other) {
-        if(other.gameObject.tag == plyr_target.gameObject.tag) bullet_explode();
+        if(other.gameObject.tag == "plaer_hitbx"){
+            Debug.Log("zer");
+            bullet_explode();
+        } 
         if(other.gameObject.tag == "ground") bullet_explode();
     }
 
