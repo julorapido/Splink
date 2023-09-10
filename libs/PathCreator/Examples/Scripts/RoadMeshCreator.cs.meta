@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6dd564469617549bfa5ae2a25d805b3b
+timeCreated: 1546381468
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences:
+  - pathCreator: {instanceID: 0}
+  - roadMaterial: {fileID: 2100000, guid: b5df4735192845740bd11076dc9cdc99, type: 2}
+  - undersideMaterial: {fileID: 2100000, guid: c1d8d882244c5344fa86a8fd23246f81, type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

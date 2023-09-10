@@ -27,7 +27,7 @@ public class AutoTurret : MonoBehaviour
     [Header ("Attached Turret Lists")]
     int i = 0, j = 0, k = 0, l = 0;
     private List<GameObject> tr_barrels = new List<GameObject>(new GameObject[] {null, null, null});
-    private List<GameObject> tr_sht_points = new List<GameObject>(new GameObject[] {null, null, null});
+    private List<GameObject> tr_sht_points = new List<GameObject>(new GameObject[] {null, null, null, null, null, null});
     private List<Transform> tr_body = new List<Transform>(new Transform[] {null, null, null});
     private List<Transform> tr_stand = new List<Transform>(new Transform[] {null, null, null});
 
@@ -52,6 +52,11 @@ public class AutoTurret : MonoBehaviour
     public bool is_horizontal;
     private bool reset_bl = false;
 
+    [Header ("Turret Range")]
+    public float rng_;
+
+    [Header ("Turret FireRate")]
+    private ParticleSystem fire_;
 
     private void Start()
     {
@@ -59,6 +64,10 @@ public class AutoTurret : MonoBehaviour
         //InvokeRepeating("shoot_prjcle", 0, 0.50f);
         // ASSIGNEMENT OF BARRELS AND SHOOTS POINTS
         Transform[] tr_trsnfrms = GetComponentsInChildren<Transform>();
+
+        ParticleSystem[] tr_ps = GetComponentsInChildren<ParticleSystem>();
+        fire_  = tr_ps[0];
+
         //Debug.Log(tr_trsnfrms.Length);
         foreach(Transform chld_ in tr_trsnfrms){
             GameObject chld_g = chld_.gameObject;
@@ -195,15 +204,29 @@ public class AutoTurret : MonoBehaviour
                                                 plyr_gm.transform.rotation.y,
                                             0f) ;
                     }
+
                     Vector3 trgt = is_horizontal ? target_Dir :  plyr_gm.transform.position;
                     if(is_horizontal){
-                        tr_body[a].LookAt(plyr_gm.transform, Vector3.right);
+                        tr_body[a].LookAt(plyr_gm.transform, 
+                            ( (120f < strt_rt[a].y) && (strt_rt[a].y <= 220f) ) ? Vector3.right : Vector3.left);
                     }else{
                         tr_body[a].LookAt(plyr_gm.transform);
                     }
-                }
-                // just [VERT or HORIZONTAL] rotation for Stand
+                }else{
+                    // just [VERT or HORIZONTAL] rotation for Stand
+                    Vector3 newD_ = Vector3.RotateTowards(transform.forward, plyr_gm.transform.position, Time.deltaTime * 12f, 0.0f);
+                    // tr_body[a].rotation = Quaternion.LookRotation(newD_);
+                    // tr_body[a].rotation = Quaternion.Euler(tr_body[a].eulerAngles.x, tr_body[a].eulerAngles.y, 0f);
+                    if(is_horizontal){
+                      tr_body[a].LookAt(plyr_gm.transform, 
+                            ( (120f < strt_rt[a].y) && (strt_rt[a].y <= 220f) ) ? Vector3.right : Vector3.left);
+                    }else{
+                        tr_body[a].LookAt(plyr_gm.transform);
+                    }
 
+                }
+    
+      
             }
         }
         
@@ -213,11 +236,13 @@ public class AutoTurret : MonoBehaviour
         if(plyr_n_sight){
             try{
                 Vector3 msl_scale = turret_bullet.transform.localScale;
+                if(fire_ != null) {fire_.Play();};
 
                 switch(t_type){
                     case turret_Type.Normal:
                         //Instantiate()
-                        LeanTween.scale(tr_barrels[0], tr_barrels[0].transform.localScale * 1.2f, shootCoolDown - 0.2f).setEasePunch();
+                        LeanTween.scale(tr_barrels[0], tr_barrels[0].transform.localScale * 1.25f, shootCoolDown - 0.4f).setEasePunch();
+                        //Quaternion r_  = Quaternion.Euler(tr_body[0].rotation.eulerAngles.x + 180, tr_body[0].rotation.eulerAngles.y, tr_body[0].rotation.eulerAngles.z);
                         GameObject missle_Go = Instantiate(turret_bullet, tr_sht_points[0].transform.position, tr_sht_points[0].transform.rotation);
                         //typeof(GameObject) as GameObject;
                         missle_Go.transform.localScale = new Vector3(msl_scale.x * (4*(gameObject.transform.localScale.x / 5)), msl_scale.y * (4*(gameObject.transform.localScale.y / 5)),
@@ -230,8 +255,8 @@ public class AutoTurret : MonoBehaviour
                         projectile_scrpt.blt_type = A_T_Projectile.turret_Type.Normal;
                         break;
                     case turret_Type.Double:
-                        for(int i = 0; i < k; i ++){
-                            LeanTween.scale(tr_barrels[i], tr_barrels[i].transform.localScale * 1.2f, shootCoolDown - 0.2f).setEasePunch();
+                        for(int i = 0; i < j; i ++){
+                            LeanTween.scale(tr_barrels[i], tr_barrels[i].transform.localScale * 1.2f, shootCoolDown - 0.4f).setEasePunch();
 
                             GameObject m_Go = Instantiate(turret_bullet, tr_sht_points[i].transform.position, tr_sht_points[i].transform.rotation);
                             m_Go.transform.localScale = new Vector3(msl_scale.x * (4*(gameObject.transform.localScale.x / 5)), msl_scale.y * (4*(gameObject.transform.localScale.y / 5)),
@@ -257,9 +282,23 @@ public class AutoTurret : MonoBehaviour
                         proj_scrpt_h.blt_type = A_T_Projectile.turret_Type.Heavy;
                         break;
                     case turret_Type.Sniper:
+                        LeanTween.scale(tr_body[0].gameObject, tr_body[0].localScale * 1.17f, shootCoolDown - 0.4f).setEasePunch();
+                        GameObject missle_Go_s = Instantiate(turret_bullet, tr_sht_points[0].transform.position, tr_sht_points[0].transform.rotation);
+                        if(!missle_Go_s) return;
+
+                        A_T_Projectile proj_scrpt_s = missle_Go_s.GetComponent<A_T_Projectile>();
+                        proj_scrpt_s.plyr_target = plyr_gm.transform;
+                        proj_scrpt_s.blt_type = A_T_Projectile.turret_Type.Sniper;
                         break;
                     case turret_Type.Gattling:
-                        
+                        tr_barrels[0].transform.Rotate(1,0,0, Space.World);
+
+                        LeanTween.scale(tr_body[0].gameObject, tr_body[0].localScale * 1.02f, shootCoolDown - 0.02f).setEasePunch();
+                        GameObject missle_Go_g = Instantiate(turret_bullet, tr_sht_points[0].transform.position, tr_sht_points[0].transform.rotation);
+                        if(!missle_Go_g) return;
+
+                        A_T_Projectile proj_scrpt_g = missle_Go_g.GetComponent<A_T_Projectile>();
+                        proj_scrpt_g.plyr_target = plyr_gm.transform; proj_scrpt_g.blt_type = A_T_Projectile.turret_Type.Gattling;
                         break;
                     case turret_Type.Catapult:
 
@@ -269,7 +308,7 @@ public class AutoTurret : MonoBehaviour
                         
                         break;
                     case turret_Type.Military:
-                    
+
                         break;
                 }
             }catch(Exception err){
@@ -281,7 +320,7 @@ public class AutoTurret : MonoBehaviour
 
     private void target_check()
     {
-        Collider[] colls = Physics.OverlapSphere(transform.position, 2f);
+        Collider[] colls = Physics.OverlapSphere(transform.position, rng_);
         //float distAway = Mathf.Infinity;
         bool s = false;
         for (int i = 0; i < colls.Length; i++)
