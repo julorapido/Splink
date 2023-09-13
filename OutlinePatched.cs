@@ -13,7 +13,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 
-public class Outline : MonoBehaviour {
+public class OutlinePatched : MonoBehaviour {
   private static HashSet<Mesh> registeredMeshes = new HashSet<Mesh>();
 
   public enum Mode {
@@ -102,6 +102,11 @@ public class Outline : MonoBehaviour {
   void OnEnable() {
     foreach (var renderer in renderers) {
 
+      int ms_= renderer.gameObject.GetComponents<ParticleSystem>().Length;
+      if(ms_ > 0){
+        continue;
+      }
+      
       // Append outline shaders
       var materials = renderer.sharedMaterials.ToList();
 
@@ -181,6 +186,14 @@ public class Outline : MonoBehaviour {
 
     // Retrieve or generate smooth normals
     foreach (var meshFilter in GetComponentsInChildren<MeshFilter>()) {
+
+      // =====> Check if the Parent doesn't have <ParticleSystem()>
+      //GameObject g_o = meshFilter.GetComponent<GameObject>();
+      GameObject g_o = meshFilter.gameObject;
+      ParticleSystem p_s = g_o.GetComponent<ParticleSystem>();
+      if(p_s != null){
+        continue;
+      }
 
       // Skip if smooth normals have already been adopted
       if (!registeredMeshes.Add(meshFilter.sharedMesh)) {

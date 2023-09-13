@@ -130,10 +130,12 @@ public class PlayerMovement : MonoBehaviour
 
         if(!stopRunning_){
             if (Input.GetKeyDown(KeyCode.Space) && (canJmp_ || wt_fr_DblJmp) && (jumpCnt > 0) && (jmp_auth == true) &&  !_anim.GetBool("GroundHit") ){
+                
                 if(_anim.GetBool("slide")){
                     _anim.SetBool("slide", false);
                     _anim.SetBool("Flying", true);
                 }
+
                 StartCoroutine(delay_input( 0.42f));
                 float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
                 jumpCnt--;
@@ -144,11 +146,15 @@ public class PlayerMovement : MonoBehaviour
                 // ForceMode.VelocityChange for jump strength
                 plyr_rb.AddForce( new Vector3(0, (wt_fr_DblJmp ? (jumpForce * 1.6f) : jumpForce * 1.85f), 0), ForceMode.VelocityChange);
                 //plyr_rb.velocity = new Vector3(plyr_rb.position.x, jumpForce, plyr_rb.position.z);
+                
                 if (wt_fr_DblJmp == true){dbl_jump_ = true;}
                 
                 if(wt_fr_DblJmp == false){
+
                     _jumping = true;
+
                     StartCoroutine(Dbl_Jmp_Tm(3));
+
                 }
             }
         }
@@ -158,8 +164,10 @@ public class PlayerMovement : MonoBehaviour
             last_tyro_trvld += (tyro_speed) * Time.fixedDeltaTime;
             plyr_trsnfm.position = actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, -2.1f, -0.1f);
             tyro_handler_child.position = actual_path.path.GetPointAtDistance(last_tyro_trvld);
+
             Quaternion e = actual_path.path.GetRotationAtDistance(last_tyro_trvld);
             plyr_trsnfm.rotation = new Quaternion(plyr_trsnfm.rotation.x, e.y, plyr_trsnfm.rotation.z, plyr_trsnfm.rotation.w);
+            
             tyro_handler_child.rotation = new Quaternion(tyro_handler_child.rotation.x, e.y, tyro_handler_child.rotation.z, tyro_handler_child.rotation.w);
             
             float d_end = Vector3.Distance(plyr_trsnfm.position, end_tyroPos);
@@ -193,10 +201,12 @@ public class PlayerMovement : MonoBehaviour
                 _jumping = false;
                 //Debug.Log(plyr_trsnfm.transform.rotation.eulerAngles);
                 StartCoroutine(Dly_bool_anm(0.3f, "Jump"));
+                FindObjectOfType<CameraMovement>().jmp();
             }
 
             if(dbl_jump_ == true){
                 _jumping = false; dbl_jump_ = false;
+                
                 jump_prtcl.Play();
                 StopCoroutine(Dbl_Jmp_Tm(2));
                 StopCoroutine(Dly_bool_anm(0.3f, "Jump"));

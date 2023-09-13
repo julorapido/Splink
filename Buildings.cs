@@ -97,11 +97,11 @@ public class Buildings : MonoBehaviour
                             }
                             break;  
                     }
-                    // if(bld_wdth < _sze.x || bld_wdth < _rds || bld_wdth < _msh_wdt.x){
-                    //     bld_sze.x = _sze.x > 0 ? _sze.x : _msh_wdt.x;
-                    //     bld_sze.y = _sze.z > 0 ? _sze.z : _msh_wdt.y;
-                    //     bld_wdth = _rds > 0 ? _rds : (_sze.x > 0 ? _sze.x : _msh_wdt.x);
-                    // }
+                    if(bld_wdth < _sze.x || bld_wdth < _rds || bld_wdth < _msh_wdt.x){
+                        bld_sze.x = _sze.x > 0 ? _sze.x : _msh_wdt.x;
+                        bld_sze.y = _sze.z > 0 ? _sze.z : _msh_wdt.y;
+                        bld_wdth = _rds > 0 ? _rds : (_sze.x > 0 ? _sze.x : _msh_wdt.x);
+                    }
                 }
                 /////////////////////////////////////////////////
 

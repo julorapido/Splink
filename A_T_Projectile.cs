@@ -39,12 +39,16 @@ public class A_T_Projectile : MonoBehaviour
 
     private Vector3 l_dir;
     private int z_ = 0;
+    private bool is_behind = false;
 
     // Start is called before the first frame update
     private void Start()
     {
         bullet_msh  = gameObject.GetComponentsInChildren<MeshRenderer>();
         bullet_04_rb = gameObject.GetComponent<Rigidbody>();
+
+        Vector3 dir = (plyr_target.position) - transform.position;
+        if(dir.z < 0 ) is_behind = true;
 
         qtrn_blt04 = Vector3.RotateTowards(transform.forward, (plyr_target.position - transform.position), Time.deltaTime * 100, 0.0f);
 
@@ -56,11 +60,12 @@ public class A_T_Projectile : MonoBehaviour
     {
         //gameObject.transform.LookAt(plyr_trnsfrm);
         float dst_ = Vector3.Distance(transform.position, plyr_target.position);
-        if( (dst_ < 8) && !plyr_passed) {plyr_passed = true; speed *= 1.3f;}
+        if( (dst_ < 3) && !plyr_passed) {plyr_passed = true; speed *= 1.3f;}
 
         try{
             Vector3 dir = (plyr_target.position + new Vector3(0f, 1f, 0f) ) - transform.position;
             if(!plyr_passed) l_dir = dir;
+            if(plyr_passed &&  (dst_ > 40) ) bullet_explode();
 
             Vector3 newDirection = Vector3.RotateTowards(transform.forward, dir, Time.deltaTime * turnSpeed, 0.0f);
             switch(blt_type){
@@ -69,7 +74,10 @@ public class A_T_Projectile : MonoBehaviour
                     //Debug.DrawRay(transform.position, newDirection, Color.red);
 
                     transform.Translate(Vector3.forward * Time.deltaTime * speed);
-                    transform.rotation = Quaternion.LookRotation(plyr_passed ? l_dir : newDirection);
+                    Vector3 l_r  = plyr_passed ? l_dir : newDirection;
+                    if( l_r != new Vector3(0, 0, 0) ){
+                        transform.rotation = Quaternion.LookRotation(plyr_passed ? l_dir : newDirection);
+                    }
                     transform.rotation = Quaternion.Euler(transform.eulerAngles.x, transform.eulerAngles.y, z_);
 
                     z_+= 3;
@@ -83,7 +91,7 @@ public class A_T_Projectile : MonoBehaviour
                     // transform.rotation = Quaternion.LookRotation(qtrn_blt04); // Quaternion.Euler(qtrn_blt04.x, qtrn_blt04.y, qtrn_blt04.z);
                     //transform.LookAt(plyr_target);
                     transform.rotation = Quaternion.LookRotation(qtrn_blt04);
-                    bullet_04_rb.AddForce(9 * shoot_dir, ForceMode.VelocityChange);
+                    bullet_04_rb.AddForce(2 * shoot_dir, ForceMode.VelocityChange);
 
                     break;
                 case turret_Type.Catapult:
@@ -114,7 +122,7 @@ public class A_T_Projectile : MonoBehaviour
 
     private void bullet_explode(){
         for (int i = 0; i < bullet_msh.Length; i ++){
-            bullet_msh[i].enabled = false;
+            //bullet_msh[i].enabled = false;
         }
 
     }

@@ -11,7 +11,8 @@ public class Collectible : MonoBehaviour {
     public bool isFloating = false;
     public bool isScaling = false;
 
-    public Vector3 rotationAngle;
+    [SerializeField]
+    private Vector3 rotationAngle;
     private float rotationSpeed = 1f;
 
     [Header ("Floating Settings")]
@@ -20,7 +21,8 @@ public class Collectible : MonoBehaviour {
     private float floatTimer;
    
     private Vector3 startScale;
-    public Vector3 scaleEffect;
+     [SerializeField]
+    private Vector3 scaleEffect;
 
     private bool scalingUp = true;
     private float scaleSpeed = 1f;
@@ -46,7 +48,7 @@ public class Collectible : MonoBehaviour {
             if(isFloating)
             {
                 floatTimer += Time.deltaTime;
-                Vector3 moveDir = new Vector3(0.0f, floatSpeed / 160f, 0.0f);
+                Vector3 moveDir = new Vector3(0.0f, floatSpeed / 130f, 0.0f);
                 transform.Translate(moveDir);
 
                 if (goingUp && floatTimer >= scaleAndFloatRate)
