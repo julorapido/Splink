@@ -80,11 +80,14 @@ public class CameraMovement : MonoBehaviour
     private List<float> mathRef_arr = new List<float>(new float[6] {
         0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
     }); 
-    private float mathfRef = 0.0f;
-    private float mathfRef0_ = 0.0f;
 
-    public float mathfRef_pos = 0.0f;
-    public float mathfRef0_pos = 0.0f;
+    // ROTATIONS REFS
+    private float mathfRef_x = 0.0f, mathfRef_y = 0.0f, mathfRef_z = 0.0f;
+    private float mathfRef0_x = 0.0f, mathfRef0_y = 0.0f, mathfRef0_z = 0.0f;
+
+    // POSITIONS REFS
+    public float mathfRef_pos_x = 0.0f, mathfRef_pos_y = 0.0f, mathfRef_pos_z = 0.0f;
+    public float mathfRef0_pos_x = 0.0f, mathfRef0_pos_y = 0.0f, mathfRef0_pos_z = 0.0f;
 
     [Header ("Fov Floats")]
     private float start_fov;
@@ -177,16 +180,24 @@ public class CameraMovement : MonoBehaviour
 
                     if(!s_) // ROTATIONS MOVEMENTS
                     {
+                        float srched_ref =( trns_back_arr[i] == true ?  
+                         (values_ref[i] == "wallR_rot_x_offst"  ? (mathfRef_x) : (values_ref[i] == "wallR_rot_y_offst" ? mathfRef_y : mathfRef_z) )
+                            :
+                          (values_ref[i] == "wallR_rot_x_offst"  ? (mathfRef0_x) : (values_ref[i] == "wallR_rot_y_offst" ? mathfRef0_y : mathfRef0_z) )
+                        );
+
                         if(trns_back_arr[i] == false)
                         {
-                            rot_dc[values_ref[i]] = Mathf.SmoothDamp( rot_dc[values_ref[i]], values_flt[i], ref mathfRef, 0.070f); 
+                            rot_dc[values_ref[i]] = Mathf.SmoothDamp( rot_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.140f); 
+
                             if( Math.Abs(rot_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.002f) {
                                 trns_back_arr[i] = true;
+                                Debug.Log("an angle rotation ended ! ");
                             }
                         }
                         else if (trns_back_arr[i] == true)
                         { 
-                            rot_dc[values_ref[i]] = Mathf.SmoothDamp(rot_dc[values_ref[i]], 0.00f, ref mathfRef0_, 0.250f); 
+                            rot_dc[values_ref[i]] = Mathf.SmoothDamp(rot_dc[values_ref[i]], 0.00f, ref srched_ref, 0.070f); 
                             //if( rot_dc[values_ref[i]] == 0.0f) {
                             if(Math.Abs(rot_dc[values_ref[i]]) < 0.002f ){
                                 it_++;
@@ -196,16 +207,23 @@ public class CameraMovement : MonoBehaviour
                     }
                     else // POSITIONS MOVEMENTS 
                     {
+                        float srched_ref =( trns_back_arr[i] == true ?  
+                         (values_ref[i] == "wallR_x_offst"  ? (mathfRef_pos_x) : (values_ref[i] == "wallR_y_offst" ? mathfRef_pos_y : mathfRef_pos_z) )
+                            :
+                          (values_ref[i] == "wallR_x_offst"  ? (mathfRef0_pos_x) : (values_ref[i] == "wallR_y_offst" ? mathfRef0_pos_y : mathfRef0_pos_z) )
+                        );
+
+
                         if(trns_back_arr[i] == false)
                         {
-                            pos_dc[values_ref[i]] = Mathf.SmoothDamp( pos_dc[values_ref[i]], values_flt[i], ref mathfRef_pos, 0.100f);
+                            pos_dc[values_ref[i]] = Mathf.SmoothDamp( pos_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.100f);
                             if( Math.Abs(pos_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.001f ) { 
                                 trns_back_arr[i] = true; 
                             }
                         }
                         else if (trns_back_arr[i] == true)
                         { 
-                            pos_dc[values_ref[i]] = Mathf.SmoothDamp(pos_dc[values_ref[i]], 0.00f, ref mathfRef0_pos, 0.070f); 
+                            pos_dc[values_ref[i]] = Mathf.SmoothDamp(pos_dc[values_ref[i]], 0.00f, ref srched_ref, 0.070f); 
                             if(Math.Abs(pos_dc[values_ref[i]]) < 0.0005f ){
                             //if( pos_dc[values_ref[i]] == 0.0f){
                                 it_++;
@@ -228,8 +246,7 @@ public class CameraMovement : MonoBehaviour
     }
 
     private void reset_smoothDmpfnc() {
-
-        mathfRef = mathfRef0_ = mathfRef_pos = mathfRef0_pos = 0.0f; 
+        mathfRef_x = mathfRef_y = mathfRef_z = mathfRef0_x = mathfRef0_y = mathfRef0_z = mathfRef_pos_x = mathfRef_pos_y = mathfRef_pos_z = mathfRef0_pos_x = mathfRef0_pos_y = mathfRef0_pos_z = 0.0f;
         mathRef_arr = new List<float>(new float[6] {
             0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
         }); 
@@ -474,9 +491,10 @@ public class CameraMovement : MonoBehaviour
     public void jmp(bool is_dblJmp){
         // wallR_rot_x_offst = -0.052f; 
         // wallR_y_offst = -0.20f;    
-          
+        reset_smoothDmpfnc();  
+
         iterator_ = 3;
-        List<float> v_flt = new List<float>(new float[6] {-0.095f, -0.85f,is_dblJmp ?  -0.025f : 0.025f, 0.0f, 0.0f, 0.0f} ); 
+        List<float> v_flt = new List<float>(new float[6] {-0.085f, -0.80f,is_dblJmp ?  -0.025f : 0.025f, 0.0f, 0.0f, 0.0f} ); 
         List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "", "",""} ); 
  
         values_ref = s_arr;
