@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Linq;
+//using System.Collections.Generic;
 
 public class CameraMovement : MonoBehaviour
 {
@@ -32,23 +34,23 @@ public class CameraMovement : MonoBehaviour
     [Header ("Camera Jump/Fly/Slide offset values")]
     [HideInInspector] public float supl_xRot = 0.0f;
     [HideInInspector] public float supl_yOff = 0.0f;
-    private float mathfRef = 0.0f;
+
+    private float mathfRef_grpl = 0.0f;
+
     private string dy_cm_inf = "";
 
-    [Header ("Camera WallRun Values")]
-    // private float wallR_x_offst = 0.0f;
-    // private float wallR_y_offst = 0.0f;
-    // private float wallR_z_offst = 0.0f;
+    [Header ("Camera WallRun Values")]  
 
     //  public float wallR_rot_x_offst = 0.0f;
     // private float wallR_rot_y_offst = 0.0f;
     // private float wallR_rot_z_offst = 0.0f;
 
-    private IDictionary<string, float> rot_dc = new Dictionary<string, float>(){
+    [SerializeField]
+    private static IDictionary<string, float> rot_dc = new Dictionary<string, float>(){
         {"wallR_rot_x_offst", 0.0f  },
         {"wallR_rot_y_offst", 0.0f },  {"wallR_rot_z_offst",  0.0f }
     };
-    private IDictionary<string, float> pos_dc = new Dictionary<string, float>(){
+    private static IDictionary<string, float> pos_dc = new Dictionary<string, float>(){
         { "wallR_x_offst", 0.0f },
         { "wallR_y_offst", 0.0f },  {"wallR_z_offst", 0.0f}
     };
@@ -62,13 +64,9 @@ public class CameraMovement : MonoBehaviour
     // }
     // private float z_off {  get{ return wallR_z_offst; }  set{ wallR_z_offst = value; } }
 
-    // private float z_off_rot {  get{ return wallR_rot_x_offst; }  set{ wallR_rot_z_offst = value; } }
-    // private float y_off_rot {  get{ return wallR_rot_y_offst; }  set{ wallR_rot_y_offst = value; } }
-    // private float x_off_rot {  get{ return wallR_rot_z_offst; }  set{ wallR_rot_x_offst = value; } }
-
 
     [Header ("SmoothDamp Functions")]
-    private bool trns_fnc = false;
+    public bool trns_fnc = false;
     private bool trns_back = false;
 
     private float trns_vlue;
@@ -76,9 +74,17 @@ public class CameraMovement : MonoBehaviour
     private List<string> values_ref = new List<string>(new string[6] {
       "wallR_x_offst", "wallR_y_offst", "wallR_z_offst", "wallR_rot_x_offst", "wallR_rot_y_offst", "wallR_rot_z_offst"
     });    
-    private List<bool> trns_back_arr = new List<bool>(new bool[6] {
+    private List<bool?> trns_back_arr = new List<bool?>(new bool?[6] {
         false, false, false ,false, false, false
     });    
+    private List<float> mathRef_arr = new List<float>(new float[6] {
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
+    }); 
+    private float mathfRef = 0.0f;
+    private float mathfRef0_ = 0.0f;
+
+    public float mathfRef_pos = 0.0f;
+    public float mathfRef0_pos = 0.0f;
 
     [Header ("Fov Floats")]
     private float start_fov;
@@ -110,6 +116,7 @@ public class CameraMovement : MonoBehaviour
     private Camera c_;
 
     private void Start(){
+
         p_anim = p_gm.GetComponentInChildren<Animator>();
 
         def_offset = offset;
@@ -142,47 +149,97 @@ public class CameraMovement : MonoBehaviour
         if (!Input.GetKeyDown("q") && !Input.GetKeyDown("d") ){rotate_back = true;}else{
             rotate_back = false;
         }
-
         if(c_.fieldOfView != new_fov){
             c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, new_fov, 0.85f);
         }
 
-        if(smthDmp_grpl) rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], -0.08f, ref mathfRef, 0.295f);
-        if(smthDmp_grpl_end) rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], -0.74f, ref mathfRef, 0.295f);
+        if(smthDmp_grpl) rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], -0.08f, ref mathfRef_grpl, 0.295f);
+        if(smthDmp_grpl_end) rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], -0.74f, ref mathfRef_grpl, 0.295f);
 
         if(trns_fnc){
+            int it_ = 0;
             for (int i = 0; i < values_flt.Count; i++){
                 if( values_flt[i] == 0.0f) break;
                 
                 bool s_ =  nms_.Contains(values_ref[i]);
+                if(!s_){
+                    // Debug.Log( ( !s_ ? rot_dc[values_ref[i]] : pos_dc[values_ref[i]] ) +
+                    //             " vs " + values_ref[i] );
+                }
 
-                if(!s_)
+                // const float indexed_ref = mathRef_arr[i];
+
+                if(trns_back_arr[i] == null)
+                {
+                    it_ ++;
+                }else 
                 {
 
-                    if(!trns_back_arr[i]){
-                        if(rot_dc[values_ref[i]] >= values_flt[i] - 0.01f ) {
-                            rot_dc[values_ref[i]] = Mathf.SmoothDamp( rot_dc[values_ref[i]], values_flt[i], ref mathfRef, 0.250f); 
-                            trns_back_arr[i] = true;
+                    if(!s_) // ROTATIONS MOVEMENTS
+                    {
+                        if(trns_back_arr[i] == false)
+                        {
+                            rot_dc[values_ref[i]] = Mathf.SmoothDamp( rot_dc[values_ref[i]], values_flt[i], ref mathfRef, 0.070f); 
+                            if( Math.Abs(rot_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.002f) {
+                                trns_back_arr[i] = true;
+                            }
                         }
+                        else if (trns_back_arr[i] == true)
+                        { 
+                            rot_dc[values_ref[i]] = Mathf.SmoothDamp(rot_dc[values_ref[i]], 0.00f, ref mathfRef0_, 0.250f); 
+                            //if( rot_dc[values_ref[i]] == 0.0f) {
+                            if(Math.Abs(rot_dc[values_ref[i]]) < 0.002f ){
+                                it_++;
+                                trns_back_arr[i] = null;
+                            }
+                        }  
                     }
-                    else{ rot_dc[values_ref[i]] = Mathf.SmoothDamp(rot_dc[values_ref[i]], 0.0f, ref mathfRef, 0.250f); }  
-
-                }else
-                {
-                    if(!trns_back_arr[i]){
-                        if( pos_dc[values_ref[i]] >= values_flt[i] - 0.01f ) { 
-                            pos_dc[values_ref[i]] = Mathf.SmoothDamp( pos_dc[values_ref[i]], values_flt[i], ref mathfRef, 0.250f);
-                            trns_back_arr[i] = true; 
+                    else // POSITIONS MOVEMENTS 
+                    {
+                        if(trns_back_arr[i] == false)
+                        {
+                            pos_dc[values_ref[i]] = Mathf.SmoothDamp( pos_dc[values_ref[i]], values_flt[i], ref mathfRef_pos, 0.100f);
+                            if( Math.Abs(pos_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.001f ) { 
+                                trns_back_arr[i] = true; 
+                            }
                         }
-                    }
-                    else{ pos_dc[values_ref[i]] = Mathf.SmoothDamp(pos_dc[values_ref[i]], 0.0f, ref mathfRef, 0.250f); }  
+                        else if (trns_back_arr[i] == true)
+                        { 
+                            pos_dc[values_ref[i]] = Mathf.SmoothDamp(pos_dc[values_ref[i]], 0.00f, ref mathfRef0_pos, 0.070f); 
+                            if(Math.Abs(pos_dc[values_ref[i]]) < 0.0005f ){
+                            //if( pos_dc[values_ref[i]] == 0.0f){
+                                it_++;
+                                trns_back_arr[i] = null;
+                            }
+                        }  
+                    }    
 
                 }
-    
+      
+                if (it_ == iterator_){ trns_fnc = false; } 
+                if(!trns_fnc) {
+                    //Debug.Log("WHOLE RESET !");
+                    reset_smoothDmpfnc();
+                    break;
+                }
             }
         }
+
     }
 
+    private void reset_smoothDmpfnc() {
+
+        mathfRef = mathfRef0_ = mathfRef_pos = mathfRef0_pos = 0.0f; 
+        mathRef_arr = new List<float>(new float[6] {
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
+        }); 
+        for(int b = 0; b < iterator_; b ++)
+        {
+            bool s_ =  nms_.Contains(values_ref[b]);
+            if(s_) rot_dc[values_ref[b]] = 0.0f;
+            else pos_dc[values_ref[b]] = 0.0f;
+        }
+    }
 
     private void FixedUpdate(){
         x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ? -1 *   (60 - (player_rb.rotation.eulerAngles.y - 300.0f)) : player_rb.rotation.eulerAngles.y);
@@ -204,18 +261,6 @@ public class CameraMovement : MonoBehaviour
         tyro_on = FindObjectOfType<PlayerMovement>().plyr_tyro;
         sliding_on =  FindObjectOfType<PlayerMovement>().plyr_sliding;
 
-        if(p_anim != null){
-            if(p_anim.GetBool("Jump") || p_anim.GetBool("DoubleJump")){
-                //supl_xRot = Mathf.SmoothDamp(supl_xRot, -0.07f, ref mathfRef, 0.52f);
-                //supl_yOff = Mathf.SmoothDamp(supl_yOff, -2f, ref mathfRef, 0.52f);
-            }else if(p_anim.GetBool("launcherJump") || p_anim.GetBool("bumperJump") || p_anim.GetBool("obstacleJump") || p_anim.GetBool("slide")){
-                // supl_xRot = Mathf.SmoothDamp(supl_xRot, 0.04f, ref mathfRef, 0.4f);
-                // supl_yOff = Mathf.SmoothDamp(supl_yOff, 0.25f, ref mathfRef, 0.4f);
-            }else{
-                supl_xRot = Mathf.SmoothDamp(supl_xRot, 0f, ref mathfRef, 0.52f);
-                supl_yOff = Mathf.SmoothDamp(supl_yOff, 0f, ref mathfRef, 0.52f);
-            }
-        }
     }
 
     private void LateUpdate() {
@@ -235,9 +280,9 @@ public class CameraMovement : MonoBehaviour
             // Smooth Damp
             Vector3 smoothFollow = Vector3.SmoothDamp(
                 transform.position,
-                desired_ + (tyro_on ? new Vector3(0f, 0.5f, 3.0f) : new Vector3(0f,0f,0f)) + new Vector3(rot_dc["wallR_x_offst"], rot_dc["wallR_y_offst"] + supl_yOff, rot_dc["wallR_z_offst"]),
+                desired_ + (tyro_on ? new Vector3(0f, 0.5f, 3.0f) : new Vector3(0f,0f,0f)) + new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"]),
                 ref currentVelocity,
-                tyro_on ? 0.15f : 0.07f
+                tyro_on ? 0.15f : 0.06f
             ); 
             // Vector3 smoothFollow = Vector3.SmoothDamp(transform.position, desired_, ref currentVelocity, smoothTime *   Time.fixedDeltaTime); 
 
@@ -289,12 +334,6 @@ public class CameraMovement : MonoBehaviour
 
 
 
-    // private void FovTrans(float fov_value, float t_){
-    //     Camera c_ = gameObject.GetComponent<Camera>();
-    //     if(c_){
-    //         c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, fov_value, t_);
-    //     }
-    // }
 
     // PUBLIC CAM VALUES TRANSITIONS FOR WALL RUN
     public void wal_rn_offset(bool is_ext, Transform gm_){
@@ -306,6 +345,10 @@ public class CameraMovement : MonoBehaviour
 
             rot_dc["wallR_rot_z_offst"] = 0.0f; rot_dc["wallR_rot_y_offst"] = 0.0f; rot_dc["wallR_rot_x_offst"] = 0.0f;
         }else{
+            // // //
+            reset_smoothDmpfnc();
+            // // //
+
             //FovTrans(start_fov, 0.5f);
             new_fov = 90f;
             pos_dc["wallR_y_offst"] = -0.55f;
@@ -326,16 +369,23 @@ public class CameraMovement : MonoBehaviour
     }
 
 
+
+
     // PUBLIC CAM VALUES TRANS FOR GRAPPLING
     public void grpl_offset(bool is_ext, Transform gm_ = null){
         if(is_ext){
             //FovTrans(85f, 0.5f);
             supl_xRot = 0.0f;
             new_fov = start_fov;
+          
             pos_dc["wallR_x_offst"] = 0.0f; Invoke("delay_yOf_grpl", 0.55f); pos_dc["wallR_z_offst"] = 0.0f;
             rot_dc["wallR_rot_z_offst"] = 0.0f; rot_dc["wallR_rot_y_offst"] = 0.0f; rot_dc["wallR_rot_x_offst"] = 0.0f;
         }else{
             if(gm_){
+                // // //
+                reset_smoothDmpfnc();
+                // // //
+
                 new_fov = 87f;
                 float sns =  player.position.x - gm_.position.x;
                 // CLOSE UP Z OFFSET
@@ -360,6 +410,9 @@ public class CameraMovement : MonoBehaviour
         smthDmp_grpl_end = false; smthDmp_grpl = false;
         rot_dc["wallR_y_offst"] = 0f;
     }
+
+
+
     // END GRAPPLING CAMERA MOVEMENT TRANSITION
     private void end_grpl_Cm(){
         FindObjectOfType<Grappling>().soft_Grapple();
@@ -375,15 +428,18 @@ public class CameraMovement : MonoBehaviour
 
 
 
+
     // PUBLIC CAM VALUES TRANS FOR SLIDING
     public void sld_offset(bool is_ext){
         if(is_ext){
             //FovTrans(85f, 0.5f);
             supl_xRot = 0.0f;
             new_fov = start_fov;
-            pos_dc["wallR_x_offst"] = 0.0f; rot_dc["wallR_y_offst"] = 0.0f; rot_dc["wallR_z_offst"] = 0.0f;
+            pos_dc["wallR_x_offst"] = 0.0f; pos_dc["wallR_y_offst"] = 0.0f; pos_dc["wallR_z_offst"] = 0.0f;
             rot_dc["wallR_rot_z_offst"] = 0.0f; rot_dc["wallR_rot_y_offst"] = 0.0f; rot_dc["wallR_rot_x_offst"] = 0.0f;
         }else{
+            reset_smoothDmpfnc();
+
             new_fov = 86f;
             // CLOSE UP Z OFFSET
             pos_dc["wallR_z_offst"] = 1.00f;
@@ -396,11 +452,13 @@ public class CameraMovement : MonoBehaviour
 
 
 
+
     // PUBLIC CAM VALUES TRANS FOR OBSTCL JMP
     public void obs_offset(){
         // SMOOTH DAMP FOR X ROTATION
         pos_dc["wallR_y_offst"] = 0.35f;
-        rot_dc["wallR_rot_x_offst"] = 0.14f;    
+        rot_dc["wallR_rot_x_offst"] = 0.14f;  
+        reset_smoothDmpfnc();  
         Invoke("obst_rst", 0.75f);   
     }
     private void obst_rst(){
@@ -409,18 +467,21 @@ public class CameraMovement : MonoBehaviour
         rot_dc["wallR_rot_z_offst"] = 0.0f; rot_dc["wallR_rot_y_offst"] = 0.0f; rot_dc["wallR_rot_x_offst"] = 0.0f;
     }
 
+
+
+
     // PUBLIC FUNC FOR JUMP SUPER SMOOTH TRANS
-    public void jmp(){
+    public void jmp(bool is_dblJmp){
         // wallR_rot_x_offst = -0.052f; 
         // wallR_y_offst = -0.20f;    
           
-        iterator_ = 2;
-        List<float> v_flt = new List<float>(new float[6] {-0.052f, -0.20f, 0.0f, 0.0f, 0.0f, 0.0f} ); 
-        List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "", "", "",""} ); 
+        iterator_ = 3;
+        List<float> v_flt = new List<float>(new float[6] {-0.095f, -0.85f,is_dblJmp ?  -0.025f : 0.025f, 0.0f, 0.0f, 0.0f} ); 
+        List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "", "",""} ); 
  
         values_ref = s_arr;
         values_flt = v_flt;
-        trns_back_arr = new List<bool>(new bool[6] {
+        trns_back_arr = new List<bool?>(new bool?[6] {
             false, false, false ,false, false, false
         }); 
 

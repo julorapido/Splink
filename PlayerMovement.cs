@@ -201,7 +201,7 @@ public class PlayerMovement : MonoBehaviour
                 _jumping = false;
                 //Debug.Log(plyr_trsnfm.transform.rotation.eulerAngles);
                 StartCoroutine(Dly_bool_anm(0.3f, "Jump"));
-                FindObjectOfType<CameraMovement>().jmp();
+                FindObjectOfType<CameraMovement>().jmp(false);
             }
 
             if(dbl_jump_ == true){
@@ -211,6 +211,7 @@ public class PlayerMovement : MonoBehaviour
                 StopCoroutine(Dbl_Jmp_Tm(2));
                 StopCoroutine(Dly_bool_anm(0.3f, "Jump"));
                 StartCoroutine(Dly_bool_anm(0.4f, "DoubleJump"));
+                FindObjectOfType<CameraMovement>().jmp(true);
             }
 
             // Obstacl Jumping && Swinging ==> stopRunning_ bool
