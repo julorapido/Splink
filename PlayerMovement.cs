@@ -20,8 +20,6 @@ public class PlayerMovement : MonoBehaviour
     public float player_speed = 30;
     private float svd_speed; private float uptd_speed;
     public float strafe_speed = 30;
-    // public float gravityScale = 10;
-    // public float fallingGravityScale = 40;
     private Animator _anim = null;
     private CharacterController _controller = null;
     //public Animation _animTion = null;
@@ -61,6 +59,7 @@ public class PlayerMovement : MonoBehaviour
 
     [Header ("Player Attached Partcl")]
     public ParticleSystem jump_prtcl;
+    public ParticleSystem doubleJump_prtcl;
 
     private bool gameOver_ = false;
 
@@ -202,16 +201,17 @@ public class PlayerMovement : MonoBehaviour
                 //Debug.Log(plyr_trsnfm.transform.rotation.eulerAngles);
                 StartCoroutine(Dly_bool_anm(0.3f, "Jump"));
                 FindObjectOfType<CameraMovement>().jmp(false);
+                jump_prtcl.Play();
             }
 
             if(dbl_jump_ == true){
                 _jumping = false; dbl_jump_ = false;
                 
-                jump_prtcl.Play();
                 StopCoroutine(Dbl_Jmp_Tm(2));
                 StopCoroutine(Dly_bool_anm(0.3f, "Jump"));
                 StartCoroutine(Dly_bool_anm(0.4f, "DoubleJump"));
                 FindObjectOfType<CameraMovement>().jmp(true);
+                doubleJump_prtcl.Play();
             }
 
             // Obstacl Jumping && Swinging ==> stopRunning_ bool
@@ -221,7 +221,7 @@ public class PlayerMovement : MonoBehaviour
 
                 // SLIDING SPEED
                 if(plyr_sliding){
-                    plyr_rb.AddForce( new Vector3(0, 0, 2 * uptd_speed), ForceMode.VelocityChange);
+                    plyr_rb.AddForce( new Vector3(0, 0, 1.6f * uptd_speed), ForceMode.VelocityChange);
 
                 // WALL RUN 
                 }else if(plyr_wallRninng){
@@ -233,7 +233,7 @@ public class PlayerMovement : MonoBehaviour
                     }
                     // STRAFE SPEED
                     if (Input.GetKey("q") || Input.GetKey("d")){
-                        plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? uptd_speed / 3.85f : uptd_speed / 1.75f )), ForceMode.VelocityChange);
+                        plyr_rb.AddForce( new Vector3(0, 0, (plyr_flying ? uptd_speed / 3.3f : uptd_speed / 1.75f )), ForceMode.VelocityChange);
                     }
                 }
  

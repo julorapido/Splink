@@ -15,9 +15,11 @@ public class CameraMovement : MonoBehaviour
     [Header ("Player Inspector Values")]
     public Transform player;
     public Rigidbody player_rb;
+    public float player_velocity;
 
     [Header ("Camera Offset Value")]
     public Vector3 offset;
+    
     
     private float smoothTrans_  = 2.5f;
     private bool game_Over_ = false;
@@ -66,7 +68,9 @@ public class CameraMovement : MonoBehaviour
 
 
     [Header ("SmoothDamp Functions")]
-    public bool trns_fnc = false;
+    private int iterator_;
+
+    private bool trns_fnc = false;
     private bool trns_back = false;
 
     private float trns_vlue;
@@ -86,8 +90,9 @@ public class CameraMovement : MonoBehaviour
     private float mathfRef0_x = 0.0f, mathfRef0_y = 0.0f, mathfRef0_z = 0.0f;
 
     // POSITIONS REFS
-    public float mathfRef_pos_x = 0.0f, mathfRef_pos_y = 0.0f, mathfRef_pos_z = 0.0f;
-    public float mathfRef0_pos_x = 0.0f, mathfRef0_pos_y = 0.0f, mathfRef0_pos_z = 0.0f;
+    private float mathfRef_pos_x = 0.0f, mathfRef_pos_y = 0.0f, mathfRef_pos_z = 0.0f;
+    private float mathfRef0_pos_x = 0.0f, mathfRef0_pos_y = 0.0f, mathfRef0_pos_z = 0.0f;
+
 
     [Header ("Fov Floats")]
     private float start_fov;
@@ -106,6 +111,7 @@ public class CameraMovement : MonoBehaviour
     //private float smoothTime = 2f ;
     private Vector3 currentVelocity;
 
+    [Header ("Player Actions Informations")]
     private bool tyro_on = false;
     private bool sliding_on = false;
     private bool rotate_back = false;
@@ -114,7 +120,6 @@ public class CameraMovement : MonoBehaviour
     [HideInInspector] public Vector3 _grplPoint_;
     private bool end_trans_called = false;
 
-    private int iterator_;
 
     private Camera c_;
 
@@ -186,22 +191,23 @@ public class CameraMovement : MonoBehaviour
                           (values_ref[i] == "wallR_rot_x_offst"  ? (mathfRef0_x) : (values_ref[i] == "wallR_rot_y_offst" ? mathfRef0_y : mathfRef0_z) )
                         );
 
+
                         if(trns_back_arr[i] == false)
                         {
-                            rot_dc[values_ref[i]] = Mathf.SmoothDamp( rot_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.140f); 
+                            rot_dc[values_ref[i]] = Mathf.SmoothDamp( rot_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.0505f); 
 
-                            if( Math.Abs(rot_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.002f) {
+                            if( Math.Abs(rot_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.0045f) {
                                 trns_back_arr[i] = true;
-                                Debug.Log("an angle rotation ended ! ");
                             }
                         }
                         else if (trns_back_arr[i] == true)
                         { 
-                            rot_dc[values_ref[i]] = Mathf.SmoothDamp(rot_dc[values_ref[i]], 0.00f, ref srched_ref, 0.070f); 
+                            rot_dc[values_ref[i]] = Mathf.SmoothDamp(rot_dc[values_ref[i]], 0.00f, ref srched_ref, 0.0450f); 
                             //if( rot_dc[values_ref[i]] == 0.0f) {
-                            if(Math.Abs(rot_dc[values_ref[i]]) < 0.002f ){
+                            if(Math.Abs(rot_dc[values_ref[i]]) < 0.0035f ){
                                 it_++;
                                 trns_back_arr[i] = null;
+                                //Debug.Log("rotation done");
                             }
                         }  
                     }
@@ -214,20 +220,22 @@ public class CameraMovement : MonoBehaviour
                         );
 
 
+
                         if(trns_back_arr[i] == false)
                         {
-                            pos_dc[values_ref[i]] = Mathf.SmoothDamp( pos_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.100f);
-                            if( Math.Abs(pos_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.001f ) { 
+                            pos_dc[values_ref[i]] = Mathf.SmoothDamp( pos_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.040f);
+                            if( Math.Abs(pos_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.003f ) { 
                                 trns_back_arr[i] = true; 
                             }
                         }
                         else if (trns_back_arr[i] == true)
                         { 
-                            pos_dc[values_ref[i]] = Mathf.SmoothDamp(pos_dc[values_ref[i]], 0.00f, ref srched_ref, 0.070f); 
-                            if(Math.Abs(pos_dc[values_ref[i]]) < 0.0005f ){
+                            pos_dc[values_ref[i]] = Mathf.SmoothDamp(pos_dc[values_ref[i]], 0.00f, ref srched_ref, 0.050f); 
+                            if(Math.Abs(pos_dc[values_ref[i]]) < 0.0070f ){
                             //if( pos_dc[values_ref[i]] == 0.0f){
                                 it_++;
                                 trns_back_arr[i] = null;
+                                //Debug.Log("position done");
                             }
                         }  
                     }    
@@ -250,6 +258,7 @@ public class CameraMovement : MonoBehaviour
         mathRef_arr = new List<float>(new float[6] {
             0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
         }); 
+        trns_fnc = false;
         for(int b = 0; b < iterator_; b ++)
         {
             bool s_ =  nms_.Contains(values_ref[b]);
@@ -260,11 +269,26 @@ public class CameraMovement : MonoBehaviour
 
     private void FixedUpdate(){
         x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ? -1 *   (60 - (player_rb.rotation.eulerAngles.y - 300.0f)) : player_rb.rotation.eulerAngles.y);
+
+        player_velocity = player_rb.velocity.z;
+
+        if(player_velocity > 6f)
+        {
+            offset.z = def_offset.z + ( 1f/15f *  (player_velocity - 6f) ); // 1f == to 6 velocity [from > 6f]
+        }
+        if(p_anim.GetBool("Flying") && ( !p_anim.GetBool("wallRun") && !p_anim.GetBool("swing") && !p_anim.GetBool("slide")) )
+        {
+            offset = new Vector3(def_offset.x, def_offset.y - 0.40f, offset.z);
+        }else{
+            offset.y = def_offset.y;
+        }
+
+
         // Lerp Position
         if(((-0.050f * x_offst)) != lst_offst_x){
             desired_  = (player.position + offset);
             desired_.x = desired_.x +  ((-0.050f * x_offst));
-            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 60;
+            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 50f;
             lst_offst_x = ((-0.050f * x_offst));
         }
 
@@ -287,7 +311,7 @@ public class CameraMovement : MonoBehaviour
             // Dampen towards the target rotation
             //Quaternion initial_rt  = new Quaternion(15, gameObject.transform.rotation.y, 0, 1);  
             Quaternion desired_rt  = new Quaternion(xRot + supl_xRot + rot_dc["wallR_rot_x_offst"],
-                 (x_offst / 112.0f) + rot_dc["wallR_rot_y_offst"], 
+                 (x_offst / 97.0f) + rot_dc["wallR_rot_y_offst"], 
                 (x_offst / 10000.0f) + rot_dc["wallR_rot_z_offst"],
                  1
             );
@@ -299,7 +323,7 @@ public class CameraMovement : MonoBehaviour
                 transform.position,
                 desired_ + (tyro_on ? new Vector3(0f, 0.5f, 3.0f) : new Vector3(0f,0f,0f)) + new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"]),
                 ref currentVelocity,
-                tyro_on ? 0.15f : 0.06f
+                tyro_on ? 0.15f : 0.0680f
             ); 
             // Vector3 smoothFollow = Vector3.SmoothDamp(transform.position, desired_, ref currentVelocity, smoothTime *   Time.fixedDeltaTime); 
 
@@ -371,16 +395,16 @@ public class CameraMovement : MonoBehaviour
             pos_dc["wallR_y_offst"] = -0.55f;
 
             // CLOSE UP Z OFFSET
-            pos_dc["wallR_z_offst"] = 2.20f;
+            pos_dc["wallR_z_offst"] = 1.90f;
 
             float sns =  player.position.x - gm_.position.x;
             if(sns < 0 ){
                 pos_dc["wallR_x_offst"] = -1.35f; 
-                rot_dc["wallR_rot_y_offst"] = 0.150f; rot_dc["wallR_rot_z_offst"] = 0.14f;
+                rot_dc["wallR_rot_y_offst"] = 0.250f; rot_dc["wallR_rot_z_offst"] = 0.14f;
 
             }else{
                 pos_dc["wallR_x_offst"] = 1.35f;
-                rot_dc["wallR_rot_y_offst"] = -0.150f; rot_dc["wallR_rot_z_offst"] = -0.14f;
+                rot_dc["wallR_rot_y_offst"] = -0.250f; rot_dc["wallR_rot_z_offst"] = -0.14f;
             }
         }
     }
@@ -494,7 +518,7 @@ public class CameraMovement : MonoBehaviour
         reset_smoothDmpfnc();  
 
         iterator_ = 3;
-        List<float> v_flt = new List<float>(new float[6] {-0.085f, -0.80f,is_dblJmp ?  -0.025f : 0.025f, 0.0f, 0.0f, 0.0f} ); 
+        List<float> v_flt = new List<float>(new float[6] {-0.130f, -0.20f, is_dblJmp ?  -0.038f : 0.044f, 0.0f, 0.0f, 0.0f} ); 
         List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "", "",""} ); 
  
         values_ref = s_arr;
