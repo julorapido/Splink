@@ -168,11 +168,16 @@ public class Buildings : MonoBehaviour
         for (int j = 0; j < chld_len; j ++)
         {
             GameObject chld_ = section_parent.transform.GetChild(j).gameObject;
-            List<Material?> chld_materials = new List<Material?>(new Material[5] {null, null, null, null, null});
+            Debug.Log(chld_);
+            List<Material?> chld_materials = new List<Material?>(new Material[7] {null, null, null, null, null, null, null});
+            List<int> materialsDbl_indexes = new List<int>(new int[7] {-1, -1, -1, -1, -1, -1, -1});
+
+            int chld_i = 0;
 
             //if parent is his own mesh renderer
             if(chld_.GetComponent<MeshFilter>() != null) continue;
-
+            
+            bool mt_fetched = false;
             // Right order to get mesh filters [NOT RECURSIVE-UP]
             MeshFilter[] meshFilters_ = new MeshFilter[chld_.transform.childCount];
             for (int c = 0; c < chld_.transform.childCount; c ++)
@@ -184,10 +189,23 @@ public class Buildings : MonoBehaviour
 
                 // get materials 
                 MeshRenderer mesh_r = chld_.transform.GetChild(c).GetComponent<MeshRenderer>();
-                if(mesh_r != null){
-                    Material[] mesh_Mats = GetComponent<Renderer>().sharedMaterials;
-                    foreach (Material localMat in mesh_Mats)
-                        if (!chld_materials.Contains(localMat)) chld_materials.Add(localMat);
+                if(mesh_r != null && !mt_fetched){
+                    Material[] mesh_Mats = mesh_r.sharedMaterials;
+                    foreach (Material localMat in mesh_Mats){
+                        //if (!chld_materials.Contains(localMat) && mesh_r.gameObject.tag == "ground") {
+                        if (mesh_r.gameObject.tag == "ground") 
+                        {
+                            // if material appears twice in meshRenderer
+                            if ( chld_materials.Contains(localMat) )
+                            {
+                                materialsDbl_indexes[chld_i] = chld_i; 
+                            }
+
+                            chld_materials[chld_i] = localMat;
+                            chld_i++;
+                        }
+                    }
+                    mt_fetched = true;
                 }
        
             }
@@ -201,13 +219,14 @@ public class Buildings : MonoBehaviour
             CombineInstance[] cmb_inst = new CombineInstance[meshFilters_.Length];
 
             int sb_Mcount = 0;
-            Mesh[] subMeshes_ = new Mesh[sb_Mcount];
-            Debug.Log(chld_);
+            Mesh[] subMeshes_ = new Mesh[chld_i];
 
             // loop for each material => [chld_materials]
             // submeshes creation => a combiner for each (sub)mesh that is mapped to the right material.
-            foreach (Material searchdMaterial_ in chld_materials)
+            //foreach (Material searchdMaterial_ in chld_materials)
+            for(int y = 0; y < chld_materials.Count; y++)
             {
+                Material searchdMaterial_ = chld_materials[y];
                 if(searchdMaterial_ == null) break;
 
                 // map meshFilters with correspondant material
@@ -241,10 +260,15 @@ public class Buildings : MonoBehaviour
                             continue;
 
                             // This submesh is the material we're looking for right now.
+                            // each Material gets a new CombineInstance() [subMesh]
                             CombineInstance ci = new CombineInstance();
                             ci.mesh = meshFilters_[i].sharedMesh;
-                            ci.subMeshIndex = m_I;
-                            ci.transform = meshFilters_[i].transform.localToWorldMatrix;
+
+                            if(materialsDbl_indexes.Contains(m_I)) ci.subMeshIndex = m_I + 1;
+                            else ci.subMeshIndex = m_I;
+                            
+                            //ci.transform = meshFilters_[i].transform.localToWorldMatrix;
+                            ci.transform = meshFilters_[i].transform.worldToLocalMatrix;
                             cmb_inst[i] = ci;
                             // turn off gmObj
                             meshFilters_[i].gameObject.SetActive(false);
@@ -271,7 +295,7 @@ public class Buildings : MonoBehaviour
         
                 // Flatten into a single mesh.
                 Mesh newMesh_ = new Mesh();
-                newMesh_.CombineMeshes (cmb_reformed, false);
+                newMesh_.CombineMeshes (cmb_reformed, true);
                 subMeshes_[sb_Mcount] = newMesh_;
 
                 sb_Mcount ++;
@@ -294,7 +318,11 @@ public class Buildings : MonoBehaviour
             Mesh finalMesh = new Mesh();
             finalMesh.CombineMeshes(finalCombiners, false);
 
-            ( section_parent.transform.GetChild(j) ).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshFilter>().sharedMesh = finalMesh;
+            // reduce final mesh renderer materials list ==> before modifying new [finalMesh]
+            chld_materials.RemoveAll(item => item == null);
+            section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshRenderer>().SetMaterials(chld_materials);
+
+            section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshFilter>().sharedMesh = finalMesh;
             section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).gameObject.SetActive(true);
 
             Debug.Log ("Final mesh has " + subMeshes_.Length + " materials.");
