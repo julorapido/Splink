@@ -5,6 +5,7 @@ using System;
 
 public class Buildings : MonoBehaviour
 {
+    [SerializeField]
     public GameObject[] buildngs_prefb;
     public GameObject[] sections_prefb;
 
@@ -167,10 +168,12 @@ public class Buildings : MonoBehaviour
         for (int j = 0; j < chld_len; j ++)
         {
             GameObject chld_ = section_parent.transform.GetChild(j).gameObject;
+            List<Material?> chld_materials = new List<Material?>(new Material[5] {null, null, null, null, null});
 
-            //IF PARENT IS HIS OWN MESH RENDERER
+            //if parent is his own mesh renderer
             if(chld_.GetComponent<MeshFilter>() != null) continue;
 
+            // Right order to get mesh filters [NOT RECURSIVE-UP]
             MeshFilter[] meshFilters_ = new MeshFilter[chld_.transform.childCount];
             for (int c = 0; c < chld_.transform.childCount; c ++)
             {
@@ -178,85 +181,205 @@ public class Buildings : MonoBehaviour
                 if(chld_c != null){
                     meshFilters_[c] = chld_c;
                 }
+
+                // get materials 
+                MeshRenderer mesh_r = chld_.transform.GetChild(c).GetComponent<MeshRenderer>();
+                if(mesh_r != null){
+                    Material[] mesh_Mats = GetComponent<Renderer>().sharedMaterials;
+                    foreach (Material localMat in mesh_Mats)
+                        if (!chld_materials.Contains(localMat)) chld_materials.Add(localMat);
+                }
+       
             }
-            //GameObject[] chld_arr = chld_.GetComponentsInChildren<GameObject>();
-            //MeshFilter[] meshFilters_ = chld_.GetComponentsInChildren<MeshFilter>();
+            
             //for(int z = 0; z < meshFilters_.Length; z ++) Debug.Log(meshFilters_[z]);
+
             if(meshFilters_.Length < 2)
             {
                 continue;
             }
             CombineInstance[] cmb_inst = new CombineInstance[meshFilters_.Length];
+
+            int sb_Mcount = 0;
+            Mesh[] subMeshes_ = new Mesh[sb_Mcount];
             Debug.Log(chld_);
-            int i = 0, v = 0, x = 0;
-            while (i < meshFilters_.Length)
+
+            // loop for each material => [chld_materials]
+            // submeshes creation => a combiner for each (sub)mesh that is mapped to the right material.
+            foreach (Material searchdMaterial_ in chld_materials)
             {
-                if (i < (meshFilters_.Length - 1)  && filter_Reference != null)
+                if(searchdMaterial_ == null) break;
+
+                // map meshFilters with correspondant material
+                int i = 0, v = 0, x = 0;
+                while (i < meshFilters_.Length)
                 {
-                    if( ( (meshFilters_[i]?.sharedMesh) != filter_Reference?.sharedMesh) ) 
+                    // CHECK if is meshFilter is same as filterReference
+                    if (i < (meshFilters_.Length - 1)  && filter_Reference != null)
                     {
-                        i++;
+                        if( ( (meshFilters_[i]?.sharedMesh) != filter_Reference?.sharedMesh) ) 
+                        {
+                            i++;
+                            continue;
+                        } 
+                    }
+
+                    // reference assignation
+                    if( filter_Reference == null && meshFilters_[i]?.gameObject.tag == "ground") {
+                        filter_Reference = meshFilters_[i];
+                        filter_Ref_chldPos = i;
                         continue;
+                    };
+
+                    if(filter_Reference != null && meshFilters_[i]?.gameObject.tag == "ground")
+                    {
+                        // Let's see if their materials are the one we want right now.
+                        Material[] loopMaterials = meshFilters_[i].GetComponent<Renderer>().sharedMaterials;
+                        for (int m_I = 0; m_I < loopMaterials.Length; m_I++)
+                        {
+                            if (loopMaterials[m_I] != searchdMaterial_)
+                            continue;
+
+                            // This submesh is the material we're looking for right now.
+                            CombineInstance ci = new CombineInstance();
+                            ci.mesh = meshFilters_[i].sharedMesh;
+                            ci.subMeshIndex = m_I;
+                            ci.transform = meshFilters_[i].transform.localToWorldMatrix;
+                            cmb_inst[i] = ci;
+                            // turn off gmObj
+                            meshFilters_[i].gameObject.SetActive(false);
+
+                            v++;
+                        }
+              
+                    }
+            
+
+                    i++;
+                }
+            
+                // clear empty combineInstance spaces
+                CombineInstance[] cmb_reformed = new CombineInstance[v];
+                for(int p = 0; p < cmb_inst.Length; p ++)
+                { 
+                    if (cmb_inst[p].mesh != null)
+                    {
+                        cmb_reformed[x] = cmb_inst[p];
+                        x ++;
                     } 
                 }
-
-                // REFERENCE ASSIGNATION
-                if( filter_Reference == null && meshFilters_[i]?.gameObject.tag == "ground") {
-                    filter_Reference = meshFilters_[i];
-                    filter_Ref_chldPos = i;
-                    Debug.Log(filter_Reference.mesh.subMeshCount);
-                    continue;
-                };
-
-                if(filter_Reference != null && meshFilters_[i]?.gameObject.tag == "ground")
-                {
-                    v++;
-                    cmb_inst[i].mesh = meshFilters_[i].sharedMesh;
-                    cmb_inst[i].transform = meshFilters_[i].transform.localToWorldMatrix;
-                    meshFilters_[i].gameObject.SetActive(false);
-                }
         
+                // Flatten into a single mesh.
+                Mesh newMesh_ = new Mesh();
+                newMesh_.CombineMeshes (cmb_reformed, false);
+                subMeshes_[sb_Mcount] = newMesh_;
 
-                i++;
+                sb_Mcount ++;
             }
-            CombineInstance[] cmb_reformed = new CombineInstance[v];
-            for(int p = 0; p < cmb_inst.Length; p ++)
-            { 
-                if (cmb_inst[p].mesh != null)
-                {
-                    cmb_reformed[x] = cmb_inst[p];
-                    x ++;
-                } 
-            }
-    
-            Mesh newMesh_ = new Mesh();
-            int ref_sbMeshes_cnt = filter_Reference.mesh.subMeshCount;
 
-            newMesh_.subMeshCount = ref_sbMeshes_cnt;
-            if(ref_sbMeshes_cnt > 1)
+
+            // The final mesh: combine all the material-specific meshes as independent submeshes.
+            CombineInstance[] finalCombiners = new CombineInstance[meshFilters_.Length];
+            int fC = 0;
+            foreach (Mesh mesh in subMeshes_)
             {
-                for(int sb = 0; sb < ref_sbMeshes_cnt; sb++)
-                {
-                    UnityEngine.Rendering.SubMeshDescriptor sb_msh = filter_Reference.mesh.GetSubMesh(sb);
-                    Debug.Log(newMesh_.subMeshCount + " vs " + sb);
-                    newMesh_.SetSubMesh(sb, sb_msh);
-                }
+                CombineInstance ci = new CombineInstance();
+                ci.mesh = mesh;
+                ci.subMeshIndex = 0;
+                ci.transform = Matrix4x4.identity;
+                finalCombiners[fC] = (ci);
+                fC ++;
             }
-  
 
-            newMesh_.CombineMeshes(cmb_reformed);
-            newMesh_.RecalculateBounds();
+            Mesh finalMesh = new Mesh();
+            finalMesh.CombineMeshes(finalCombiners, false);
 
-
-            ( section_parent.transform.GetChild(j) ).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshFilter>().sharedMesh = newMesh_;
+            ( section_parent.transform.GetChild(j) ).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshFilter>().sharedMesh = finalMesh;
             section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).gameObject.SetActive(true);
+
+            Debug.Log ("Final mesh has " + subMeshes_.Length + " materials.");
         }
 
     }
 
-    // Update is called once per frame
-    private void Update()
-    {
-        
-    }
+
 }
+
+
+
+
+    //   private void AdvancedMerge()
+    //     {
+    //     // All our children (and us)
+    //     MeshFilter[] filters = GetComponentsInChildren (false);
+
+    //     // All the meshes in our children (just a big list)
+    //     //   List materials = new List();
+    //     //   MeshRenderer[] renderers = GetComponentsInChildren (false); // <-- can optimize this
+
+    //     //   foreach (MeshRenderer renderer in renderers)
+    //     //   {
+    //     //    if (renderer.transform == transform)
+    //     //     continue;
+    //     //    Material[] localMats = renderer.sharedMaterials;
+    //     //    foreach (Material localMat in localMats)
+    //     //     if (!materials.Contains (localMat))
+    //     //      materials.Add (localMat);
+    //     //   }
+
+
+    //     // Each material will have a mesh for it.
+    //     List submeshes = new List();
+    //     foreach (Material material in materials)
+    //     {
+    //         // Make a combiner for each (sub)mesh that is mapped to the right material.
+    //         List combiners = new List ();
+    //         foreach (MeshFilter filter in filters)
+    //         {
+    //                 // if (filter.transform == transform) continue;
+    //                 // // The filter doesn't know what materials are involved, get the renderer.
+    //                 // MeshRenderer renderer = filter.GetComponent ();  // <-- (Easy optimization is possible here, give it a try!)
+    //                 // if (renderer == null)
+    //                 // {
+    //                 //     Debug.LogError (filter.name + " has no MeshRenderer");
+    //                 //     continue;
+    //                 // }
+
+    //                 // Let's see if their materials are the one we want right now.
+    //                 Material[] localMaterials = GetComponent<Renderer>().sharedMaterials;
+    //                 for (int materialIndex = 0; materialIndex < localMaterials.Length; materialIndex++)
+    //                 {
+    //                     if (localMaterials [materialIndex] != material)
+    //                     continue;
+
+    //                     // This submesh is the material we're looking for right now.
+    //                     CombineInstance ci = new CombineInstance();
+    //                     ci.mesh = filter.sharedMesh;
+    //                     ci.subMeshIndex = materialIndex;
+    //                     ci.transform = Matrix4x4.identity;
+    //                     combiners.Add (ci);
+    //                 }
+    //         }
+    //         // Flatten into a single mesh.
+    //         Mesh mesh = new Mesh ();
+    //         mesh.CombineMeshes (combiners.ToArray(), true);
+    //         submeshes.Add (mesh);
+    //     }
+
+    //     // The final mesh: combine all the material-specific meshes as independent submeshes.
+    //     List finalCombiners = new List ();
+    //     foreach (Mesh mesh in submeshes)
+    //     {
+    //         CombineInstance ci = new CombineInstance ();
+    //         ci.mesh = mesh;
+    //         ci.subMeshIndex = 0;
+    //         ci.transform = Matrix4x4.identity;
+    //         finalCombiners.Add (ci);
+    //     }
+    //     Mesh finalMesh = new Mesh();
+    //     finalMesh.CombineMeshes (finalCombiners.ToArray(), false);
+    //     myMeshFilter.sharedMesh = finalMesh;
+    //     Debug.Log ("Final mesh has " + submeshes.Count + " materials.");
+
+
+    //     }
