@@ -145,7 +145,6 @@ public class Buildings : MonoBehaviour
                 Vector3 sl_size = sl.GetComponent<BoxCollider>().size;
                 
                 GameObject buffer_sect = Instantiate(sl, new Vector3(x_pos - sl_size.x/2, 0 + y_, z_pos + sl_size.z / 2 + 20f), new Quaternion(0f, 0f, 0f, 1), bldg_parent);
-                //GameObject[] buffer_go_arr = buffer_sect.GetComponentsInChildren<Transform>();
                 if(buffer_sect.transform.childCount >= 2)
                 {
                     combine_Meshes(buffer_sect, buffer_sect.transform.childCount);
@@ -160,7 +159,216 @@ public class Buildings : MonoBehaviour
     }
 
 
+
+
+
+
+
+
+
     private void combine_Meshes(GameObject section_parent, int chld_len){
+        MeshFilter? filter_Reference = null;
+        // Vector3 scale_Reference = new Vector3(0, 0, 0);
+        // Quaternion rotation_Reference = Quaternion.identity;
+        GameObject emptyRef = new GameObject();
+        Transform transform_Refence = emptyRef.transform;
+        int filter_Ref_chldPos = -1;
+        Debug.Log(section_parent);
+
+        for (int j = 0; j < chld_len; j ++)
+        {
+            GameObject chld_ = section_parent.transform.GetChild(j).gameObject;
+            Material[] chld_mats = new Material[6];
+            bool mt_fetched = false;
+            int sumbeshesCount = 0;
+
+            Debug.Log(chld_);
+
+            //if parent is his own mesh renderer
+            if(chld_.GetComponent<MeshFilter>() != null) continue;
+            
+            // Right order to get mesh filters [NOT RECURSIVE-UP]
+            MeshFilter[] meshFilters_ = new MeshFilter[chld_.transform.childCount];
+            for (int c = 0; c < chld_.transform.childCount; c ++)
+            {
+                MeshFilter chld_c = chld_.transform.GetChild(c).GetComponent<MeshFilter>();
+                if(chld_c != null && (chld_.transform.GetChild(c).gameObject.activeSelf == true) ){
+                    meshFilters_[c] = chld_c;
+                }
+
+                // get materials length [ for combineInstance.subMeshIndex ]
+                MeshRenderer mesh_r = chld_.transform.GetChild(c)?.GetComponent<MeshRenderer>();
+                if(!mesh_r) continue;
+                if(mesh_r != null && !mt_fetched){
+                    Material[] mesh_Mats = mesh_r.sharedMaterials;
+                    foreach (Material localMat in mesh_Mats){
+                        if (mesh_r.gameObject.tag == "ground") 
+                        {
+                            chld_mats[sumbeshesCount] = localMat;
+                            sumbeshesCount++;
+                        }
+                    }
+                    mt_fetched = true;
+                }
+            }
+            
+
+            if(meshFilters_.Length < 2 || chld_mats[0] == null)
+            {
+                Debug.Log("MATERIAL CATCH!!!!");
+                continue;
+            }
+
+            CombineInstance[] cmb_inst = new CombineInstance[sumbeshesCount * meshFilters_.Length];
+            int batchedBldg = 0;
+
+            // map meshFilters with correspondant material
+            int i = 0, v = 0, x = 0;
+            while (i < meshFilters_.Length)
+            {
+                // CHECK if is meshFilter is same as filterReference
+                if (filter_Reference != null)
+                {
+                    if( ( (meshFilters_[i]?.sharedMesh) != filter_Reference?.sharedMesh) ) 
+                    {
+                        i++;
+                        continue;
+                    } 
+                }
+
+                // reference assignation    
+                if( filter_Reference == null && meshFilters_[i]?.gameObject.tag == "ground") {
+                    filter_Reference = meshFilters_[i];
+                    transform_Refence = meshFilters_[i].gameObject.GetComponent<Transform>();
+                    filter_Ref_chldPos = i;
+                    continue; 
+                };
+                if(filter_Reference != null && meshFilters_[i]?.gameObject.tag == "ground")
+                {
+                    batchedBldg++;
+                    for(int o = 0; o < sumbeshesCount; o++)
+                    {
+                        // one CombineInstance per subMesh 
+                        CombineInstance ci = new CombineInstance();
+                        ci.mesh = meshFilters_[i].sharedMesh;
+
+                        Matrix4x4 instance_Matrix =  meshFilters_[i].transform.worldToLocalMatrix;
+                        Vector3 mesh_pos = meshFilters_[i].gameObject.transform.localPosition;
+
+                        float y_ecart = transform_Refence.localPosition.y - mesh_pos.y;
+
+                        float y__ = (
+                            v > 0 ?               
+                                ((v) * (( meshFilters_[i].sharedMesh.bounds.size.y * transform_Refence.localScale.y) / 2) )
+                            : 0
+                        );
+                        y__ += (y_ecart - y__);
+
+                        //swap parent
+                        meshFilters_[i].gameObject.transform.parent = transform_Refence;
+
+                        // new Matrix 4x4.SetTRS(position, quaternion, scale)
+                        instance_Matrix.SetTRS(
+                            v > 0 ? meshFilters_[i].gameObject.transform.localPosition : new Vector3(0, 0, 0),
+                            //new Vector3(mesh_pos.x, -1 * y__, mesh_pos.z),
+                            transform_Refence.localRotation,
+                            Vector3.one
+                        );
+
+                        ci.transform = instance_Matrix;
+       
+                        ci.subMeshIndex = o;
+                        cmb_inst[(i * sumbeshesCount) + o] = ci;
+                        
+                        // turn off gmObj
+                        if (v > 0) meshFilters_[i].gameObject.SetActive(false);
+                    }
+                    v++;
+                }
+        
+                i++;
+            }
+                
+            if(filter_Ref_chldPos == -1 || filter_Reference == null) return;
+
+            // clear empty combineInstance spaces
+            CombineInstance[] cmb_reformed = new CombineInstance[v * sumbeshesCount];
+            for(int p = 0; p < cmb_inst.Length; p ++)
+            { 
+                if (cmb_inst[p].mesh != null)
+                {
+                    cmb_reformed[x] = cmb_inst[p];
+                    x ++;
+                } 
+            }
+            cmb_inst = cmb_reformed;
+
+
+            // Flatten into a single mesh.
+            Mesh newMesh_ = new Mesh();
+            newMesh_.CombineMeshes (cmb_inst, false);
+            newMesh_.RecalculateBounds();
+            newMesh_.RecalculateNormals();
+            newMesh_.Optimize();
+                    
+            Debug.Log(sumbeshesCount + " submeshes and " + batchedBldg +  " batched instances"); 
+            Debug.Log("------------------------------"); 
+
+            // update materials [materials count ^2 ]
+            Material[] mt = new Material[sumbeshesCount * batchedBldg];
+            for(int m = 0; m < (sumbeshesCount * batchedBldg); m += sumbeshesCount)
+            {
+                for(int mM = 0; mM < sumbeshesCount; mM ++) mt[m + mM] = chld_mats[mM];
+            }
+
+            section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshRenderer>().sharedMaterials = mt;
+            section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshFilter>().sharedMesh = newMesh_;
+            section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshFilter>().sharedMesh.RecalculateNormals();
+            section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshFilter>().sharedMesh.RecalculateBounds();
+            section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).gameObject.SetActive(true);
+
+        }
+    }
+
+
+
+    private Mesh fixFinalVertices(Mesh _mesh, Vector3 scale)
+    {
+        // Step 1: Get the vertices of the mesh
+        Vector3[] vertices = _mesh.vertices;
+            // Vector3 center = Vector3.zero;
+        // foreach (Vector3 vertex in vertices)
+        // {
+        //     center += vertex;
+        // }
+    
+        // center /= vertices.Length;
+        // center.y = center.y + _mesh.bounds.size.y;
+        // Step 3: Move vertices to the new center
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            //vertices[i] -= center;
+            //Vector3 vertex = vertices[i];
+            vertices[i].x = vertices[i].x * scale.x;
+            vertices[i].y = vertices[i].y * scale.y;
+            vertices[i].z = vertices[i].z * scale.z;
+        }
+    
+        // Step 4: Update the mesh with the new vertices
+        _mesh.vertices = vertices;
+        _mesh.RecalculateBounds();
+         _mesh.RecalculateNormals();
+
+        return _mesh;
+    }
+
+
+
+
+
+
+
+    private void combine_MeshesAndMergeMaterials(GameObject section_parent, int chld_len){
         MeshFilter? filter_Reference = null;
         int filter_Ref_chldPos = 0;
         Debug.Log(section_parent);
@@ -264,7 +472,7 @@ public class Buildings : MonoBehaviour
                             CombineInstance ci = new CombineInstance();
                             ci.mesh = meshFilters_[i].sharedMesh;
 
-                            if(materialsDbl_indexes.Contains(m_I)) ci.subMeshIndex = m_I + 1;
+                            if(materialsDbl_indexes.Contains(m_I)) ci.subMeshIndex = m_I ;
                             else ci.subMeshIndex = m_I;
                             
                             //ci.transform = meshFilters_[i].transform.localToWorldMatrix;
@@ -327,87 +535,23 @@ public class Buildings : MonoBehaviour
 
             Debug.Log ("Final mesh has " + subMeshes_.Length + " materials.");
         }
+    }
+
+
+
+
+
+
+
+
+    private void generate_SubTerrain()
+    {
 
     }
+
+
 
 
 }
 
 
-
-
-    //   private void AdvancedMerge()
-    //     {
-    //     // All our children (and us)
-    //     MeshFilter[] filters = GetComponentsInChildren (false);
-
-    //     // All the meshes in our children (just a big list)
-    //     //   List materials = new List();
-    //     //   MeshRenderer[] renderers = GetComponentsInChildren (false); // <-- can optimize this
-
-    //     //   foreach (MeshRenderer renderer in renderers)
-    //     //   {
-    //     //    if (renderer.transform == transform)
-    //     //     continue;
-    //     //    Material[] localMats = renderer.sharedMaterials;
-    //     //    foreach (Material localMat in localMats)
-    //     //     if (!materials.Contains (localMat))
-    //     //      materials.Add (localMat);
-    //     //   }
-
-
-    //     // Each material will have a mesh for it.
-    //     List submeshes = new List();
-    //     foreach (Material material in materials)
-    //     {
-    //         // Make a combiner for each (sub)mesh that is mapped to the right material.
-    //         List combiners = new List ();
-    //         foreach (MeshFilter filter in filters)
-    //         {
-    //                 // if (filter.transform == transform) continue;
-    //                 // // The filter doesn't know what materials are involved, get the renderer.
-    //                 // MeshRenderer renderer = filter.GetComponent ();  // <-- (Easy optimization is possible here, give it a try!)
-    //                 // if (renderer == null)
-    //                 // {
-    //                 //     Debug.LogError (filter.name + " has no MeshRenderer");
-    //                 //     continue;
-    //                 // }
-
-    //                 // Let's see if their materials are the one we want right now.
-    //                 Material[] localMaterials = GetComponent<Renderer>().sharedMaterials;
-    //                 for (int materialIndex = 0; materialIndex < localMaterials.Length; materialIndex++)
-    //                 {
-    //                     if (localMaterials [materialIndex] != material)
-    //                     continue;
-
-    //                     // This submesh is the material we're looking for right now.
-    //                     CombineInstance ci = new CombineInstance();
-    //                     ci.mesh = filter.sharedMesh;
-    //                     ci.subMeshIndex = materialIndex;
-    //                     ci.transform = Matrix4x4.identity;
-    //                     combiners.Add (ci);
-    //                 }
-    //         }
-    //         // Flatten into a single mesh.
-    //         Mesh mesh = new Mesh ();
-    //         mesh.CombineMeshes (combiners.ToArray(), true);
-    //         submeshes.Add (mesh);
-    //     }
-
-    //     // The final mesh: combine all the material-specific meshes as independent submeshes.
-    //     List finalCombiners = new List ();
-    //     foreach (Mesh mesh in submeshes)
-    //     {
-    //         CombineInstance ci = new CombineInstance ();
-    //         ci.mesh = mesh;
-    //         ci.subMeshIndex = 0;
-    //         ci.transform = Matrix4x4.identity;
-    //         finalCombiners.Add (ci);
-    //     }
-    //     Mesh finalMesh = new Mesh();
-    //     finalMesh.CombineMeshes (finalCombiners.ToArray(), false);
-    //     myMeshFilter.sharedMesh = finalMesh;
-    //     Debug.Log ("Final mesh has " + submeshes.Count + " materials.");
-
-
-    //     }
