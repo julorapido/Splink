@@ -173,16 +173,19 @@ public class Buildings : MonoBehaviour
         GameObject emptyRef = new GameObject();
         Transform transform_Refence = emptyRef.transform;
         int filter_Ref_chldPos = -1;
-        Debug.Log(section_parent);
+
+        int wholeBatchBldg = 0;
+        int wholeBatchMat = 0;
 
         for (int j = 0; j < chld_len; j ++)
         {
+            // filterRef reset (-_-)
+            filter_Reference = null; filter_Ref_chldPos = -1;
+
             GameObject chld_ = section_parent.transform.GetChild(j).gameObject;
             Material[] chld_mats = new Material[6];
             bool mt_fetched = false;
             int sumbeshesCount = 0;
-
-            Debug.Log(chld_);
 
             //if parent is his own mesh renderer
             if(chld_.GetComponent<MeshFilter>() != null) continue;
@@ -215,7 +218,7 @@ public class Buildings : MonoBehaviour
 
             if(meshFilters_.Length < 2 || chld_mats[0] == null)
             {
-                Debug.Log("MATERIAL CATCH!!!!");
+                //Debug.Log("MATERIAL CATCH!!!!");
                 continue;
             }
 
@@ -311,8 +314,9 @@ public class Buildings : MonoBehaviour
             newMesh_.RecalculateNormals();
             newMesh_.Optimize();
                     
-            Debug.Log(sumbeshesCount + " submeshes and " + batchedBldg +  " batched instances"); 
-            Debug.Log("------------------------------"); 
+            //Debug.Log(sumbeshesCount + " submeshes and " + batchedBldg +  " batched instances"); 
+            wholeBatchBldg+=batchedBldg; wholeBatchMat+= sumbeshesCount;
+            //Debug.Log("------------------------------"); 
 
             // update materials [materials count ^2 ]
             Material[] mt = new Material[sumbeshesCount * batchedBldg];
@@ -328,6 +332,8 @@ public class Buildings : MonoBehaviour
             section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).gameObject.SetActive(true);
 
         }
+
+        Debug.Log(" Whole Batch : "  + (wholeBatchBldg * wholeBatchMat) );
     }
 
 
