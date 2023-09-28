@@ -14,18 +14,17 @@ public class PlayerCollisions : MonoBehaviour
     [Header ("SubCollisions Constants")]
     public string[] subcolsions_values = new string[5]{"obstacleHit", "launcherHit","tyro", "bumper", "tapTapJump"};
 
-    [Header ("Selected Collision")]
+    [Header ("-> Selected Collision <-")]
     public string slcted_clsion;
 
     [Header ("Ground Physical Mat")]
-    public PhysicMaterial grnd_mat;
+    [HideInInspector] public PhysicMaterial grnd_mat;
 
     [Header ("Start Delay")]
-    public float strt_delay;
+    private float strt_delay = 0.5f;
     private bool can_trgr = false;
-    public Transform ply_transform;
+    private Transform ply_transform;
     private Vector3 currentVelocity;
-    //ImmutableList<string> colors = ImmutableList.Create("Red", "Green", "Blue");
 
     [Header ("Sider Wall last_registered_gm")]
     private int lst_wall;
@@ -40,43 +39,53 @@ public class PlayerCollisions : MonoBehaviour
             switch (slcted_clsion){
                 case "ground":
                     // Grnd hit
-                    if(collision.gameObject.tag == "ground"){
+                    if(collision.gameObject.tag == "ground")
+                    {
                         FindObjectOfType<PlayerMovement>().animateCollision("groundHit", _size);
-                        FindObjectOfType<CameraMovement>().fly_dynm(false);
-                        if(grnd_mat != null){
+                        if(grnd_mat != null)
+                        {
                             Collider p =  collision.gameObject.GetComponent<Collider>();
                             if(p){ p.sharedMaterial = grnd_mat;}
                         }
                     }
                     // Obstcl hit
-                    if(collision.gameObject.tag == "obstacle"){FindObjectOfType<PlayerMovement>().animateCollision("obstacleHit", _size);}
+                    if(collision.gameObject.tag == "obstacle") FindObjectOfType<PlayerMovement>().animateCollision("obstacleHit", _size);
+
                     // Launcher jmp
-                    if(collision.gameObject.tag == "launcher"){ FindObjectOfType<PlayerMovement>().animateCollision("launcherHit", _size);}
+                    if(collision.gameObject.tag == "launcher") FindObjectOfType<PlayerMovement>().animateCollision("launcherHit", _size);
+
                     // Tyro hit
-                    if(collision.gameObject.tag == "tyro"){FindObjectOfType<PlayerMovement>().tyro_movement(collision.gameObject);}
+                    if(collision.gameObject.tag == "tyro") FindObjectOfType<PlayerMovement>().tyro_movement(collision.gameObject);
+
                     // Bumper jmp
-                    if(collision.gameObject.tag == "bumper"){
+                    if(collision.gameObject.tag == "bumper")
+                    {
                         GameObject pr_gm = collision.gameObject.transform.parent.gameObject == null ? collision.gameObject.transform.parent.gameObject : collision.gameObject;
                         LeanTween.scale(pr_gm, pr_gm.transform.localScale * 1.2f, 0.4f).setEasePunch();
                         FindObjectOfType<PlayerMovement>().animateCollision("bumperJump", _size);
                     }
+
                     // Tap Tap Jump
-                    if(collision.gameObject.tag == "tapTapJump"){
+                    if(collision.gameObject.tag == "tapTapJump")
+                    {
                          FindObjectOfType<PlayerMovement>().animateCollision("tapTapJump", _size, collision.gameObject);
                     }
                     break;
 
                 case "frontwall":
                     // front wall gameover
-                    if(collision.gameObject.tag == "ground"){
+                    if(collision.gameObject.tag == "ground")
+                    {
                         FindObjectOfType<PlayerMovement>().animateCollision("frontWallHit", _size);
                     }
                     break;
 
                 case "sidewall":
                     // Sidewall hit
-                    if(collision.gameObject.tag == "ground"){
-                        if(lst_wall != null && lst_wall != collision.gameObject.GetInstanceID()){
+                    if(collision.gameObject.tag == "ground")
+                    {
+                        if(lst_wall != null && lst_wall != collision.gameObject.GetInstanceID())
+                        {
                             lst_wall = (collision.gameObject.GetInstanceID());
                             Vector3 targetDir = collision.gameObject.transform.position - ply_transform.position;
                             float angle = Vector3.Angle(targetDir, transform.forward);
@@ -110,18 +119,19 @@ public class PlayerCollisions : MonoBehaviour
             switch (slcted_clsion)
             {
                 case "ground":
-                    if(collision.gameObject.tag == "ground"){
+                    if(collision.gameObject.tag == "ground")
+                    {
                         FindObjectOfType<PlayerMovement>().animateCollision("groundLeave", _size);
-                        FindObjectOfType<CameraMovement>().fly_dynm(true);
-                        //FindObjectOfType<PlayerMovement>().animateCollision("groundLeave");
                     }
-                    if(collision.gameObject.tag == "obstacle"){
+                    if(collision.gameObject.tag == "obstacle")
+                    {
                         FindObjectOfType<PlayerMovement>().animateCollision("obstacleLeave", _size);
                     }
                     break;
 
                 case "sidewall":
-                    if(collision.gameObject.tag == "ground"){
+                    if(collision.gameObject.tag == "ground")
+                    {
                         FindObjectOfType<PlayerMovement>().animateCollision("wallRunExit", _size);
                         FindObjectOfType<PlayerVectors>().slippery_trigr(true, collision.gameObject);
                         FindObjectOfType<CameraMovement>().wal_rn_offset(true, collision.gameObject.transform);
@@ -129,7 +139,8 @@ public class PlayerCollisions : MonoBehaviour
                     break; 
 
                 case "slider":
-                    if(collision.gameObject.tag == "slider"){
+                    if(collision.gameObject.tag == "slider")
+                    {
                         LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.08f, 1f).setEasePunch();
                         Vector3 upped = collision.gameObject.transform.position;
                         upped.y += 0.1f;

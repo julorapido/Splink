@@ -6,8 +6,9 @@ using System;
 public class Buildings : MonoBehaviour
 {
     [SerializeField]
-    public GameObject[] buildngs_prefb;
-    public GameObject[] sections_prefb;
+    private GameObject[] buildngs_prefb;
+    [SerializeField]
+    private GameObject[] sections_prefb;
 
     private float x_pos = 0.0f;
     private float z_pos = 0.0f;
@@ -16,12 +17,19 @@ public class Buildings : MonoBehaviour
     // GLOBAL WIDTH OF BUILDGS GEN
     private const float fnc_gn_w = 50.0f;
 
-    public Transform bldg_parent;
+    [SerializeField]
+    private Transform bldg_parent;
+
+
     // Start is called before the first frame update
     private void Start(){
         //Gen_Bldngs(20);
         Gen_PrefbSections(3);
     }
+
+    private enum colliders_type {
+        SphereCollider,MeshCollider, BoxCollider, CapsuleCollider
+    };
 
     private void Gen_Bldngs(int z_len)
     {
@@ -306,7 +314,6 @@ public class Buildings : MonoBehaviour
             }
             cmb_inst = cmb_reformed;
 
-
             // Flatten into a single mesh.
             Mesh newMesh_ = new Mesh();
             newMesh_.CombineMeshes (cmb_inst, false);
@@ -314,9 +321,10 @@ public class Buildings : MonoBehaviour
             newMesh_.RecalculateNormals();
             newMesh_.Optimize();
                     
+ 
             //Debug.Log(sumbeshesCount + " submeshes and " + batchedBldg +  " batched instances"); 
-            wholeBatchBldg+=batchedBldg; wholeBatchMat+= sumbeshesCount;
             //Debug.Log("------------------------------"); 
+            wholeBatchBldg+=batchedBldg; wholeBatchMat+= sumbeshesCount;
 
             // update materials [materials count ^2 ]
             Material[] mt = new Material[sumbeshesCount * batchedBldg];
@@ -325,31 +333,70 @@ public class Buildings : MonoBehaviour
                 for(int mM = 0; mM < sumbeshesCount; mM ++) mt[m + mM] = chld_mats[mM];
             }
 
+
+            // update colliders
+            colliders_type cldrs_type = new colliders_type();
+            Dictionary<string, Type> _Types = new Dictionary<string, Type> {
+                { "Sphere", typeof(SphereCollider) },
+                { "Mesh", typeof(MeshCollider) },
+                { "Capsule", typeof(CapsuleCollider) },
+                { "Box", typeof(BoxCollider) },
+
+            };
+            GameObject ref_go = section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).gameObject;
+            for(int cl = 0; cl < ref_go.transform.childCount; cl++)
+            {
+               if(ref_go.transform.GetChild(cl).gameObject.tag == "ground")
+               {
+                    Transform trnsfrm_cl = ref_go.transform.GetChild(cl).gameObject.transform;
+                    Vector3 colliders_offst = trnsfrm_cl.localPosition;
+                
+                    BoxCollider[] bx_arr = trnsfrm_cl.GetComponents<BoxCollider>(); SphereCollider[] sph_arr = trnsfrm_cl.GetComponents<SphereCollider>();
+                    MeshCollider[] msh_arr = trnsfrm_cl.GetComponents<MeshCollider>(); CapsuleCollider[] cps_arr = trnsfrm_cl.GetComponents<CapsuleCollider>();
+                    
+                    //TComponent[] p = new TComponent[SphereCollider, MeshCollider];
+                    for(int cl_i = 0; cl_i < 4; cl_i++)
+                    {
+                        string[] typeCldr = (GetComponent<Collider>().GetType().ToString().Split("."));
+                        // Debug.Log()
+                        // Debug.Log(typeCldr[0]);
+                        // Debug.Log(typeCldr[1]);
+
+                        //ref_go.transform.GetChild(cl).gameObject.AddComponent<_Types[typeCldr]>();
+                        //cldrs_type typed_Collider = ref_go.transform.GetChild(cl).gameObject.AddComponent<cldrs_type.type>();
+                        //_Types["Capsule"]???
+                    }
+               } 
+            }
+
             section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshRenderer>().sharedMaterials = mt;
             section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshFilter>().sharedMesh = newMesh_;
             section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshFilter>().sharedMesh.RecalculateNormals();
             section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshFilter>().sharedMesh.RecalculateBounds();
+            section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshFilter>().sharedMesh.Optimize();
             section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).gameObject.SetActive(true);
 
         }
 
+        Destroy(emptyRef);
+
         Debug.Log(" Whole Batch : "  + (wholeBatchBldg * wholeBatchMat) );
     }
 
-
+    
 
     private Mesh fixFinalVertices(Mesh _mesh, Vector3 scale)
     {
         // Step 1: Get the vertices of the mesh
         Vector3[] vertices = _mesh.vertices;
-            // Vector3 center = Vector3.zero;
-        // foreach (Vector3 vertex in vertices)
-        // {
-        //     center += vertex;
-        // }
+            Vector3 center = Vector3.zero;
+        foreach (Vector3 vertex in vertices)
+        {
+            center += vertex;
+        }
     
-        // center /= vertices.Length;
-        // center.y = center.y + _mesh.bounds.size.y;
+        center /= vertices.Length;
+        center.y = center.y + _mesh.bounds.size.y;
         // Step 3: Move vertices to the new center
         for (int i = 0; i < vertices.Length; i++)
         {
@@ -367,6 +414,8 @@ public class Buildings : MonoBehaviour
 
         return _mesh;
     }
+
+
 
 
 
@@ -542,6 +591,8 @@ public class Buildings : MonoBehaviour
             Debug.Log ("Final mesh has " + subMeshes_.Length + " materials.");
         }
     }
+
+
 
 
 
