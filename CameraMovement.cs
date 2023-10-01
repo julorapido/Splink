@@ -178,7 +178,7 @@ public class CameraMovement : MonoBehaviour
 
                         if(trns_back_arr[i] == false)
                         {
-                            rot_dc[values_ref[i]] = Mathf.SmoothDamp( rot_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.0650f); 
+                            rot_dc[values_ref[i]] = Mathf.SmoothDamp( rot_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.0635f); 
 
                             if( Math.Abs(rot_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.0045f) {
                                 trns_back_arr[i] = true;
@@ -186,7 +186,7 @@ public class CameraMovement : MonoBehaviour
                         }
                         else if (trns_back_arr[i] == true)
                         { 
-                            rot_dc[values_ref[i]] = Mathf.SmoothDamp(rot_dc[values_ref[i]], 0.00f, ref srched_ref, 0.0400f); 
+                            rot_dc[values_ref[i]] = Mathf.SmoothDamp(rot_dc[values_ref[i]], 0.00f, ref srched_ref, 0.0460f); 
                             //if( rot_dc[values_ref[i]] == 0.0f) {
                             if(Math.Abs(rot_dc[values_ref[i]]) < 0.0035f ){
                                 it_++;
@@ -207,7 +207,7 @@ public class CameraMovement : MonoBehaviour
 
                         if(trns_back_arr[i] == false)
                         {
-                            pos_dc[values_ref[i]] = Mathf.SmoothDamp( pos_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.040f);
+                            pos_dc[values_ref[i]] = Mathf.SmoothDamp( pos_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.060f);
                             if( Math.Abs(pos_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.003f ) { 
                                 trns_back_arr[i] = true; 
                             }
@@ -271,19 +271,19 @@ public class CameraMovement : MonoBehaviour
         {
             // Dampen towards the target rotation
             Quaternion desired_rt  = new Quaternion(xRot + supl_xRot + rot_dc["wallR_rot_x_offst"],
-                 (x_offst / 120.0f) + rot_dc["wallR_rot_y_offst"], 
+                 (x_offst / 105.0f) + rot_dc["wallR_rot_y_offst"], 
                 (x_offst / 10000.0f) + rot_dc["wallR_rot_z_offst"],
                  1
             );
 
-            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt,  tyro_on ? 0.07f : 0.15f);
+            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt,  tyro_on ? 0.07f : 0.12f);
 
             // Smooth Damp
             Vector3 smoothFollow = Vector3.SmoothDamp(
                 transform.position,
                 desired_ + (tyro_on ? new Vector3(0f, 0.5f, 3.0f) : new Vector3(0f,0f,0f)) + new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"]),
                 ref currentVelocity,
-                tyro_on ? 0.15f : 0.070f
+                tyro_on ? 0.15f : 0.055f
             ); 
 
             transform.position = smoothFollow;
@@ -478,7 +478,7 @@ public class CameraMovement : MonoBehaviour
         reset_smoothDmpfnc();  
 
         iterator_ = 3;
-        List<float> v_flt = new List<float>(new float[6] {-0.170f, -0.90f, is_dblJmp ?  -0.0550f : 0.0550f, 0.0f, 0.0f, 0.0f} ); 
+        List<float> v_flt = new List<float>(new float[6] {-0.170f, -1.10f, is_dblJmp ?  -0.0550f : 0.0550f, 0.0f, 0.0f, 0.0f} ); 
         List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "", "",""} ); 
  
         values_ref = s_arr;

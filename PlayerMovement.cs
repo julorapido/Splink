@@ -33,13 +33,14 @@ public class PlayerMovement : MonoBehaviour
 
 
     [Header ("Player Movements Status")]
-    private bool wt_fr_DblJmp = false;
     private bool plyr_flying = false;
-    [HideInInspector] public bool plyr_sliding = false;
+    [HideInInspector] 
+    public bool plyr_sliding = false;
     private bool plyr_wallRninng = false;
     private bool plyr_obstclJmping = false;
     private bool plyr_swnging = false;
-    [HideInInspector] public bool plyr_tyro = false;
+    [HideInInspector] 
+    public bool plyr_tyro = false;
 
     
     [Header ("Authorized Movements")]
@@ -47,7 +48,7 @@ public class PlayerMovement : MonoBehaviour
     private bool movement_auth = true;
 
     [Header ("Player Available Jumps")]
-    private int jumpCnt = 2;
+    public int jumpCnt = 2;
 
     [Header ("Player Attached Partcl")]
     public ParticleSystem jump_prtcl;
@@ -118,12 +119,13 @@ public class PlayerMovement : MonoBehaviour
         {
             if ( Input.GetKeyDown(KeyCode.Space) && (jumpCnt > 0) ){
 
-                StopCoroutine(delay_jumpInput( 0.55f ) );  StartCoroutine(delay_jumpInput( 0.57f ) );
 
                 // JUMP
                 if(jumpCnt == 2)
                 {
-                    StartCoroutine(Dly_bool_anm(0.55f, "Jump"));
+                    StopCoroutine(delay_jumpInput( 0f ) );  StartCoroutine(delay_jumpInput( 0.55f ) );
+
+                    StartCoroutine(Dly_bool_anm(0.52f, "Jump"));
                     FindObjectOfType<CameraMovement>().jmp(false);
                     jump_prtcl.Play();
                 }
@@ -131,19 +133,22 @@ public class PlayerMovement : MonoBehaviour
                 // DOUBLE JUMP
                 if(jumpCnt == 1)
                 {
-                    StartCoroutine(Dly_bool_anm(0.55f, "DoubleJump"));
+                    int randFlip =  UnityEngine.Random.Range(1, 3);
+                    _anim.SetInteger("dblJmp", randFlip);
+                    _anim.SetBool("Flying", false);
+
+                    StopCoroutine(delay_jumpInput( 0f ) );  StartCoroutine(delay_jumpInput( 0.70f ) );
+
+                    StartCoroutine(Dly_bool_anm(0.65f, "DoubleJump"));
                     FindObjectOfType<CameraMovement>().jmp(true);
                     doubleJump_prtcl.Play();
                 }
 
-                jumpCnt--;
-
-                // reset y velocity for jump
-                plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0f, plyr_rb.velocity.z / 1.25f);
-
                 // ForceMode.VelocityChange 
-                plyr_rb.AddForce( new Vector3(0, (wt_fr_DblJmp ? (jumpAmount * 1.25f) : jumpAmount), 0), ForceMode.VelocityChange);
-                
+                plyr_rb.AddForce( new Vector3(0, (jumpCnt == 1 ? (jumpAmount * 1.40f) : jumpAmount), 0), ForceMode.VelocityChange);
+
+
+                jumpCnt--;        
             }
         }
 
@@ -153,12 +158,14 @@ public class PlayerMovement : MonoBehaviour
         {
             last_tyro_trvld += (tyro_speed) * Time.fixedDeltaTime;
             plyr_trsnfm.position = actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, -2.1f, -0.1f);
-            tyro_handler_child.position = actual_path.path.GetPointAtDistance(last_tyro_trvld);
 
             Quaternion e = actual_path.path.GetRotationAtDistance(last_tyro_trvld);
+
+            tyro_handler_child.position = actual_path.path.GetPointAtDistance(last_tyro_trvld);
+            tyro_handler_child.rotation = new Quaternion(tyro_handler_child.rotation.x, e.y, tyro_handler_child.rotation.z, tyro_handler_child.rotation.w);
+
             plyr_trsnfm.rotation = new Quaternion(plyr_trsnfm.rotation.x, e.y, plyr_trsnfm.rotation.z, plyr_trsnfm.rotation.w);
             
-            tyro_handler_child.rotation = new Quaternion(tyro_handler_child.rotation.x, e.y, tyro_handler_child.rotation.z, tyro_handler_child.rotation.w);
             
             float d_end = Vector3.Distance(plyr_trsnfm.position, end_tyroPos);
             if(d_end < 8f)
@@ -203,7 +210,7 @@ public class PlayerMovement : MonoBehaviour
 
 
             // movement auth disabled for [ObstacleHit, Swinging, Tyro, GrappleJump]
-            if (movement_auth)
+            if (movement_auth && !plyr_swnging)
             {
                 // MAIN MOVEMENT SPEED //
                 
@@ -217,17 +224,13 @@ public class PlayerMovement : MonoBehaviour
                 // RUNNING SPEED
                 else
                 {
+                
                     // DEFAULT SPEED
-                    if (!Input.GetKey("q") && !Input.GetKey("d"))
-                    {
-                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 8);
-                    }
-
+                    if (!Input.GetKey("q") && !Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 8);
+                    
                     // STRAFE SPEED
-                    if (Input.GetKey("q") || Input.GetKey("d"))
-                    {
-                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 5);
-                    }
+                    if (Input.GetKey("q") || Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 5);
+                       
                 }
 
 
@@ -244,7 +247,8 @@ public class PlayerMovement : MonoBehaviour
                     }
                     
                     // LEFT STRAFE
-                    plyr_rb.AddForce((plyr_flying ?  -2.8f * (Vector3.right * strafe_speed) :  -5 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
+                    if(plyr_rb.velocity.x > -14)  plyr_rb.AddForce((-4 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
+                    else  plyr_rb.velocity = new Vector3(-14, plyr_rb.velocity.y, plyr_rb.velocity.z);
                 }
 
                 if (Input.GetKey("d"))
@@ -260,7 +264,8 @@ public class PlayerMovement : MonoBehaviour
                     }
 
                     // RIGHT STRAFE
-                    plyr_rb.AddForce((plyr_flying ? 2.8f * (Vector3.right * strafe_speed) : 5 * (Vector3.right * strafe_speed)), ForceMode.VelocityChange);
+                    if(plyr_rb.velocity.x < 14)  plyr_rb.AddForce((-4 * (Vector3.left * strafe_speed) ), ForceMode.VelocityChange);
+                    else  plyr_rb.velocity = new Vector3(14, plyr_rb.velocity.y, plyr_rb.velocity.z);
                 }
             }
 
@@ -282,12 +287,12 @@ public class PlayerMovement : MonoBehaviour
                 {
                     if(plyr_trsnfm.position.z < grap_pnt.z - 3.5f)
                     {
-                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 10);
+                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 25);
                         plyr_rb.AddForce( new Vector3(0, 0.175f, 0), ForceMode.VelocityChange);
                     }
                     else
                     {
-                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 7);
+                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 14);
                         plyr_rb.AddForce( new Vector3(0, 0.35f,  0), ForceMode.VelocityChange);
                     }
                 }
@@ -315,9 +320,10 @@ public class PlayerMovement : MonoBehaviour
         {
             case "groundLeave":
                 _anim.SetBool("Flying", true);
+                _anim.SetBool("GroundHit", false);
                 plyr_flying = true;
 
-                if(gameOver_ || plyr_obstclJmping || plyr_sliding){return;}
+                //if(gameOver_ || plyr_obstclJmping || plyr_sliding){return;}
 
                 if(mdfied_cldrs_nm[0] == "")
                 {
@@ -328,6 +334,7 @@ public class PlayerMovement : MonoBehaviour
 
             case "groundHit":
                 _anim.SetBool("Flying", false);
+                _anim.SetBool("GroundHit", true);
                 plyr_flying = false;
 
                 jumpCnt = 2;
@@ -349,7 +356,7 @@ public class PlayerMovement : MonoBehaviour
                 {
                     StartCoroutine(Dly_bool_anm(1.25f, "obstacleJump"));
                     plyr_rb.AddForce( new Vector3(0, 2, 0), ForceMode.VelocityChange);
-                    StartCoroutine(obstcl_anim(cls_size));
+                    StartCoroutine(obstcl_anim(cls_size, optional_gm));
                 }
                 break;
 
@@ -402,7 +409,7 @@ public class PlayerMovement : MonoBehaviour
          
                 jumpCnt = 2;
                 
-                plyr_rb.AddForce( new Vector3(0, jumpForce * 0.3f, 5), ForceMode.VelocityChange);
+                plyr_rb.AddForce( new Vector3(0, jumpForce * 0.15f, 5), ForceMode.VelocityChange);
                 fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.42f, true);
                 break;
 
@@ -410,7 +417,7 @@ public class PlayerMovement : MonoBehaviour
                 plyr_sliding = false;
                 _anim.SetBool("slide", false);
                 
-                plyr_rb.AddForce( new Vector3(0, jumpForce, -6), ForceMode.VelocityChange);
+                plyr_rb.AddForce( new Vector3(0, jumpForce * 1.2f, -6), ForceMode.VelocityChange);
                 fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.42f, false);    
                 break;
 
@@ -551,10 +558,11 @@ public class PlayerMovement : MonoBehaviour
 
 
     // OBSTACLE HIT ANIMATION
-    private IEnumerator obstcl_anim(Vector3 cls_size)
+    private IEnumerator obstcl_anim(Vector3 cls_size, GameObject obstacl_gm)
     {
         float jumpForce = Mathf.Sqrt(jumpAmount * -2 * (Physics.gravity.y));
         plyr_obstclJmping = true;
+        // disable all movements
         movement_auth = false;
 
         // reset Y and Z velocity (v / 10)
@@ -562,33 +570,50 @@ public class PlayerMovement : MonoBehaviour
 
         if (plyr_flying)
         {
-            // Precise [ 7 * cls_size.z ] cause alrdy flying
-            plyr_rb.AddForce( new Vector3(0, jumpForce * 0.3f, 7 * cls_size.z), ForceMode.VelocityChange);
+            // if land behind obstacle
+
+
+
+            // Precise [ 9 * cls_size.z ] cause alrdy flying
+            plyr_rb.AddForce( new Vector3(0, -1 * (jumpForce * 0.3f), 9 * cls_size.z), ForceMode.VelocityChange);
+            yield return new WaitForSeconds(0.45f); 
+
+
+            plyr_rb.AddForce( new Vector3(0, jumpForce * 0.85f, 0), ForceMode.VelocityChange);
             yield return new WaitForSeconds(0.15f); 
+
         }
         else
         {
             plyr_rb.useGravity = false;
             
-            // VERTICAL MOVE
+            // FIRST : SMALL VERTICAL MOVE
             plyr_rb.AddForce( new Vector3(0, 3, -1), ForceMode.VelocityChange);             
             LeanTween.moveY(gameObject,plyr_trsnfm.position.y + (cls_size.y  + 0.1f), 0.320f).setEaseInSine();      
             yield return new WaitForSeconds(0.325f); 
 
 
-            // HORIZONTAL SLIDE of Precise [ 7 * cls_size.z ] jump dist
+            // SECOND : HORIZONTAL SLIDE of Precise [ 7 * cls_size.z ] jump dist
             plyr_rb.AddForce( new Vector3(0, -1  * (jumpForce * 0.15f), 7f * cls_size.z), ForceMode.VelocityChange);
+            // make obstacle fly 
+            Rigidbody obst_rb = obstacl_gm.AddComponent<Rigidbody>();
+            obst_rb.AddForce(new Vector3(0, -10, -6), ForceMode.VelocityChange);
 
             yield return new WaitForSeconds(0.45f); 
-                // RE-Reset velocity & UP FORCE ++
+                // THIRD : Reset velocity & JUMP++
                 plyr_rb.useGravity = true;
-                plyr_rb.AddForce( new Vector3(0, jumpForce * 2.20f, 0), ForceMode.VelocityChange);
+                plyr_rb.AddForce( new Vector3(0, jumpForce * 1.40f, 0), ForceMode.VelocityChange);
                 FindObjectOfType<CameraMovement>().obs_offset();
+
 
             yield return new WaitForSeconds(0.15f); 
                 // FORWARD FORCE ++
                 plyr_rb.AddForce( new Vector3(0, 0, 9), ForceMode.VelocityChange);
         }
+
+
+    
+
 
         yield return new WaitForSeconds(0.25f); 
             plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0, plyr_rb.velocity.z / 4);

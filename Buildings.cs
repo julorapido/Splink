@@ -27,9 +27,6 @@ public class Buildings : MonoBehaviour
         Gen_PrefbSections(3);
     }
 
-    private enum colliders_type {
-        SphereCollider,MeshCollider, BoxCollider, CapsuleCollider
-    };
 
     private void Gen_Bldngs(int z_len)
     {
@@ -164,6 +161,8 @@ public class Buildings : MonoBehaviour
             }
             z_pos += svd_z + 10.0f;
         }
+
+        generate_SubTerrain();
     }
 
 
@@ -185,6 +184,7 @@ public class Buildings : MonoBehaviour
         int wholeBatchBldg = 0;
         int wholeBatchMat = 0;
 
+
         for (int j = 0; j < chld_len; j ++)
         {
             // filterRef reset (-_-)
@@ -197,7 +197,7 @@ public class Buildings : MonoBehaviour
 
             //if parent is his own mesh renderer
             if(chld_.GetComponent<MeshFilter>() != null) continue;
-            
+
             // Right order to get mesh filters [NOT RECURSIVE-UP]
             MeshFilter[] meshFilters_ = new MeshFilter[chld_.transform.childCount];
             for (int c = 0; c < chld_.transform.childCount; c ++)
@@ -275,14 +275,16 @@ public class Buildings : MonoBehaviour
                         );
                         y__ += (y_ecart - y__);
 
+            
                         //swap parent
                         meshFilters_[i].gameObject.transform.parent = transform_Refence;
 
                         // new Matrix 4x4.SetTRS(position, quaternion, scale)
+                        //Debug.Log(meshFilters_[i].gameObject + " vs  i: " + i +  " rot : " + meshFilters_[i].gameObject.transform.localRotation );
+                        //Debug.Log( meshFilters_[i].gameObject.transform.localRotation );
                         instance_Matrix.SetTRS(
                             v > 0 ? meshFilters_[i].gameObject.transform.localPosition : new Vector3(0, 0, 0),
-                            //new Vector3(mesh_pos.x, -1 * y__, mesh_pos.z),
-                            transform_Refence.localRotation,
+                            v > 0 ? meshFilters_[i].gameObject.transform.localRotation :  new Quaternion(0, 0, 0, 0),
                             Vector3.one
                         );
 
@@ -326,6 +328,7 @@ public class Buildings : MonoBehaviour
             //Debug.Log("------------------------------"); 
             wholeBatchBldg+=batchedBldg; wholeBatchMat+= sumbeshesCount;
 
+
             // update materials [materials count ^2 ]
             Material[] mt = new Material[sumbeshesCount * batchedBldg];
             for(int m = 0; m < (sumbeshesCount * batchedBldg); m += sumbeshesCount)
@@ -335,15 +338,13 @@ public class Buildings : MonoBehaviour
 
 
             // update colliders
-            colliders_type cldrs_type = new colliders_type();
             Dictionary<string, Type> _Types = new Dictionary<string, Type> {
-                { "Sphere", typeof(SphereCollider) },
-                { "Mesh", typeof(MeshCollider) },
-                { "Capsule", typeof(CapsuleCollider) },
-                { "Box", typeof(BoxCollider) },
-
+                { "Sphere", typeof(SphereCollider) }, { "Mesh", typeof(MeshCollider) },
+                { "Capsule", typeof(CapsuleCollider) }, { "Box", typeof(BoxCollider) },
             };
             GameObject ref_go = section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).gameObject;
+
+            // map childs
             for(int cl = 0; cl < ref_go.transform.childCount; cl++)
             {
                if(ref_go.transform.GetChild(cl).gameObject.tag == "ground")
@@ -354,20 +355,82 @@ public class Buildings : MonoBehaviour
                     BoxCollider[] bx_arr = trnsfrm_cl.GetComponents<BoxCollider>(); SphereCollider[] sph_arr = trnsfrm_cl.GetComponents<SphereCollider>();
                     MeshCollider[] msh_arr = trnsfrm_cl.GetComponents<MeshCollider>(); CapsuleCollider[] cps_arr = trnsfrm_cl.GetComponents<CapsuleCollider>();
                     
-                    //TComponent[] p = new TComponent[SphereCollider, MeshCollider];
-                    for(int cl_i = 0; cl_i < 4; cl_i++)
-                    {
-                        string[] typeCldr = (GetComponent<Collider>().GetType().ToString().Split("."));
-                        // Debug.Log()
-                        // Debug.Log(typeCldr[0]);
-                        // Debug.Log(typeCldr[1]);
+                    try{
 
-                        //ref_go.transform.GetChild(cl).gameObject.AddComponent<_Types[typeCldr]>();
-                        //cldrs_type typed_Collider = ref_go.transform.GetChild(cl).gameObject.AddComponent<cldrs_type.type>();
-                        //_Types["Capsule"]???
+                        Collider[] colliders = ref_go.transform.GetChild(cl).GetComponents<Collider>();
+                        if(colliders.Length > 0)
+                        {
+                            for (int z = 0; z < colliders.Length; z ++)
+                            {
+                                string[] typeCldr = (colliders[z].GetType().ToString().Split("UnityEngine."));
+                                string forced_Type = (typeCldr[1].Split("Collider"))[0];
+                                
+                                // Mesh Collider special case
+                                if(_Types[forced_Type] == typeof(MeshCollider))
+                                {
+
+                                    GameObject emptyHolder = new GameObject();
+                                    GameObject cldrs_holder = Instantiate( emptyHolder,
+                                        ref_go.transform.GetChild(cl).position,
+                                        ref_go.transform.GetChild(0).rotation,
+                                        section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos)
+                                    );
+
+                                    Collider mc = cldrs_holder.AddComponent((_Types[forced_Type])) as Collider;
+                                    MeshCollider m_p = mc as MeshCollider;
+                                    m_p.sharedMesh = ref_go.GetComponent<MeshFilter>().sharedMesh;
+                                    m_p.convex = true;
+                                }
+
+                                // Box, Sphere and Capsule
+                                else
+                                {
+                                    Collider? ref_ = colliders[z];
+                                    Collider? p = section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).gameObject.AddComponent((_Types[forced_Type])) as Collider;
+                                    if(_Types[forced_Type] == typeof(CapsuleCollider)) p = p as CapsuleCollider ;
+                                    if(_Types[forced_Type] == typeof(BoxCollider)) p = p as BoxCollider;
+                                    if(_Types[forced_Type] == typeof(SphereCollider)) p = p as SphereCollider;
+                                                        
+                                    if(p is BoxCollider)
+                                    {
+                                        (p as BoxCollider).center = (ref_ as BoxCollider).center + colliders_offst;
+                                        (p as BoxCollider).size = (ref_ as BoxCollider).size;
+                                    };
+
+
+                                    if(p is CapsuleCollider)
+                                    {
+                                        (p as CapsuleCollider).center = (ref_ as CapsuleCollider).center + colliders_offst;
+                                        (p as CapsuleCollider).height = (ref_ as CapsuleCollider).height;
+                                        (p as CapsuleCollider).radius = (ref_ as CapsuleCollider).radius;
+                                    } 
+
+                                    // cast SphereCollider on p (for radius)
+                                    if( (p is SphereCollider)) 
+                                    {
+                                        (p as SphereCollider).center = (ref_ as SphereCollider).center + colliders_offst;
+                                        (p as SphereCollider).radius = (ref_ as SphereCollider).radius;
+
+                                    }
+
+                                    // var p_forced = (
+                                    //     (_Types[forced_Type] == typeof(BoxCollider) ) ? (p as BoxCollider)
+                                    //          :
+                                    //     ( _Types[forced_Type] == typeof(SphereCollider) ? (p as SphereCollider) : (p as CapsuleCollider) );
+                                    // );
+                                }
+                    
+                            }
+                        }
+                    
+                    } catch(Exception err) {
+                        Debug.Log(err);
+                        //Debug.Log("no turret type");
                     }
+    
                } 
             }
+
 
             section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshRenderer>().sharedMaterials = mt;
             section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos).GetComponent<MeshFilter>().sharedMesh = newMesh_;
@@ -603,7 +666,13 @@ public class Buildings : MonoBehaviour
 
     private void generate_SubTerrain()
     {
+        GameObject[] allBuildngs_ = GameObject.FindGameObjectsWithTag("ground");
+        //Debug.Log(allBuildngs_.Length);
+        for(int i = 0; i < allBuildngs_.Length; i ++)
+        {
+            Mesh bldg_mesh = allBuildngs_[i].GetComponent<MeshFilter>().sharedMesh;
 
+        }
     }
 
 

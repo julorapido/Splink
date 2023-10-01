@@ -12,7 +12,7 @@ public class PlayerCollisions : MonoBehaviour
     public string[] colsions_values = new string[4]{"ground", "frontwall","sidewall", "slider"};
 
     [Header ("SubCollisions Constants")]
-    public string[] subcolsions_values = new string[5]{"obstacleHit", "launcherHit","tyro", "bumper", "tapTapJump"};
+    private string[] subcolsions_values = new string[5]{"obstacleHit", "launcherHit","tyro", "bumper", "tapTapJump"};
 
     [Header ("-> Selected Collision <-")]
     public string slcted_clsion;
@@ -49,7 +49,7 @@ public class PlayerCollisions : MonoBehaviour
                         }
                     }
                     // Obstcl hit
-                    if(collision.gameObject.tag == "obstacle") FindObjectOfType<PlayerMovement>().animateCollision("obstacleHit", _size);
+                    if(collision.gameObject.tag == "obstacle") FindObjectOfType<PlayerMovement>().animateCollision("obstacleHit", _size, collision.gameObject);
 
                     // Launcher jmp
                     if(collision.gameObject.tag == "launcher") FindObjectOfType<PlayerMovement>().animateCollision("launcherHit", _size);
@@ -125,7 +125,7 @@ public class PlayerCollisions : MonoBehaviour
                     }
                     if(collision.gameObject.tag == "obstacle")
                     {
-                        FindObjectOfType<PlayerMovement>().animateCollision("obstacleLeave", _size);
+                        FindObjectOfType<PlayerMovement>().animateCollision("obstacleLeave", _size, collision.gameObject);
                     }
                     break;
 
@@ -145,6 +145,8 @@ public class PlayerCollisions : MonoBehaviour
                         Vector3 upped = collision.gameObject.transform.position;
                         upped.y += 0.1f;
                         Vector3 smoothUp_ = Vector3.SmoothDamp(collision.gameObject.transform.position, upped, ref currentVelocity, 0.4f); 
+                        
+                        FindObjectOfType<PlayerMovement>().animateCollision("groundLeave", _size);
                         FindObjectOfType<PlayerMovement>().animateCollision("sliderLeave", _size);
                         FindObjectOfType<CameraMovement>().sld_offset(true);
                     }  
