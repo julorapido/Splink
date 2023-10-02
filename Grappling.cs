@@ -11,7 +11,6 @@ public class Grappling : MonoBehaviour
     [SerializeField] private Transform plyr_pos;
     [SerializeField] private Transform gunTip;
     [SerializeField] private LayerMask wt_grappleable;
-    [SerializeField] private LineRenderer lr;
 
     [Header ("Grappling Cooldowns & MaxDistance")]
     [SerializeField] private float mx_grappl_distance;
@@ -39,10 +38,30 @@ public class Grappling : MonoBehaviour
     private SpringJoint hld_joint;
 
 
+    [Header ("Grapple Hold LineRenderer")]
+    [SerializeField] private AnimationCurve line_curve;
+    [SerializeField] private LineRenderer lr;
+    private SpringJoint line_spring;
+    private int line_quality = 200;
+    private float waveCount = 1f, waveHeight = 10f;
+
+    [Header ("Grapple Dash LineRenderer")]
+    [SerializeField] private LineRenderer dash_lr;
+    private int resolution = 100, waveCountd_ = 8, wobbleCount = 5;
+    private float waveSize = 2f, animSpeed = 0.1f;
+
 
     private void Start()
     {
         pm_ = GetComponent<PlayerMovement>();
+    }
+
+    private void LateUpdate()
+    {
+        // DRAW ROPE
+        // if(is_grpling_)
+        //     lr.SetPosition(0, gunTip.position);
+        DrawRope(); 
     }
 
     private void Update()
@@ -75,7 +94,6 @@ public class Grappling : MonoBehaviour
     }
 
 
-
     public void soft_Grapple()
     {
         if(hld_joint)
@@ -83,6 +101,44 @@ public class Grappling : MonoBehaviour
             hld_joint.damper = 80f;
    
     }
+
+
+
+    private void DrawRope()
+    {
+        if(!is_grpling_)
+        {
+            lr.positionCount = 0;
+            if(line_spring != null) Destroy(line_spring);
+            return;
+        }
+
+        if(line_spring == null) {
+            line_spring = gameObject.AddComponent<SpringJoint>();
+            //line_spring.autoConfigureConnectedAnchor = false;
+            line_spring.connectedAnchor = gplr_point;
+        }
+
+        if(lr.positionCount == 0)
+        {
+            lr.positionCount = line_quality + 0;
+        }
+
+        hld_joint.spring = 500f; // Elastic Strength
+        hld_joint.damper = 14f; // Elastic Damper
+        hld_joint.massScale = 10f; // Elastic Mass
+
+        Vector3 up = Quaternion.LookRotation( (gplr_point - gunTip.position ).normalized) * Vector3.up;
+        for(int i = 0; i < line_quality; i ++)
+        {
+            var delta = i / (float) line_quality;
+            var offset = up * waveHeight * Mathf.Sin(delta * waveCount * Mathf.PI)  * line_curve.Evaluate(delta) ;
+
+            lr.SetPosition(i, Vector3.Lerp(gunTip.position, gplr_point, delta) + offset);
+        }
+    }
+
+
 
 
     private void StartGrapple()
@@ -158,7 +214,6 @@ public class Grappling : MonoBehaviour
         hld_joint.massScale = 10f;
 
 
-
         if(!trgrd_)
         {
             lr.enabled = false;
@@ -168,8 +223,8 @@ public class Grappling : MonoBehaviour
 
             // Set lineRenderer
             lr.enabled = true;
-            lr.SetPosition(0, gunTip.position);
-            lr.SetPosition(1, gplr_point);
+            // lr.SetPosition(0, gunTip.position);
+            // lr.SetPosition(1, gplr_point);
 
             is_grpling_ = true;
 
@@ -207,13 +262,24 @@ public class Grappling : MonoBehaviour
 
 
     // // // // // // // GRAPPLE DASH // // // // // // // // // // 
-    private void JumpToPosition (Vector3 targetPos, float traj_height){
+    private void ExecuteGrapple()
+    {  
+        float grapplePointRelativeYPos = gplr_point.y - (plyr_pos.transform.position.y - 1.5f);
+        float highestPointOnArc = (grapplePointRelativeYPos < 0) ? overshootYAxis : (grapplePointRelativeYPos + overshootYAxis);
+
+        JumpToPosition(gplr_point,  highestPointOnArc); 
+    }
+
+
+    private void JumpToPosition (Vector3 targetPos, float traj_height)
+    {
         activ_grapple = true;
         rb_.velocity = CalculateJumpVelocity(plyr_pos.position, targetPos, traj_height);
         activ_grapple = false;
     }
 
-    private Vector3 CalculateJumpVelocity(Vector3 startPoint, Vector3 endPoint, float trajectoryHeight){
+    private Vector3 CalculateJumpVelocity(Vector3 startPoint, Vector3 endPoint, float trajectoryHeight)
+    {
         float gravity = Physics.gravity.y;
         float displacementY = endPoint.y - startPoint.y;
         Vector3 displacementXZ = new Vector3(endPoint.x - startPoint.x, 0f, endPoint.z - startPoint.z);
@@ -225,80 +291,51 @@ public class Grappling : MonoBehaviour
         return velocityXZ + velocityY;
     }
 
-    private void ExecuteGrapple(){  
-        Vector3 lowestPoint = new Vector3(plyr_pos.transform.position.x, plyr_pos.transform.position.y - 1.5f, plyr_pos.transform.position.z);
-        float grapplePointRelativeYPos = gplr_point.y - lowestPoint.y;
-        float highestPointOnArc = grapplePointRelativeYPos + overshootYAxis; // ADDING THE Y AXIS ARC VALUE
 
-        if(grapplePointRelativeYPos < 0) highestPointOnArc = overshootYAxis;
+    private IEnumerator GrappleDashRope(Vector3 target_)
+    {
+        dash_lr.positionCount = resolution;
 
-        JumpToPosition(gplr_point,  highestPointOnArc); 
+        float percent = 0f;
+        float angle = Vector3.Angle(target_, gunTip.position);
+
+        while(percent <= 1f)
+        {
+            percent += Time.deltaTime * animSpeed;
+            SetDashRopePoints(percent, angle);
+            yield return null;
+        }
+        SetDashRopePoints(1, angle);
+        yield return null;
     }
-    // // // // // // // // // // // // // // // // // // // // // // // // 
 
+    private void SetDashRopePoints(float percent, float angl)
+    {
+        Vector3 ropeEnd = Vector3.Lerp(gunTip.position, gplr_point, percent);
+        float len = Vector2.Distance(gunTip.position, ropeEnd);
 
+        for (int i = 0; i < resolution; i ++)
+        {
+            float xPos = (float)i / resolution * len;
 
-    // private Spring spring;
-    // private LineRenderer lr;
-    // private Vector3 currentGrapplePosition;
-    // public GrapplingGun grapplingGun;
-    // public int quality;
-    // public float damper;
-    // public float strength;
-    // public float velocity;
-    // public float waveCount;
-    // public float waveHeight;
-    // public AnimationCurve affectCurve;
-    
-    // private void Awake()
-    // {
-    //     lr = GetComponent<LineRenderer>();
-    //     spring = new Spring();
-    //     spring.SetTarget(0);
-    // }
-    
-    // private void LateUpdate()
-    // {
-    //     DrawRope();
-    // }
-
-    // private void DrawRope() 
-    // {
-    //     //If not grappling, don't draw rope
-    //     if (!grapplingGun.IsGrappling()) 
-    //     {
-    //         currentGrapplePosition = grapplingGun.gunTip.position;
-    //         spring.Reset();
-    //         if (lr.positionCount > 0)
-    //             lr.positionCount = 0;
-    //         return;
-    //     }
-
-    //     if (lr.positionCount == 0)
-    //     {
-    //         spring.SetVelocity(velocity);
-    //         lr.positionCount = quality + 1;
-    //     }
+            float amplitude = Mathf.Sin( (1 - percent) * wobbleCount * Mathf.PI);
         
-    //     spring.SetDamper(damper);
-    //     spring.SetStrength(strength);
-    //     spring.Update(Time.deltaTime);
+            float yPos = Mathf.Sin( (float) waveCountd_ * i / resolution * 2 * Mathf.PI * (1 - percent) ) * amplitude;
 
-    //     var grapplePoint = grapplingGun.GetGrapplePoint();
-    //     var gunTipPosition = grapplingGun.gunTip.position;
-    //     var up = Quaternion.LookRotation((grapplePoint - gunTipPosition).normalized) * Vector3.up;
+            //Vector2 pos = RotatePoint(new Vector2(gunTip.position.x + xPos, gunTip.position.y + yPos), gunTip.position, angl);
 
-    //     currentGrapplePosition = Vector3.Lerp(currentGrapplePosition, grapplePoint, Time.deltaTime * 12f);
+            Vector3 pos3 = new Vector3(xPos, yPos, gplr_point.z);
+            dash_lr.SetPosition(i, pos3);
+        }
+    }
 
-    //     for (var i = 0; i < quality + 1; i++) 
-    //     {
-    //         var delta = i / (float) quality;
-    //         var offset = up * waveHeight * Mathf.Sin(delta * waveCount * Mathf.PI) * spring.Value *
-    //                      affectCurve.Evaluate(delta);
-            
-    //         lr.SetPosition(i, Vector3.Lerp(gunTipPosition, currentGrapplePosition, delta) + offset);
-    //     }
-    // }
+    private Vector2 RotatePoint(Vector2 point, Vector2 pivot, float angle)
+    {
+        Vector2 dir = point - pivot;
+        dir = Quaternion.Euler(0, 0, angle) * dir;
+        point = dir + pivot;
+        return point;
+    }
 }
 
  

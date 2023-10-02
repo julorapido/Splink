@@ -131,8 +131,8 @@ public class CameraMovement : MonoBehaviour
             c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, new_fov, 0.85f);
         }
 
-        if(smthDmp_grpl) rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], -0.08f, ref mathfRef_grpl, 0.295f);
-        if(smthDmp_grpl_end) rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], -0.74f, ref mathfRef_grpl, 0.295f);
+        if(smthDmp_grpl) rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], 0.05f, ref mathfRef_grpl, 0.295f);
+        if(smthDmp_grpl_end) rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], -0.34f, ref mathfRef_grpl, 0.295f);
 
 
     }
@@ -380,7 +380,7 @@ public class CameraMovement : MonoBehaviour
                 pos_dc["wallR_z_offst"] = 1.45f;
                 pos_dc["wallR_y_offst"] = -0.65f;
 
-                rot_dc["wallR_rot_x_offst"] = -0.28f;
+                //rot_dc["wallR_rot_x_offst"] = 0.5f;
 
                 // SMOOTH DAMP FOR X ROTATION boolean
                 smthDmp_grpl = true;

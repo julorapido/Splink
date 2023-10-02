@@ -274,7 +274,6 @@ public class PlayerMovement : MonoBehaviour
             // Swinging Forces 
             if(!movement_auth && plyr_swnging)
             {
-                Debug.Log("swing forces");
                 // swing strafe
                 if (Input.GetKey("q"))  plyr_rb.AddForce((0.6f * (Vector3.left * strafe_speed)), ForceMode.VelocityChange);
                 if (Input.GetKey("d"))  plyr_rb.AddForce((0.6f * (Vector3.right * strafe_speed)), ForceMode.VelocityChange);
