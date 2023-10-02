@@ -63,7 +63,8 @@ public class CameraMovement : MonoBehaviour
     // POSITIONS REFS
     private float mathfRef_pos_x = 0.0f, mathfRef_pos_y = 0.0f, mathfRef_pos_z = 0.0f;
     private float mathfRef0_pos_x = 0.0f, mathfRef0_pos_y = 0.0f, mathfRef0_pos_z = 0.0f;
-
+    // Percentage % 
+    private float smoothTime_prc = 0f;
 
 
     [Header ("Fov Floats")]
@@ -178,7 +179,7 @@ public class CameraMovement : MonoBehaviour
 
                         if(trns_back_arr[i] == false)
                         {
-                            rot_dc[values_ref[i]] = Mathf.SmoothDamp( rot_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.0635f); 
+                            rot_dc[values_ref[i]] = Mathf.SmoothDamp( rot_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.0635f * (1.0f + (smoothTime_prc/100) ) ); 
 
                             if( Math.Abs(rot_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.0045f) {
                                 trns_back_arr[i] = true;
@@ -186,7 +187,7 @@ public class CameraMovement : MonoBehaviour
                         }
                         else if (trns_back_arr[i] == true)
                         { 
-                            rot_dc[values_ref[i]] = Mathf.SmoothDamp(rot_dc[values_ref[i]], 0.00f, ref srched_ref, 0.0460f); 
+                            rot_dc[values_ref[i]] = Mathf.SmoothDamp(rot_dc[values_ref[i]], 0.00f, ref srched_ref, 0.0460f * (1.0f + (smoothTime_prc/100) ) ); 
                             //if( rot_dc[values_ref[i]] == 0.0f) {
                             if(Math.Abs(rot_dc[values_ref[i]]) < 0.0035f ){
                                 it_++;
@@ -207,14 +208,14 @@ public class CameraMovement : MonoBehaviour
 
                         if(trns_back_arr[i] == false)
                         {
-                            pos_dc[values_ref[i]] = Mathf.SmoothDamp( pos_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.060f);
+                            pos_dc[values_ref[i]] = Mathf.SmoothDamp( pos_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.060f * (0.8f + (smoothTime_prc/100) ) );
                             if( Math.Abs(pos_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.003f ) { 
                                 trns_back_arr[i] = true; 
                             }
                         }
                         else if (trns_back_arr[i] == true)
                         { 
-                            pos_dc[values_ref[i]] = Mathf.SmoothDamp(pos_dc[values_ref[i]], 0.00f, ref srched_ref, 0.040f); 
+                            pos_dc[values_ref[i]] = Mathf.SmoothDamp(pos_dc[values_ref[i]], 0.00f, ref srched_ref, 0.040f * (0.8f + (smoothTime_prc/100) ) ); 
                             if(Math.Abs(pos_dc[values_ref[i]]) < 0.0070f ){
                             //if( pos_dc[values_ref[i]] == 0.0f){
                                 it_++;
@@ -243,12 +244,12 @@ public class CameraMovement : MonoBehaviour
         x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ? -1 *   (60 - (player_rb.rotation.eulerAngles.y - 300.0f)) : player_rb.rotation.eulerAngles.y);
 
         // Lerp Position
-        if(((-0.050f * x_offst)) != lst_offst_x)
+        if(((-0.043f * x_offst)) != lst_offst_x)
         {
             desired_  = (player.position + offset);
-            desired_.x = desired_.x +  ((-0.038f * x_offst));
+            desired_.x = desired_.x +  ((-0.043f * x_offst));
             desired_.z = desired_.z +  (Math.Abs(x_offst)) / 80f;
-            lst_offst_x = ((-0.050f * x_offst));
+            lst_offst_x = ((-0.43f * x_offst));
         }
 
         if(_grplPoint_ != new Vector3(0,0,0))
@@ -303,6 +304,7 @@ public class CameraMovement : MonoBehaviour
 
     private void reset_smoothDmpfnc()
     {
+        smoothTime_prc = 0.0f;
         mathfRef_x = mathfRef_y = mathfRef_z = mathfRef0_x = mathfRef0_y = mathfRef0_z = mathfRef_pos_x = mathfRef_pos_y = mathfRef_pos_z = mathfRef0_pos_x = mathfRef0_pos_y = mathfRef0_pos_z = 0.0f;
         mathRef_arr = new List<float>(new float[6] {
             0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
@@ -372,25 +374,29 @@ public class CameraMovement : MonoBehaviour
                 reset_smoothDmpfnc();
                 // // //
 
-                new_fov = 87f;
-                float sns =  player.position.x - gm_.position.x;
+                new_fov = 95f;
+
                 // CLOSE UP Z OFFSET
                 pos_dc["wallR_z_offst"] = 1.45f;
                 pos_dc["wallR_y_offst"] = -0.65f;
 
-                rot_dc["wallR_rot_x_offst"] = 0.25f;
+                rot_dc["wallR_rot_x_offst"] = -0.28f;
 
                 // SMOOTH DAMP FOR X ROTATION boolean
                 smthDmp_grpl = true;
 
+                float sns =  player.position.x - gm_.position.x;
                 if(sns < 0 ) 
                 { 
-                    pos_dc["wallR_x_offst"] = 0.3f; rot_dc["wallR_rot_z_offst"] = -0.055f;
+                    pos_dc["wallR_x_offst"] = -0.6f; 
+                    rot_dc["wallR_rot_y_offst"] = 0.15f;
+                    rot_dc["wallR_rot_z_offst"] = -0.085f;
                 }
                 else
                 {
-                    rot_dc["wallR_rot_z_offst"] = 0.055f;
-                    pos_dc["wallR_x_offst"] = -0.3f; 
+                    pos_dc["wallR_x_offst"] = 0.6f; 
+                    rot_dc["wallR_rot_y_offst"] = -0.15f;
+                    rot_dc["wallR_rot_z_offst"] = 0.085f; 
                 }
 
             }
@@ -491,6 +497,29 @@ public class CameraMovement : MonoBehaviour
         trns_back = false;
       
     }
+    
+    // PUBLIC FUNC FOR [LAUNCHER, BUMPER, TAP TAP] 
+    public void special_jmp()
+    { 
+        reset_smoothDmpfnc();  
+
+        // +20% smoothTime !!
+        smoothTime_prc = 30f;
+
+        iterator_ = 3;
+        List<float> v_flt = new List<float>(new float[6] {0.170f, 1.40f, 0.040f, 0.0f, 0.0f, 0.0f} ); 
+        List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "", "",""} ); 
+ 
+        values_ref = s_arr; values_flt = v_flt;
+        trns_back_arr = new List<bool?>(new bool?[6] {
+            false, false, false ,false, false, false
+        }); 
+
+        trns_fnc = true;
+        trns_back = false;
+      
+    }
+
 
     // private void array_pnt_Constructor(ref List<float> p,int index, ref float p){
     //     List<float> v_flt = new List<float>(new float[6] {-0.052f, -0.20f, 0.0f, 0.0f, 0.0f, 0.0f} ); 

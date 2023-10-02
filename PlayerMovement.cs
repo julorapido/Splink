@@ -24,13 +24,11 @@ public class PlayerMovement : MonoBehaviour
     private CharacterController _controller = null;
 
 
-
     [Header ("Animation Center Fixes")]
-    [SerializeField] private Transform[] fix_trnsfrms;
-    [SerializeField] private GameObject[] fix_objs;
-    private string[] mdfied_cldrs_nm = {"","","",""};
-    private Vector3[] cons_coldrs = new Vector3[10];
+    private Vector3[] colliders_references = new Vector3[10];
 
+    [Header ("Stored Last Obstacle")]
+    private GameObject last_ObstJumped;
 
     [Header ("Player Movements Status")]
     private bool plyr_flying = false;
@@ -48,7 +46,7 @@ public class PlayerMovement : MonoBehaviour
     private bool movement_auth = true;
 
     [Header ("Player Available Jumps")]
-    public int jumpCnt = 2;
+    private int jumpCnt = 2;
 
     [Header ("Player Attached Partcl")]
     public ParticleSystem jump_prtcl;
@@ -83,22 +81,23 @@ public class PlayerMovement : MonoBehaviour
        if (_anim == null) Debug.Log("nul animtor");
 
 
-       Collider[] colList = fix_trnsfrms[0].GetComponentsInChildren<Collider>();
+       Collider[] colList = gameObject.transform.GetComponentsInChildren<Collider>();
        for (int i = 0; i < colList.Length; i ++)
        {
             string[] coldr_type = colList[i].GetType().ToString().Split('.');
-            BoxCollider b_cldr; SphereCollider s_cldr; MeshCollider m_cldr;
+            BoxCollider b_cldr; SphereCollider s_cldr; //MeshCollider m_cldr;
 
             switch(coldr_type[1])
             {
                 case "BoxCollider" :
-                    b_cldr = fix_objs[0].GetComponent<BoxCollider>();
-                    cons_coldrs[i] =  b_cldr.center; break;
-                case "SphereCollider" : 
-                    s_cldr = fix_objs[0].GetComponent<SphereCollider>();
-                    cons_coldrs[i] = s_cldr.center; break;
-                case "MeshCollider" : 
+                    b_cldr = colList[i].GetComponent<BoxCollider>();
+                    colliders_references[i] =  b_cldr.center; 
                     break;
+                case "SphereCollider" : 
+                    s_cldr = colList[0].GetComponent<SphereCollider>();
+                    colliders_references[i] = s_cldr.center;
+                    break;
+                case "MeshCollider" : break;
             }
             
         }
@@ -207,8 +206,6 @@ public class PlayerMovement : MonoBehaviour
             }
             
 
-
-
             // movement auth disabled for [ObstacleHit, Swinging, Tyro, GrappleJump]
             if (movement_auth && !plyr_swnging)
             {
@@ -226,7 +223,7 @@ public class PlayerMovement : MonoBehaviour
                 {
                 
                     // DEFAULT SPEED
-                    if (!Input.GetKey("q") && !Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 8);
+                    if (!Input.GetKey("q") && !Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 8.5f);
                     
                     // STRAFE SPEED
                     if (Input.GetKey("q") || Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 5);
@@ -247,8 +244,8 @@ public class PlayerMovement : MonoBehaviour
                     }
                     
                     // LEFT STRAFE
-                    if(plyr_rb.velocity.x > -14)  plyr_rb.AddForce((-4 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
-                    else  plyr_rb.velocity = new Vector3(-14, plyr_rb.velocity.y, plyr_rb.velocity.z);
+                    if(plyr_rb.velocity.x > -12)  plyr_rb.AddForce((-4 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
+                    else  plyr_rb.velocity = new Vector3(-12, plyr_rb.velocity.y, plyr_rb.velocity.z);
                 }
 
                 if (Input.GetKey("d"))
@@ -264,8 +261,8 @@ public class PlayerMovement : MonoBehaviour
                     }
 
                     // RIGHT STRAFE
-                    if(plyr_rb.velocity.x < 14)  plyr_rb.AddForce((-4 * (Vector3.left * strafe_speed) ), ForceMode.VelocityChange);
-                    else  plyr_rb.velocity = new Vector3(14, plyr_rb.velocity.y, plyr_rb.velocity.z);
+                    if(plyr_rb.velocity.x < 12)  plyr_rb.AddForce((-4 * (Vector3.left * strafe_speed) ), ForceMode.VelocityChange);
+                    else  plyr_rb.velocity = new Vector3(12, plyr_rb.velocity.y, plyr_rb.velocity.z);
                 }
             }
 
@@ -277,6 +274,7 @@ public class PlayerMovement : MonoBehaviour
             // Swinging Forces 
             if(!movement_auth && plyr_swnging)
             {
+                Debug.Log("swing forces");
                 // swing strafe
                 if (Input.GetKey("q"))  plyr_rb.AddForce((0.6f * (Vector3.left * strafe_speed)), ForceMode.VelocityChange);
                 if (Input.GetKey("d"))  plyr_rb.AddForce((0.6f * (Vector3.right * strafe_speed)), ForceMode.VelocityChange);
@@ -287,7 +285,7 @@ public class PlayerMovement : MonoBehaviour
                 {
                     if(plyr_trsnfm.position.z < grap_pnt.z - 3.5f)
                     {
-                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 25);
+                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 18);
                         plyr_rb.AddForce( new Vector3(0, 0.175f, 0), ForceMode.VelocityChange);
                     }
                     else
@@ -316,6 +314,11 @@ public class PlayerMovement : MonoBehaviour
         float jumpForce = Mathf.Sqrt(4.5f * -2 * (Physics.gravity.y));
         List<string> interact_Jmps = new List<string>(new string[3] {"tapTapJump", "bumperJump", "launcherHit"} );
 
+        if(interact_Jmps.Contains(cls_type)) {
+            FindObjectOfType<CameraMovement>().special_jmp();
+            StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(1.0f));
+        };
+        
         switch(cls_type)
         {
             case "groundLeave":
@@ -323,40 +326,38 @@ public class PlayerMovement : MonoBehaviour
                 _anim.SetBool("GroundHit", false);
                 plyr_flying = true;
 
-                //if(gameOver_ || plyr_obstclJmping || plyr_sliding){return;}
-
-                if(mdfied_cldrs_nm[0] == "")
-                {
-                    fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.12f, true);
-                    mdfied_cldrs_nm[0] = "Fly";
-                }
+                fix_Cldrs_pos(0.12f, true);
                 break;
 
             case "groundHit":
                 _anim.SetBool("Flying", false);
                 _anim.SetBool("GroundHit", true);
-                plyr_flying = false;
 
                 jumpCnt = 2;
                 StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(0.6f));
 
                 if (plyr_flying)
                 {           
-                    mdfied_cldrs_nm[0] = "";
-                    if(plyr_flying){ fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.12f, false);}
-
                     StartCoroutine(Dly_bool_anm(0.3f, "GroundHit"));
+                    fix_Cldrs_pos(-0.12f, false);
+
+                    plyr_flying = false;
                 }
                 break; 
 
             case "obstacleHit":
                 rotate_bck();
 
-                if(!plyr_obstclJmping)
+                if(!plyr_obstclJmping && optional_gm.GetComponent<Rigidbody>() == null)
                 {
-                    StartCoroutine(Dly_bool_anm(1.25f, "obstacleJump"));
+                    last_ObstJumped = optional_gm;
+
+                    StartCoroutine(Dly_bool_anm(plyr_flying ? 1.75f : 1.25f, "obstacleJump"));
                     plyr_rb.AddForce( new Vector3(0, 2, 0), ForceMode.VelocityChange);
                     StartCoroutine(obstcl_anim(cls_size, optional_gm));
+                }else
+                {
+                    if(last_ObstJumped != optional_gm) kickObst(optional_gm);
                 }
                 break;
 
@@ -410,7 +411,7 @@ public class PlayerMovement : MonoBehaviour
                 jumpCnt = 2;
                 
                 plyr_rb.AddForce( new Vector3(0, jumpForce * 0.15f, 5), ForceMode.VelocityChange);
-                fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.42f, true);
+                fix_Cldrs_pos( 0.42f, true);
                 break;
 
             case "sliderLeave":
@@ -418,21 +419,21 @@ public class PlayerMovement : MonoBehaviour
                 _anim.SetBool("slide", false);
                 
                 plyr_rb.AddForce( new Vector3(0, jumpForce * 1.2f, -6), ForceMode.VelocityChange);
-                fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.42f, false);    
+                fix_Cldrs_pos(-0.42f, false);    
                 break;
 
-            case string jmp when interact_Jmps.Contains(jmp):
-                StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(1.0f));
-                return;
+            // case string jmp when interact_Jmps.Contains(jmp):
+            //     StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(1.0f));
+            //     return;
 
             case "launcherHit":
-                plyr_rb.AddForce( new Vector3(0, jumpForce * 2.56f, 13), ForceMode.VelocityChange);
-                StartCoroutine(Dly_bool_anm(0.60f, "launcherJump"));
+                plyr_rb.AddForce( new Vector3(0, jumpForce * 2.10f, 16), ForceMode.VelocityChange);
+                StartCoroutine(Dly_bool_anm(0.90f, "launcherJump"));
                 break;
 
             case "bumperJump":
                 rotate_bck();
-                plyr_rb.AddForce( new Vector3(0, jumpForce * 2.85f, 18), ForceMode.VelocityChange);
+                plyr_rb.AddForce( new Vector3(0, jumpForce * 2.4f, 14), ForceMode.VelocityChange);
                 StartCoroutine(Dly_bool_anm(0.60f, "bumperJump"));
                 break;
 
@@ -511,10 +512,9 @@ public class PlayerMovement : MonoBehaviour
 
 
     
-    private void fix_Cldrs_pos(Transform trnsfrm_, GameObject gm_obj, float y_off_pos, bool default_)
+    private void fix_Cldrs_pos(float y_off_pos, bool default_)
     {
-        Collider[] colList = trnsfrm_.GetComponentsInChildren<Collider>();
-        // gm_obj is only first 3 coldrs !
+        Collider[] colList = gameObject.transform.GetComponentsInChildren<Collider>();
         for (int i = 0; i < colList.Length; i ++)
         {
             if(y_off_pos < 0 && colList[i].isTrigger)
@@ -528,20 +528,19 @@ public class PlayerMovement : MonoBehaviour
             switch(coldr_type[1])
             {
                 case "BoxCollider" :
-                    b_cldr = gm_obj.GetComponent<BoxCollider>();
-                    b_cldr.center = !default_ ? cons_coldrs[i] : new Vector3(b_cldr.center.x, b_cldr.center.y + y_off_pos, b_cldr.center.z);
+                    b_cldr = (colList[i] as BoxCollider);
+                    b_cldr.center = !default_ ? colliders_references[i] : new Vector3(b_cldr.center.x, b_cldr.center.y + y_off_pos, b_cldr.center.z);
                     break;
                 case "SphereCollider" : 
-                    s_cldr = gm_obj.GetComponent<SphereCollider>();
-                    s_cldr.center = !default_ ? cons_coldrs[i] : new Vector3(s_cldr.center.x, s_cldr.center.y + y_off_pos, s_cldr.center.z);
+                    s_cldr = (colList[i] as SphereCollider);
+                    s_cldr.center = !default_ ? colliders_references[i] : new Vector3(s_cldr.center.x, s_cldr.center.y + y_off_pos, s_cldr.center.z);
                     break;
                 // case "CapsuleCollider" : 
-                //     c_cldr = gm_obj.GetComponent<CapsuleCollider>();
-                //     c_cldr.center = !default_ ? cons_coldrs[i] : new Vector3(c_cldr.center.x, c_cldr.center.y + y_off_pos, c_cldr.center.z);
+                //     c_cldr = (colList[i] as CapsuleCollider);
+                //     c_cldr.center = !default_ ? colliders_references[i] : new Vector3(c_cldr.center.x, c_cldr.center.y + y_off_pos, c_cldr.center.z);
                 //     break;
                 case "MeshCollider" : 
-                    m_cldr = gm_obj.GetComponent<MeshCollider>();
-                    //m_cldr.center = new Vector3(m_cldr.center.x, m_cldr.center.y + y_off_pos, m_cldr.center.z);
+                    m_cldr = (colList[i] as MeshCollider);
                     break;
             }
         }
@@ -565,44 +564,60 @@ public class PlayerMovement : MonoBehaviour
         // disable all movements
         movement_auth = false;
 
-        // reset Y and Z velocity (v / 10)
+        // reset X and Y velocity
         plyr_rb.velocity = new Vector3(plyr_rb.velocity.x / 20, 0, 0);
+        plyr_rb.useGravity = false;
+
+        Vector3 randTorque = new Vector3(UnityEngine.Random.Range(-20f, 20f), UnityEngine.Random.Range(-30, 30f), UnityEngine.Random.Range(15f, -15f));
 
         if (plyr_flying)
         {
+            // 1 : vertical fix
             // if land behind obstacle
+            if(plyr_trsnfm.position.y < (obstacl_gm.transform.position.y + (cls_size.y / 2f) ) + 0.05f)
+            {
+                LeanTween.moveY(gameObject,  (obstacl_gm.transform.position.y + (cls_size.y / 2f) + 0.2f), 0.10f).setEaseInSine(); 
+                yield return new WaitForSeconds(0.10f);     
+            }
 
+            // 2 : slide
+            LeanTween.moveZ(gameObject, obstacl_gm.transform.position.z + (cls_size.z / 1.75f), 0.95f ).setEaseInSine(); 
+            yield return new WaitForSeconds(0.95f);   
 
+            // 3 : jump
+            plyr_rb.useGravity = true;
+            plyr_rb.AddForce( new Vector3(0, jumpForce * 0.70f, 0), ForceMode.VelocityChange);
 
-            // Precise [ 9 * cls_size.z ] cause alrdy flying
-            plyr_rb.AddForce( new Vector3(0, -1 * (jumpForce * 0.3f), 9 * cls_size.z), ForceMode.VelocityChange);
-            yield return new WaitForSeconds(0.45f); 
+            yield return new WaitForSeconds(0.30f); 
 
-
-            plyr_rb.AddForce( new Vector3(0, jumpForce * 0.85f, 0), ForceMode.VelocityChange);
-            yield return new WaitForSeconds(0.15f); 
-
+            // make obstacle fly 
+            Rigidbody obst_rb = obstacl_gm.AddComponent<Rigidbody>();
+            obst_rb.mass = 0.01f;
+            obst_rb.AddForce(new Vector3(0, 3, -6), ForceMode.VelocityChange);
+            obst_rb.AddTorque(randTorque, ForceMode.VelocityChange);
         }
         else
         {
-            plyr_rb.useGravity = false;
             
-            // FIRST : SMALL VERTICAL MOVE
+            // 1 : vertical fix
             plyr_rb.AddForce( new Vector3(0, 3, -1), ForceMode.VelocityChange);             
             LeanTween.moveY(gameObject,plyr_trsnfm.position.y + (cls_size.y  + 0.1f), 0.320f).setEaseInSine();      
             yield return new WaitForSeconds(0.325f); 
 
 
-            // SECOND : HORIZONTAL SLIDE of Precise [ 7 * cls_size.z ] jump dist
+            // 2 : HORIZONTAL SLIDE of Precise [ 7 * cls_size.z ] jump dist
             plyr_rb.AddForce( new Vector3(0, -1  * (jumpForce * 0.15f), 7f * cls_size.z), ForceMode.VelocityChange);
+
             // make obstacle fly 
             Rigidbody obst_rb = obstacl_gm.AddComponent<Rigidbody>();
-            obst_rb.AddForce(new Vector3(0, -10, -6), ForceMode.VelocityChange);
+            obst_rb.mass = 0.01f;
+            obst_rb.AddForce(new Vector3(0, 6, -6), ForceMode.VelocityChange);
+            obst_rb.AddTorque(randTorque, ForceMode.VelocityChange);
 
             yield return new WaitForSeconds(0.45f); 
-                // THIRD : Reset velocity & JUMP++
+                // 3 : Reset velocity & JUMP++
                 plyr_rb.useGravity = true;
-                plyr_rb.AddForce( new Vector3(0, jumpForce * 1.40f, 0), ForceMode.VelocityChange);
+                plyr_rb.AddForce( new Vector3(0, jumpForce * 1.30f, 0), ForceMode.VelocityChange);
                 FindObjectOfType<CameraMovement>().obs_offset();
 
 
@@ -612,11 +627,9 @@ public class PlayerMovement : MonoBehaviour
         }
 
 
-    
-
 
         yield return new WaitForSeconds(0.25f); 
-            plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0, plyr_rb.velocity.z / 4);
+            plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0, 0);
             _anim.SetBool("Flying", true);
             plyr_flying = true;
 
@@ -625,6 +638,20 @@ public class PlayerMovement : MonoBehaviour
         movement_auth = true;
     }
 
+    // kick obj when alr obst jumping
+    private void kickObst(GameObject obst)
+    {
+        Rigidbody obst_rb = obst.GetComponent<Rigidbody>() == null ? obst.AddComponent<Rigidbody>() : obst.GetComponent<Rigidbody>();
+        obst_rb.mass = 0.01f;
+        Vector3 randTorque = new Vector3(UnityEngine.Random.Range(-20f, 20f), UnityEngine.Random.Range(-30, 30f), UnityEngine.Random.Range(15f, -15f));
+        Vector3 kickForce = new Vector3(
+            plyr_trsnfm.position.x - obst.transform.position.x,
+            plyr_trsnfm.position.y - obst.transform.position.y,
+            plyr_trsnfm.position.z - obst.transform.position.z
+        );
+        obst_rb.AddForce(new Vector3(kickForce.x * 2, 10, 16 ), ForceMode.VelocityChange);
+        obst_rb.AddTorque(randTorque, ForceMode.VelocityChange);
+    }
 
 
 
@@ -653,9 +680,9 @@ public class PlayerMovement : MonoBehaviour
         _anim.SetBool("flying", true);
         if(is_ext)
         {
-            fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], 0.0f, false);
+            fix_Cldrs_pos(0.0f, false);
 
-            jump_auth = true;
+            movement_auth = true;
 
             grap_pnt = new Vector3(0,0,0);
             _anim.SetBool("swing", false);
@@ -665,11 +692,11 @@ public class PlayerMovement : MonoBehaviour
         }
         else
         {
-            fix_Cldrs_pos(fix_trnsfrms[0], fix_objs[0], -0.52f, true);
+            fix_Cldrs_pos(-0.52f, true);
             grap_pnt = grapl_pnt;
             plyr_rb.AddForce( new Vector3(0, 4f, 0f), ForceMode.VelocityChange);
             
-            jump_auth = false;
+            movement_auth = false;
 
             _anim.SetBool("swing", true);
             plyr_swnging = true; 

@@ -33,6 +33,26 @@ public class PlayerCollisions : MonoBehaviour
         StartCoroutine(delay_trgrs(strt_delay));
     }
 
+    // private void OnCollisionEnter(Collision other) {
+    //     Vector3 _size = other.collider.bounds.size;
+    //     switch (slcted_clsion){
+    //             case "ground":
+    //                 // Grnd hit
+    //                 if(other.collider.gameObject.tag == "ground")
+    //                 {
+    //                     FindObjectOfType<PlayerMovement>().animateCollision("groundHit", _size);
+    //                     if(grnd_mat != null)
+    //                     {
+    //                         Collider p =  other.collider.gameObject.GetComponent<Collider>();
+    //                         if(p){ p.sharedMaterial = grnd_mat;}
+    //                     }
+    //                 }
+    //                 break;
+    //             default:
+    //                 break;
+    //     }
+    // }
+
     private void OnTriggerEnter(Collider collision) {
         if(slcted_clsion.Length > 0 && can_trgr){
             Vector3 _size = collision.bounds.size;

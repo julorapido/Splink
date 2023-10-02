@@ -284,7 +284,7 @@ public class Buildings : MonoBehaviour
                         //Debug.Log( meshFilters_[i].gameObject.transform.localRotation );
                         instance_Matrix.SetTRS(
                             v > 0 ? meshFilters_[i].gameObject.transform.localPosition : new Vector3(0, 0, 0),
-                            v > 0 ? meshFilters_[i].gameObject.transform.localRotation :  new Quaternion(0, 0, 0, 0),
+                            v > 0 ? meshFilters_[i].gameObject.transform.localRotation :  Quaternion.identity,
                             Vector3.one
                         );
 

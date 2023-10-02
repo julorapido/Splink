@@ -5,17 +5,18 @@ using UnityEngine;
 public class Grappling : MonoBehaviour
 {
     private PlayerMovement pm_;
-    //public Transform cam;
+    
     [Header ("References")]
-    public Rigidbody rb_;
-    public Transform plyr_pos;
-    public Transform gunTip;
-    public LayerMask wt_grappleable;
-    public LineRenderer lr;
+    [SerializeField] private Rigidbody rb_;
+    [SerializeField] private Transform plyr_pos;
+    [SerializeField] private Transform gunTip;
+    [SerializeField] private LayerMask wt_grappleable;
+    [SerializeField] private LineRenderer lr;
 
-    [Header ("Grappling")]
-    public float mx_grappl_distance;
-    public float grpl_dely_time;
+    [Header ("Grappling Cooldowns & MaxDistance")]
+    [SerializeField] private float mx_grappl_distance;
+    [SerializeField] private float max_grpl_time;
+    private float grpl_TimeValue;
 
     [Header ("Grappnling Jump Overshoot")]
     public float overshootYAxis;
@@ -24,76 +25,75 @@ public class Grappling : MonoBehaviour
     private Vector3 gplr_point;
     private GameObject gplr_gm;
 
-    [Header ("Cooldown")]
-    public float grpl_cd;
-    public float max_grpl_time;
-    private float grpl_cd_timer;
 
-    [Header ("Input")]
-    public KeyCode grapplekey;
-
-    [Header ("Delay Booleans")]
-
+    [Header ("Grapple Hold Booleans")]
     private bool is_grpling_;
+    private bool can_reGrappl = true;
+
+
+    [Header ("Grapple Dash Boolean")]
     private bool activ_grapple = false;
 
-    private SpringJoint hld_joint;
-    private bool grappl_ended = false;
-    private bool can_reGrappl = true;
-    private bool can_stopGrappl = true;
 
-    // Start is called before the first frame update
+    [Header ("Spring Hold Grapple")]
+    private SpringJoint hld_joint;
+
+
+
     private void Start()
     {
         pm_ = GetComponent<PlayerMovement>();
     }
 
-    // Update is called once per frame
     private void Update()
     {
         if (Input.GetKeyDown("e")) StartGrapple();
-        if (Input.GetKeyUp("e") || grappl_ended){
-            if(can_stopGrappl){
-                StopGrapple();
-            }
-        }
 
-        if(grpl_dely_time > 0)
-            grpl_cd_timer -= Time.deltaTime;
+        if (Input.GetKeyUp("e") && is_grpling_) StopGrapple();
+            
+        
+        if(grpl_TimeValue > 0) grpl_TimeValue -= Time.deltaTime;
+
+
 
         // Detect Grapple Ballz
         Collider[] hitColliders = Physics.OverlapSphere(plyr_pos.position, 20f);
-        if(hitColliders.Length > 0){
+        if(hitColliders.Length > 0)
+        {
             foreach (var hitCollider in hitColliders)
             {
-                if(hitCollider.gameObject.tag == "grapple_ball"){
+                if(hitCollider.gameObject.tag == "grapple_ball")
+                {
                     //Debug.Log("grappl ball in sight");
+                    // GRAPPLE JUMP
+                    // Invoke(nameof(ExecuteGrapple), grpl_dely_time);
                 }
             }
         }
-    }
 
-    private void LateUpdate(){
-        if (!hld_joint) return;
-
-        if(is_grpling_)
-            lr.SetPosition(0, gunTip.position);
 
     }
-    public void soft_Grapple(){
-        hld_joint.spring = 300f; // ELASTIC STRENGTH
-        hld_joint.damper = 80f;
+
+
+
+    public void soft_Grapple()
+    {
+        if(hld_joint)
+            hld_joint.spring = 300f; // ELASTIC STRENGTH
+            hld_joint.damper = 80f;
+   
     }
 
-    private void StartGrapple(){
-        if(grpl_cd_timer > 0 || !can_reGrappl) return;
-        is_grpling_ = true;
+
+    private void StartGrapple()
+    {
+        if(grpl_TimeValue > 0 || !can_reGrappl) return;
         bool trgrd_ = false;
 
         RaycastHit[] ray_hits = new RaycastHit[(155 * 2) + 1];
         int indx_ = 1;
         Physics.Raycast(plyr_pos.position, plyr_pos.forward, out ray_hits[0], mx_grappl_distance, wt_grappleable);
-        //Physics.SphereCast(plyr_pos.position, predictionSphereCastRadius, plyr_pos.forward, out sphereCastHit, mx_grappl_distance, wt_grappleable);
+
         for(int i = 1; i < 155; i++){// LEFT
             Physics.Raycast(plyr_pos.position + new Vector3(-i/12, 0.65f + (i/12), 0.2f), plyr_pos.forward, out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
             if(ray_hits[indx_].point != Vector3.zero ){
@@ -102,6 +102,7 @@ public class Grappling : MonoBehaviour
                 indx_++;
             }
         }
+
         for(int j = 1; j < 155; j++){// RIGHT
             Physics.Raycast(plyr_pos.position + new Vector3(j/12, 0.65f + (j/12), 0.2f), plyr_pos.forward , out ray_hits[indx_], mx_grappl_distance, wt_grappleable);
             if(ray_hits[indx_].point != Vector3.zero){
@@ -110,23 +111,22 @@ public class Grappling : MonoBehaviour
                 indx_++;
             }
         }
-        //Debug.Log(indx_ + " points found");
-        // for(int k = 0; k < indx_; k++){
-        //     Vector3  p = ray_hits[k].point;
-        // }
+
   
         // DEFINE GRPL POINT
-        // var rng = new Random();
-        // ray_hits = ray_hits.OrderBy(e => rng.NextDouble()).ToArray();
-        for(int k = 0; k < indx_; k++){
+        for(int k = 0; k < indx_; k++)
+        {
             int pt_ = Random.Range(1, indx_);
-            if(ray_hits[k].point != Vector3.zero){
+            if(ray_hits[k].point != Vector3.zero)
+            {
                 Vector3  p = ray_hits[k].point;
                 float d_fm_p = Vector3.Distance(plyr_pos.position, p);
                 float z_dst = p.z - plyr_pos.position.z;
-                if(d_fm_p > 10 && z_dst >= 2){
+                if(d_fm_p > 10 && z_dst >= 2)
+                {
                     // 3f height minimum
-                    if( (p.y - plyr_pos.position.y) >= 5f){
+                    if( (p.y - plyr_pos.position.y) >= 5f)
+                    {
                         //if(ray_hits[k].transform.gameObject.collider.tag == "ground"){
                             gplr_point = p;
                             gplr_gm = ray_hits[k].transform.gameObject;
@@ -136,23 +136,17 @@ public class Grappling : MonoBehaviour
                 }
             }
         }
-        if(gplr_point == Vector3.zero){return;}
+        if(gplr_point == Vector3.zero) return;
 
-        // GRAPPLE JUMP
-        // Invoke(nameof(ExecuteGrapple), grpl_dely_time);
 
-        // GRAPPLE HOLD
+        // GRAPPLE SPRING HOLD
         hld_joint  = gameObject.AddComponent<SpringJoint>();
         hld_joint.autoConfigureConnectedAnchor = false;
         hld_joint.connectedAnchor = gplr_point;
 
     
         float dist_frm_point = Vector3.Distance(plyr_pos.position, gplr_point);
-        //Debug.Log("grpl dist = " + dist_frm_point);
-        //if(dist_frm_point < mx_grappl_distance / 4){lr.enabled = false;return;}
 
-        // Player Mvmnt fnc call
-        //FindObjectOfType<PlayerMovement>().grapple_anim(false);
 
         // the distance grapple try to keep from grappl point
         hld_joint.maxDistance = dist_frm_point * 0.8f;
@@ -163,41 +157,53 @@ public class Grappling : MonoBehaviour
         hld_joint.damper = 100f;
         hld_joint.massScale = 10f;
 
-        //
-        //lr.positionCount = 2;
 
-        lr.enabled = true;
-        can_stopGrappl = true;
-        lr.SetPosition(1, gplr_point);
-        
-        // Delay Grapple
-        StopCoroutine(grappleDelay(max_grpl_time));
-        grappl_ended = false;
-        StartCoroutine(grappleDelay(max_grpl_time));
 
-        if(!trgrd_){
+        if(!trgrd_)
+        {
             lr.enabled = false;
-        }else{
+        }else
+        {
+            grpl_TimeValue = max_grpl_time;
+
+            // Set lineRenderer
+            lr.enabled = true;
+            lr.SetPosition(0, gunTip.position);
+            lr.SetPosition(1, gplr_point);
+
+            is_grpling_ = true;
+
             // CALL PLAYER MOVEMENT GRAPPLE ANIMATION
             FindObjectOfType<PlayerMovement>().swing_anm(false, gplr_point);
-            FindObjectOfType<CameraMovement>()._grplPoint_ = gplr_point;
             FindObjectOfType<PlayerMovement>().rotate_bck();
+
+            // CALL CAMERA GRAPPLE MOVEMENTS
+            FindObjectOfType<CameraMovement>()._grplPoint_ = gplr_point;
             FindObjectOfType<CameraMovement>().grpl_offset(false, gplr_gm.transform);
         }
       
     }
 
-    private IEnumerator grappleDelay(float t_){
-        grappl_ended = false;
-        yield return new WaitForSeconds(t_);
-        grappl_ended = true;
+    
+    private void StopGrapple()
+    {
+        is_grpling_ = false;
+        grpl_TimeValue = 0f;
+        Destroy(hld_joint);
+
+        lr.enabled = false;
+
+        // Player Mvmnt fnc call
+        FindObjectOfType<PlayerMovement>().swing_anm(true, new Vector3(0,0,0));
+        FindObjectOfType<CameraMovement>().grpl_offset(true);
+
+        Rigidbody ply_r = plyr_pos.gameObject.GetComponent<Rigidbody>();
+
+        ply_r.velocity = new Vector3(ply_r.velocity.x, ply_r.velocity.y, ply_r.velocity.z / 1.75f);
+        ply_r.AddForce( new Vector3(0, 10, 2), ForceMode.VelocityChange);
     }
 
-    private IEnumerator grappleResetDelay(float t_){
-        can_reGrappl = false;
-        yield return new WaitForSeconds(t_);
-        can_reGrappl = true;
-    }
+
 
 
     // // // // // // // GRAPPLE DASH // // // // // // // // // // 
@@ -231,21 +237,68 @@ public class Grappling : MonoBehaviour
     // // // // // // // // // // // // // // // // // // // // // // // // 
 
 
-    
-    private void StopGrapple(){
-        is_grpling_ = false;
-        can_stopGrappl = false;
-        grpl_cd_timer = grpl_cd;
-        Destroy(hld_joint);
-        StartCoroutine(grappleResetDelay(2f));
-        //lr.positionCount = 0;
-        // Player Mvmnt fnc call
-        FindObjectOfType<PlayerMovement>().swing_anm(true, new Vector3(0,0,0));
-        FindObjectOfType<CameraMovement>().grpl_offset(true);
-        Rigidbody ply_r = plyr_pos.gameObject.GetComponent<Rigidbody>();
-        ply_r.velocity = new Vector3(ply_r.velocity.x, ply_r.velocity.y, ply_r.velocity.z / 1.75f);
-        ply_r.AddForce( new Vector3(0, 10, 2), ForceMode.VelocityChange);
-        lr.enabled = false;
-    }
 
+    // private Spring spring;
+    // private LineRenderer lr;
+    // private Vector3 currentGrapplePosition;
+    // public GrapplingGun grapplingGun;
+    // public int quality;
+    // public float damper;
+    // public float strength;
+    // public float velocity;
+    // public float waveCount;
+    // public float waveHeight;
+    // public AnimationCurve affectCurve;
+    
+    // private void Awake()
+    // {
+    //     lr = GetComponent<LineRenderer>();
+    //     spring = new Spring();
+    //     spring.SetTarget(0);
+    // }
+    
+    // private void LateUpdate()
+    // {
+    //     DrawRope();
+    // }
+
+    // private void DrawRope() 
+    // {
+    //     //If not grappling, don't draw rope
+    //     if (!grapplingGun.IsGrappling()) 
+    //     {
+    //         currentGrapplePosition = grapplingGun.gunTip.position;
+    //         spring.Reset();
+    //         if (lr.positionCount > 0)
+    //             lr.positionCount = 0;
+    //         return;
+    //     }
+
+    //     if (lr.positionCount == 0)
+    //     {
+    //         spring.SetVelocity(velocity);
+    //         lr.positionCount = quality + 1;
+    //     }
+        
+    //     spring.SetDamper(damper);
+    //     spring.SetStrength(strength);
+    //     spring.Update(Time.deltaTime);
+
+    //     var grapplePoint = grapplingGun.GetGrapplePoint();
+    //     var gunTipPosition = grapplingGun.gunTip.position;
+    //     var up = Quaternion.LookRotation((grapplePoint - gunTipPosition).normalized) * Vector3.up;
+
+    //     currentGrapplePosition = Vector3.Lerp(currentGrapplePosition, grapplePoint, Time.deltaTime * 12f);
+
+    //     for (var i = 0; i < quality + 1; i++) 
+    //     {
+    //         var delta = i / (float) quality;
+    //         var offset = up * waveHeight * Mathf.Sin(delta * waveCount * Mathf.PI) * spring.Value *
+    //                      affectCurve.Evaluate(delta);
+            
+    //         lr.SetPosition(i, Vector3.Lerp(gunTipPosition, currentGrapplePosition, delta) + offset);
+    //     }
+    // }
 }
+
+ 
