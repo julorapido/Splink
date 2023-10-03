@@ -42,8 +42,8 @@ public class Grappling : MonoBehaviour
     [SerializeField] private AnimationCurve line_curve;
     [SerializeField] private LineRenderer lr;
     private SpringJoint line_spring;
-    private int line_quality = 200;
-    private float waveCount = 1f, waveHeight = 10f;
+    private int line_quality = 50;
+    public float waveCount = 1f, waveHeight = 20f;
 
     [Header ("Grapple Dash LineRenderer")]
     [SerializeField] private LineRenderer dash_lr;
@@ -59,8 +59,6 @@ public class Grappling : MonoBehaviour
     private void LateUpdate()
     {
         // DRAW ROPE
-        // if(is_grpling_)
-        //     lr.SetPosition(0, gunTip.position);
         DrawRope(); 
     }
 
@@ -68,7 +66,7 @@ public class Grappling : MonoBehaviour
     {
         if (Input.GetKeyDown("e")) StartGrapple();
 
-        if (Input.GetKeyUp("e") && is_grpling_) StopGrapple();
+        if ( (Input.GetKeyUp("e") ||  grpl_TimeValue < 0.01f) && is_grpling_) StopGrapple();
             
         
         if(grpl_TimeValue > 0) grpl_TimeValue -= Time.deltaTime;
@@ -97,9 +95,10 @@ public class Grappling : MonoBehaviour
     public void soft_Grapple()
     {
         if(hld_joint)
-            hld_joint.spring = 300f; // ELASTIC STRENGTH
-            hld_joint.damper = 80f;
-   
+            hld_joint.spring *= 2f; // ELASTIC STRENGTH
+            hld_joint.damper *= 2f;
+            hld_joint.maxDistance = hld_joint.maxDistance * 1.25f;
+
     }
 
 
@@ -112,6 +111,8 @@ public class Grappling : MonoBehaviour
             if(line_spring != null) Destroy(line_spring);
             return;
         }
+
+        GrappleDashRope(gplr_point);
 
         if(line_spring == null) {
             line_spring = gameObject.AddComponent<SpringJoint>();
@@ -178,10 +179,10 @@ public class Grappling : MonoBehaviour
                 Vector3  p = ray_hits[k].point;
                 float d_fm_p = Vector3.Distance(plyr_pos.position, p);
                 float z_dst = p.z - plyr_pos.position.z;
-                if(d_fm_p > 10 && z_dst >= 2)
+                if( (d_fm_p > 15 && d_fm_p < 35) && z_dst >= 12)
                 {
                     // 3f height minimum
-                    if( (p.y - plyr_pos.position.y) >= 5f)
+                    if( (p.y - plyr_pos.position.y) >= 4f)
                     {
                         //if(ray_hits[k].transform.gameObject.collider.tag == "ground"){
                             gplr_point = p;
@@ -203,14 +204,13 @@ public class Grappling : MonoBehaviour
     
         float dist_frm_point = Vector3.Distance(plyr_pos.position, gplr_point);
 
-
         // the distance grapple try to keep from grappl point
-        hld_joint.maxDistance = dist_frm_point * 0.8f;
-        hld_joint.minDistance = dist_frm_point * 0.25f;
+        hld_joint.maxDistance = dist_frm_point * 1.10f;
+        hld_joint.minDistance = dist_frm_point * 0.60f;
 
         // cutsom values
-        hld_joint.spring = 360f; // ELASTIC STRENGTH
-        hld_joint.damper = 100f;
+        hld_joint.spring = 3f; // ELASTIC STRENGTH
+        hld_joint.damper = 14f;
         hld_joint.massScale = 10f;
 
 
@@ -246,6 +246,7 @@ public class Grappling : MonoBehaviour
         grpl_TimeValue = 0f;
         Destroy(hld_joint);
 
+        gplr_point = new Vector3(0, 0, 0);
         lr.enabled = false;
 
         // Player Mvmnt fnc call
@@ -294,6 +295,7 @@ public class Grappling : MonoBehaviour
 
     private IEnumerator GrappleDashRope(Vector3 target_)
     {
+        dash_lr.enabled = true;
         dash_lr.positionCount = resolution;
 
         float percent = 0f;

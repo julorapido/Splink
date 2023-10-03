@@ -39,6 +39,7 @@ public class PlayerMovement : MonoBehaviour
     private bool plyr_swnging = false;
     [HideInInspector] 
     public bool plyr_tyro = false;
+    private bool plyr_intro_tyro= false;
 
     
     [Header ("Authorized Movements")]
@@ -61,11 +62,12 @@ public class PlayerMovement : MonoBehaviour
     private float last_tyro_trvld = 0.05f;
     private Transform tyro_handler_child;
     private PathCreator actual_path;
-    private const float tyro_speed = 14f;
+    private const float tyro_speed = 12f;
     private Vector3 end_tyroPos;
 
     [Header ("Grapple Vars")]
     private Vector3 grap_pnt = new Vector3(0,0,0);
+    private bool grpl_sns = false;
 
     [Header ("Game State")]
     private bool gameOver_ = false;
@@ -152,22 +154,23 @@ public class PlayerMovement : MonoBehaviour
         }
 
 
+
         // TYRO MVMNT
         if(plyr_tyro)
         {
             last_tyro_trvld += (tyro_speed) * Time.fixedDeltaTime;
-            plyr_trsnfm.position = actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, -2.1f, -0.1f);
 
             Quaternion e = actual_path.path.GetRotationAtDistance(last_tyro_trvld);
 
-            tyro_handler_child.position = actual_path.path.GetPointAtDistance(last_tyro_trvld);
+            tyro_handler_child.position = actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, 0.06f, 0);
             tyro_handler_child.rotation = new Quaternion(tyro_handler_child.rotation.x, e.y, tyro_handler_child.rotation.z, tyro_handler_child.rotation.w);
 
+            plyr_trsnfm.position = actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, -2.1f, -0.1f);
             plyr_trsnfm.rotation = new Quaternion(plyr_trsnfm.rotation.x, e.y, plyr_trsnfm.rotation.z, plyr_trsnfm.rotation.w);
-            
+
             
             float d_end = Vector3.Distance(plyr_trsnfm.position, end_tyroPos);
-            if(d_end < 8f)
+            if(d_end < 6f)
             {
                 plyr_rb.AddForce( new Vector3(0, 20, 10), ForceMode.VelocityChange);
                 _anim.SetBool("tyro", false);
@@ -175,6 +178,10 @@ public class PlayerMovement : MonoBehaviour
 
                 // turn back on all movements
                 movement_auth = true;
+
+                // turn back gravity
+                plyr_rb.useGravity = true;
+
             }
 
         }
@@ -193,21 +200,25 @@ public class PlayerMovement : MonoBehaviour
         if (!gameOver_ && !plyr_tyro)
         {
 
-            if (!Input.GetKey("q") && !Input.GetKey("d"))  rotate_bck();
-            if(Input.GetKey("q") || Input.GetKey("d"))  rt_auth = false; 
-
-            // rotate back [Quaternion Slerp]
-            if(rt_auth)
+            if(!plyr_tyro && !plyr_intro_tyro)
             {
-                if(plyr_trsnfm.rotation.eulerAngles.y >= 0.1f || plyr_trsnfm.rotation.eulerAngles.y <= -0.1f)
+                if (!Input.GetKey("q") && !Input.GetKey("d"))  rotate_bck();
+                if(Input.GetKey("q") || Input.GetKey("d"))  rt_auth = false; 
+
+                // rotate back [Quaternion Slerp]
+                if(rt_auth)
                 {
-                    transform.localRotation = Quaternion.Slerp(plyr_trsnfm.rotation, new Quaternion(0,0,0,1), 3.0f * Time.deltaTime);
+                    if(plyr_trsnfm.rotation.eulerAngles.y >= 0.1f || plyr_trsnfm.rotation.eulerAngles.y <= -0.1f)
+                    {
+                        transform.localRotation = Quaternion.Slerp(plyr_trsnfm.rotation, new Quaternion(0,0,0,1), 3.0f * Time.deltaTime);
+                    }
                 }
             }
+
             
 
             // movement auth disabled for [ObstacleHit, Swinging, Tyro, GrappleJump]
-            if (movement_auth && !plyr_swnging)
+            if (movement_auth)
             {
                 // MAIN MOVEMENT SPEED //
                 
@@ -244,8 +255,8 @@ public class PlayerMovement : MonoBehaviour
                     }
                     
                     // LEFT STRAFE
-                    if(plyr_rb.velocity.x > -12)  plyr_rb.AddForce((-4 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
-                    else  plyr_rb.velocity = new Vector3(-12, plyr_rb.velocity.y, plyr_rb.velocity.z);
+                    if(plyr_rb.velocity.x > -11)  plyr_rb.AddForce((-4 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
+                    else  plyr_rb.velocity = new Vector3(-11, plyr_rb.velocity.y, plyr_rb.velocity.z);
                 }
 
                 if (Input.GetKey("d"))
@@ -261,8 +272,8 @@ public class PlayerMovement : MonoBehaviour
                     }
 
                     // RIGHT STRAFE
-                    if(plyr_rb.velocity.x < 12)  plyr_rb.AddForce((-4 * (Vector3.left * strafe_speed) ), ForceMode.VelocityChange);
-                    else  plyr_rb.velocity = new Vector3(12, plyr_rb.velocity.y, plyr_rb.velocity.z);
+                    if(plyr_rb.velocity.x < 11)  plyr_rb.AddForce((-4 * (Vector3.left * strafe_speed) ), ForceMode.VelocityChange);
+                    else  plyr_rb.velocity = new Vector3(11, plyr_rb.velocity.y, plyr_rb.velocity.z);
                 }
             }
 
@@ -274,9 +285,11 @@ public class PlayerMovement : MonoBehaviour
             // Swinging Forces 
             if(!movement_auth && plyr_swnging)
             {
+                plyr_trsnfm.rotation = Quaternion.Euler(plyr_trsnfm.rotation.eulerAngles.x, plyr_trsnfm.rotation.eulerAngles.y, grpl_sns ? -10 : 10);
+
                 // swing strafe
-                if (Input.GetKey("q"))  plyr_rb.AddForce((0.6f * (Vector3.left * strafe_speed)), ForceMode.VelocityChange);
-                if (Input.GetKey("d"))  plyr_rb.AddForce((0.6f * (Vector3.right * strafe_speed)), ForceMode.VelocityChange);
+                if (Input.GetKey("q"))  plyr_rb.AddForce((2.6f * (Vector3.left * strafe_speed)), ForceMode.VelocityChange);
+                if (Input.GetKey("d"))  plyr_rb.AddForce((2.6f * (Vector3.right * strafe_speed)), ForceMode.VelocityChange);
 
                 if (Input.GetKey("d") || Input.GetKey("q"))  plyr_rb.AddForce( new Vector3(0f, 0.32f, 0f), ForceMode.VelocityChange);
 
@@ -284,25 +297,21 @@ public class PlayerMovement : MonoBehaviour
                 {
                     if(plyr_trsnfm.position.z < grap_pnt.z - 3.5f)
                     {
-                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 18);
-                        plyr_rb.AddForce( new Vector3(0, 0.175f, 0), ForceMode.VelocityChange);
+                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 17);
+                        plyr_rb.AddForce( new Vector3(0, -0.20f, 0), ForceMode.VelocityChange);
                     }
                     else
                     {
-                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 14);
-                        plyr_rb.AddForce( new Vector3(0, 0.35f,  0), ForceMode.VelocityChange);
+                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 22);
+                        plyr_rb.AddForce( new Vector3(0, -0.25f,  0), ForceMode.VelocityChange);
                     }
                 }
             }
 
         }
 
-        // TYRO rotations
-        if(plyr_trsnfm && rt_auth)
-        {
-            if(plyr_trsnfm.rotation.eulerAngles.y >= 0.1f || plyr_trsnfm.rotation.eulerAngles.y <= -0.1f) transform.localRotation = Quaternion.Slerp(plyr_trsnfm.rotation, new Quaternion(0,0,0,1), 3.0f * Time.deltaTime);
-        }
 
+  
     }
 
 
@@ -458,18 +467,20 @@ public class PlayerMovement : MonoBehaviour
     public void tyro_movement(GameObject path_obj)
     {
         if(plyr_tyro) return;
-        
+
         // turn off all movements
         movement_auth = false;
+        // turn off gravity
+        plyr_rb.useGravity = false;
+        plyr_rb.velocity = new Vector3(0, 0, 0);
 
-        plyr_tyro = true;
-        last_tyro_trvld = 0.05f;
+        last_tyro_trvld = 1.25f;   
+
+  
         Transform prnt_ = path_obj.transform.parent;
         PathCreator[] paths_ = prnt_.GetComponentsInChildren<PathCreator>();
         actual_path = paths_[0];
         end_tyroPos = actual_path.path.GetPoint(actual_path.path.NumPoints - 1);
-
-        _anim.SetBool("tyro", true);
 
         
         // TYRO HANDLER Find
@@ -491,9 +502,23 @@ public class PlayerMovement : MonoBehaviour
                 break;
             }
         };
+
+        _anim.SetBool("tyro", true);
+
+        plyr_intro_tyro = true;
+
+        Vector3 moveTo_ = actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, -2.1f, -0.1f);
+        LeanTween.move(gameObject, moveTo_, 0.6f).setEaseInSine(); 
+        LeanTween.move(tyro_handler_child.gameObject, actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, 0.05f, 0), 0.6f).setEaseInSine(); 
+
+        LeanTween.rotate(tyro_handler_child.gameObject, new Vector3(0, actual_path.path.GetRotationAtDistance(1f).eulerAngles.y, 0), 0.6f).setEaseInSine();
+        LeanTween.rotate(gameObject, new Vector3(0, actual_path.path.GetRotationAtDistance(1f).eulerAngles.y, 0), 1.2f).setEaseInSine();
+        
+        Invoke("activateTyro", 0.70f);
+        //plyr_tyro = true;
         
     }
-
+    private void activateTyro(){plyr_tyro = true; plyr_intro_tyro = false;}
 
 
 
@@ -580,7 +605,7 @@ public class PlayerMovement : MonoBehaviour
             }
 
             // 2 : slide
-            LeanTween.moveZ(gameObject, obstacl_gm.transform.position.z + (cls_size.z / 1.75f), 0.95f ).setEaseInSine(); 
+            LeanTween.moveZ(gameObject, obstacl_gm.transform.position.z + (cls_size.z / 2f), 0.95f ).setEaseInSine(); 
             yield return new WaitForSeconds(0.95f);   
 
             // 3 : jump
@@ -662,7 +687,7 @@ public class PlayerMovement : MonoBehaviour
     
     public void rotate_bck()
     {
-        if(plyr_tyro)
+        if(plyr_tyro || plyr_intro_tyro)
         {
             return;
         }
@@ -676,6 +701,8 @@ public class PlayerMovement : MonoBehaviour
     // Swing Animation
     public void swing_anm(bool is_ext, Vector3 grapl_pnt)
     {
+  
+
         _anim.SetBool("flying", true);
         if(is_ext)
         {
@@ -691,6 +718,9 @@ public class PlayerMovement : MonoBehaviour
         }
         else
         {
+            float sns =  plyr_trsnfm.position.x - grap_pnt.x;
+            grpl_sns = sns < 0 ? false : true;
+
             fix_Cldrs_pos(-0.52f, true);
             grap_pnt = grapl_pnt;
             plyr_rb.AddForce( new Vector3(0, 4f, 0f), ForceMode.VelocityChange);

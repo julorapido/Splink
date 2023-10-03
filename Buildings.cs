@@ -175,10 +175,7 @@ public class Buildings : MonoBehaviour
 
     private void combine_Meshes(GameObject section_parent, int chld_len){
         MeshFilter? filter_Reference = null;
-        // Vector3 scale_Reference = new Vector3(0, 0, 0);
-        // Quaternion rotation_Reference = Quaternion.identity;
-        GameObject emptyRef = new GameObject();
-        Transform transform_Refence = emptyRef.transform;
+        Transform transform_Refence = null;
         int filter_Ref_chldPos = -1;
 
         int wholeBatchBldg = 0;
@@ -203,16 +200,19 @@ public class Buildings : MonoBehaviour
             for (int c = 0; c < chld_.transform.childCount; c ++)
             {
                 MeshFilter chld_c = chld_.transform.GetChild(c).GetComponent<MeshFilter>();
-                if(chld_c != null && (chld_.transform.GetChild(c).gameObject.activeSelf == true) ){
+                if(chld_c != null && (chld_.transform.GetChild(c).gameObject.activeSelf == true) )
+                {
                     meshFilters_[c] = chld_c;
                 }
 
                 // get materials length [ for combineInstance.subMeshIndex ]
                 MeshRenderer mesh_r = chld_.transform.GetChild(c)?.GetComponent<MeshRenderer>();
                 if(!mesh_r) continue;
-                if(mesh_r != null && !mt_fetched){
+                if(mesh_r != null && !mt_fetched)
+                {
                     Material[] mesh_Mats = mesh_r.sharedMaterials;
-                    foreach (Material localMat in mesh_Mats){
+                    foreach (Material localMat in mesh_Mats)
+                    {
                         if (mesh_r.gameObject.tag == "ground") 
                         {
                             chld_mats[sumbeshesCount] = localMat;
@@ -248,12 +248,14 @@ public class Buildings : MonoBehaviour
                 }
 
                 // reference assignation    
-                if( filter_Reference == null && meshFilters_[i]?.gameObject.tag == "ground") {
+                if( filter_Reference == null && meshFilters_[i]?.gameObject.tag == "ground")
+                {
                     filter_Reference = meshFilters_[i];
                     transform_Refence = meshFilters_[i].gameObject.GetComponent<Transform>();
                     filter_Ref_chldPos = i;
                     continue; 
                 };
+
                 if(filter_Reference != null && meshFilters_[i]?.gameObject.tag == "ground")
                 {
                     batchedBldg++;
@@ -369,8 +371,8 @@ public class Buildings : MonoBehaviour
                                 if(_Types[forced_Type] == typeof(MeshCollider))
                                 {
 
-                                    GameObject emptyHolder = new GameObject();
-                                    GameObject cldrs_holder = Instantiate( emptyHolder,
+                                    //GameObject emptyHolder = new GameObject();
+                                    GameObject cldrs_holder = Instantiate( new GameObject(),
                                         ref_go.transform.GetChild(cl).position,
                                         ref_go.transform.GetChild(0).rotation,
                                         section_parent.transform.GetChild(j).transform.GetChild(filter_Ref_chldPos)
@@ -441,7 +443,6 @@ public class Buildings : MonoBehaviour
 
         }
 
-        Destroy(emptyRef);
 
         Debug.Log(" Whole Batch : "  + (wholeBatchBldg * wholeBatchMat) );
     }
