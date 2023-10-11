@@ -30,17 +30,21 @@ public class PlayerVectors : MonoBehaviour
     private void Start(){
         g_v = new GameObject[60];
     }
-    private void FixedUpdate(){
+    private void FixedUpdate()
+    {
         // Detect Side Bldgs
         Collider[] hitColliders = Physics.OverlapSphere(gameObject.transform.position, 30f);
-        if(hitColliders.Length > 0){
+        if(hitColliders.Length > 0)
+        {
             foreach (var cl_ in hitColliders)
             {
-                if(cl_.gameObject.tag == "ground"){
+                if(cl_.gameObject.tag == "ground")
+                {
                     Vector3 col_sz = cl_.bounds.size;
-                    //Debug.Log(col_sz);
-                    if(col_sz.x > 20f && col_sz.y > 7f){
-                        if(cl_?.gameObject != null){
+                    if(col_sz.x > 20f && col_sz.y > 7f)
+                    {
+                        if(cl_?.gameObject != null)
+                        {
                             g_v[i] = cl_?.gameObject;
                             i++;
                         }
@@ -52,36 +56,46 @@ public class PlayerVectors : MonoBehaviour
         }
     }
 
-    // Update and Replace slippery arr
-    public void slippery_trigr(bool is_exit, GameObject init_gmbj){
-        if(init_gmbj == last_gm){return;}else{
-            last_gm = init_gmbj;
-        }
-        // Htbox I/O
-        StartCoroutine(cld_reactivate(0.6f));
-        if(is_exit){
-            side_plyr_cldr.enabled = false;
-        // make plyr rotate
-        }else{
-            float y_rt = init_gmbj.transform.rotation.eulerAngles.y;
-            // if(! ((y_rt > 260f && y_rt < 360f) ||  (y_rt < 45f)) ){
-            //     //y_rt = y_rt > 46f ? 40f : 
-            // }
-            Quaternion p_  = new Quaternion(plyr_trsnfm.rotation.eulerAngles.x, y_rt, plyr_trsnfm.rotation.eulerAngles.z, 0);
-            plyr_trsnfm.localRotation = Quaternion.Slerp(plyr_trsnfm.rotation, init_gmbj.transform.rotation, 0.3f);
-            y_rt = plyr_trsnfm.localRotation.eulerAngles.y;
+    // Update and Replace slippery
+    // And rotate player
+    public void slippery_trigr(bool is_exit, GameObject init_gmbj)
+    {
+        if(init_gmbj == last_gm) return;
+        else last_gm = init_gmbj;
+        
 
-            if(! ((y_rt < 0f && y_rt < -47.0f) ||  (y_rt >= 0 && y_rt > 46.0f)) ){
-                // Quaternion n_ =  new Quaternion(plyr_trsnfm.rotation.eulerAngles.x, y_rt < 0f ?  -47.0f : 45.0f, plyr_trsnfm.rotation.eulerAngles.z, 0);
-                // plyr_trsnfm.localRotation = Quaternion.Slerp(plyr_trsnfm.rotation, n_, 0.4f);
+        // Htbox I/O
+        //StartCoroutine(cld_reactivate(0.6f));
+        side_plyr_cldr.enabled = true;
+
+        if(is_exit) side_plyr_cldr.enabled = false;
+        else
+        {
+            // make plyr rotate 
+            float y_rt = init_gmbj.transform.rotation.eulerAngles.y;
+
+            if(  (y_rt < -43.0f) ||  (y_rt > 43.0f) )
+            {
+                Quaternion n_ = Quaternion.identity;
+                n_.eulerAngles = new Vector3(0, y_rt < 0f ? -37.0f : 37.0f, 0);
+
+                plyr_trsnfm.rotation = n_;
+            }else
+            {
+                Quaternion p_  = Quaternion.identity;
+                p_.eulerAngles =  new Vector3(0, y_rt, 0);
+
+                plyr_trsnfm.rotation = p_;
             }
 
         }
 
         // Disable previous slippery arr
-        if(acutal_grnds[0] != null){
-            for(int j = 0; j < acutal_grnds.Length; j++){
-                if(acutal_grnds[j] == null){break;}
+        if(acutal_grnds[0] != null)
+        {
+            for(int j = 0; j < acutal_grnds.Length; j++)
+            {
+                if(acutal_grnds[j] == null) break;
                 Collider col_ = acutal_grnds[j].GetComponent<Collider>();
                 col_.material = null;
             }
@@ -92,16 +106,21 @@ public class PlayerVectors : MonoBehaviour
         
         int i = 0;
         // maybe parent is ground obj
-        if(prnt_gmbj == null){
+        if(prnt_gmbj == null)
+        {
             // acutal_grnds[0]
             acutal_grnds[i] = init_gmbj.transform.parent.gameObject;
             i = 1;
-        }else{
-            foreach(Transform chld_ in prnt_gmbj.transform){
+        }else
+        {
+            foreach(Transform chld_ in prnt_gmbj.transform)
+            {
                 Collider chld_cldrs = chld_.gameObject.GetComponent<Collider>();
-                if(chld_cldrs != null){
+                if(chld_cldrs != null)
+                {
                     //if(chld_?.gameObject?.GetComponent<BoxCollider>()?.tag == "ground" || chld_?.gameObject?.GetComponent<MeshCollider>()?.tag == "ground"){
-                    if(chld_cldrs?.tag == "ground"){
+                    if(chld_cldrs?.tag == "ground")
+                    {
                         acutal_grnds[i] = chld_.gameObject;
                         i++;
                     }
@@ -113,24 +132,35 @@ public class PlayerVectors : MonoBehaviour
         for(int p = i; p < acutal_grnds.Length; p ++){ acutal_grnds[p] = null;}
 
         // Apply slippery
-        for (int k = 0; k < i; k++){
+        for (int k = 0; k < i; k++)
+        {
             // get main collider
             Collider col_ = acutal_grnds[k].GetComponent<Collider>();
             col_.material = slippery_mat;
         }
     }
 
-    private IEnumerator cld_reactivate(float t_){
+
+
+    private IEnumerator cld_reactivate(float t_)
+    {
         yield return new WaitForSeconds(t_);
+        Debug.Log("solid activation");
         side_plyr_cldr.enabled = true;
     }
 
 
+
+
     // Apply vectors to near walls
-    private void apply_vector(){
-        for (int i = 0; i < g_v.Length; i ++){  
+    private void apply_vector()
+    {
+        for (int i = 0; i < g_v.Length; i ++)
+        { 
+
             GameObject j = g_v[i];
-            if(j != null){
+            if(j != null)
+            {
                 Vector3 k = j.GetComponent<Collider>().bounds.size;
                 Vector3 c_ =  j.GetComponent<Collider>().bounds.center;
                 Instantiate(
@@ -139,7 +169,9 @@ public class PlayerVectors : MonoBehaviour
                     new Quaternion(0,0,0,1),
                     j.transform
                 );
-            }else{ break; }
+            }else{ break; }
         }
     }
+
+    
 }

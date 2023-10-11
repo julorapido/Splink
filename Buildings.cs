@@ -17,26 +17,46 @@ public class Buildings : MonoBehaviour
     // GLOBAL WIDTH OF BUILDGS GEN
     private const float fnc_gn_w = 50.0f;
 
-    [SerializeField]
-    private Transform bldg_parent;
+    [SerializeField] private Transform player_trsf;
+
+    [SerializeField] private Transform bldg_parent;
+
+    [Header ("A Section Z-Size")]
+    private const float section_z = 135.0f;
+
+    [Header ("Section SpaceBetweens")]
+    private const float sect_spacing = 4.0f;
+
+    [Header ("Generation Apparition-Space")]
+    private float spawn_space = 0.0f;
 
 
     // Start is called before the first frame update
-    private void Start(){
-        //Gen_Bldngs(20);
-        Gen_PrefbSections(3);
+    private void Start()
+    {
+        // spawn_space 
+
+        // Gen_Bldngs(20);
+        Gen_PrefbSections(2);
     }
 
+    // fixedupdate for player transform
+    private void FixedUpdate()
+    {
+
+    }
 
     private void Gen_Bldngs(int z_len)
     {
         int ln_ = buildngs_prefb.Length;
         // Z MAP
-        for(int p = 0; p < z_len; p++){
+        for(int p = 0; p < z_len; p++)
+        {
             x_pos = 0.0f;
             space_t_fill = 0.0f;
             // X MAP
-            for(int i = 0; i < ln_; i ++){
+            for(int i = 0; i < ln_; i ++)
+            {
                 if(x_pos > fnc_gn_w){break;}
                 int rdm_ = UnityEngine.Random.Range(0, ln_);/// RAND bat indx
                 GameObject sl = buildngs_prefb[rdm_];
@@ -47,7 +67,8 @@ public class Buildings : MonoBehaviour
 
                 //////////////////// BLDG SIZE ////////////////////
                 Collider[] sl_coldrs = sl.transform.GetComponentsInChildren<Collider>();
-                for (int j = 0; j < sl_coldrs.Length; j ++){
+                for (int j = 0; j < sl_coldrs.Length; j ++)
+                {
 
                     string[] coldr_type = sl_coldrs[j].GetType().ToString().Split('.');
                     //  //  //  //  //  //
@@ -119,9 +140,10 @@ public class Buildings : MonoBehaviour
                 }
                 /////////////////////////////////////////////////
 
-                if(is_prnt_cldr){ bld_wdth = bld_wdth * sl.transform.localScale.x; }else{
-                    //bld_wdth = (bld_wdth * sl_coldrs[indx_scale].gameObject.transform.localScale.x) * sl.transform.localScale.x;
-                    bld_wdth = bld_wdth  * sl.transform.localScale.x;
+                if(is_prnt_cldr){ bld_wdth = bld_wdth * sl.transform.localScale.x; }else
+                {
+                    bld_wdth = (bld_wdth * sl_coldrs[indx_scale].gameObject.transform.localScale.x) * sl.transform.localScale.x;
+                    //bld_wdth = bld_wdth  * sl.transform.localScale.x;
                 }
                 Instantiate(sl, new Vector3(x_pos + bld_wdth/2 , 0, z_pos), new Quaternion(0f, 90f, 0f, 1), bldg_parent);
 
@@ -131,17 +153,25 @@ public class Buildings : MonoBehaviour
         }
     }
 
-    private void Gen_PrefbSections(int z_len){
+
+
+
+
+    private void Gen_PrefbSections(int z_len)
+    {
         int ln_ = sections_prefb.Length;
         float z_step = 19.0f; // STEP ON Z-AXIS
         float svd_z = 0.0f;
         float y_ = 0.0f;
         // Z MAP
-        for(int p = 0; p < z_len; p++){
+        for(int p = 0; p < z_len; p++)
+        {
             // X MAP
             x_pos = 0f;
-            for(int i = 0; i < ln_; i ++){
-                if(x_pos > fnc_gn_w){break;}
+            for(int i = 0; i < ln_; i ++)
+            {
+                if(x_pos > fnc_gn_w) break;
+
                 int rdm_ = UnityEngine.Random.Range(0, ln_);/// RAND Section indx 
                 GameObject sl = sections_prefb[rdm_];
 
@@ -157,10 +187,13 @@ public class Buildings : MonoBehaviour
 
                 x_pos += sl_size.x;
                 svd_z = sl_size.z;
-                y_ -= 7.5f;
+                y_ -= 4.5f;
             }
-            z_pos += svd_z + 10.0f;
+            z_pos += svd_z + sect_spacing;
+
+            spawn_space += section_z;
         }
+
 
         generate_SubTerrain();
     }
@@ -171,9 +204,8 @@ public class Buildings : MonoBehaviour
 
 
 
-
-
-    private void combine_Meshes(GameObject section_parent, int chld_len){
+    private void combine_Meshes(GameObject section_parent, int chld_len)
+    {
         MeshFilter? filter_Reference = null;
         Transform transform_Refence = null;
         int filter_Ref_chldPos = -1;

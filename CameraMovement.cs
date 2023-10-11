@@ -134,7 +134,7 @@ public class CameraMovement : MonoBehaviour
         }
 
         if(smthDmp_grpl) rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], 0.12f, ref mathfRef_grpl, 0.295f);
-        if(smthDmp_grpl_end) rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], -0.305f, ref mathfRef_grpl, 0.650f);
+        if(smthDmp_grpl_end) rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], -0.325f, ref mathfRef_grpl, 0.650f);
 
 
     }
@@ -280,7 +280,7 @@ public class CameraMovement : MonoBehaviour
                  1
             );
 
-            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt,  (tyro_on || grappl_on)  ? 0.07f : 0.12f);
+            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt,  (tyro_on || grappl_on) ? (grappl_on ? 0.07f : 0.045f) : 0.12f );
 
             // Smooth Damp
             Vector3 smoothFollow = Vector3.SmoothDamp(
@@ -290,7 +290,7 @@ public class CameraMovement : MonoBehaviour
                 ( grappl_on ? 
                   0.0710f 
                 :
-                  (tyro_on) ? 0.15f : 0.055f
+                  (tyro_on) ? 0.130f : 0.055f
                 )
             ); 
 
@@ -298,6 +298,8 @@ public class CameraMovement : MonoBehaviour
         }else{
             transform.LookAt(player);
         }
+
+        if(grappl_on) transform.LookAt(player);
     }
 
 
@@ -337,28 +339,38 @@ public class CameraMovement : MonoBehaviour
             new_fov = start_fov;
             pos_dc["wallR_x_offst"] = 0.0f; pos_dc["wallR_y_offst"] = 0.0f; pos_dc["wallR_z_offst"] = 0.0f;
 
-            rot_dc["wallR_rot_z_offst"] = 0.0f; rot_dc["wallR_rot_y_offst"] = 0.0f;
+            rot_dc["wallR_rot_x_offst"] = 0.0f; rot_dc["wallR_rot_z_offst"] = 0.0f; rot_dc["wallR_rot_y_offst"] = 0.0f;
         }else
         {
             // // //
             reset_smoothDmpfnc();
             // // //
 
-            //FovTrans(start_fov, 0.5f);
-            new_fov = 90f;
-            pos_dc["wallR_y_offst"] = -0.55f;
-
-            // CLOSE UP Z OFFSET
-            pos_dc["wallR_z_offst"] = 1.90f;
-
             float sns =  player.position.x - gm_.position.x;
-            if(sns < 0 ){
-                pos_dc["wallR_x_offst"] = -1.35f; 
-                rot_dc["wallR_rot_y_offst"] = 0.250f; rot_dc["wallR_rot_z_offst"] = 0.14f;
 
-            }else{
-                pos_dc["wallR_x_offst"] = 1.35f;
-                rot_dc["wallR_rot_y_offst"] = -0.250f; rot_dc["wallR_rot_z_offst"] = -0.14f;
+            //FovTrans(start_fov, 0.5f);
+            new_fov = 93f;
+            pos_dc["wallR_y_offst"] = -1.1f;
+
+            // SPACE UP || CLOSE UP Z OFFSET
+            pos_dc["wallR_z_offst"] = (sns < 0) ? -0.15f :  0.60f;
+
+            // ROTATE TOP
+            rot_dc["wallR_rot_x_offst"] = -0.1f;
+
+            rot_dc["wallR_rot_z_offst"] = sns < 0 ? 0.06f : -0.06f;
+
+            if(sns < 0 )
+            {
+                // right wall hit
+                pos_dc["wallR_x_offst"] = 0.50f; 
+                rot_dc["wallR_rot_y_offst"] = -0.310f; 
+
+            }else
+            {
+                // left wall hit
+                pos_dc["wallR_x_offst"] = 2.80f;
+                rot_dc["wallR_rot_y_offst"] = -0.475f;
             }
         }
     }
@@ -473,6 +485,28 @@ public class CameraMovement : MonoBehaviour
         supl_xRot = 0.0f;
         pos_dc["wallR_y_offst"] = 0.0f;rot_dc["wallR_rot_x_offst"] = 0.0f;
     }
+
+
+    // tyro
+    public void tyro_offset(bool is_ext)
+    {
+        if(is_ext)
+        {
+            supl_xRot = 0.0f;
+            new_fov = start_fov;
+            pos_dc["wallR_z_offst"] = 0.0f;
+
+        }else
+        {
+            reset_smoothDmpfnc();
+
+            new_fov = 88f;
+            // SPACE UP Z OFFSET
+            pos_dc["wallR_z_offst"] = -0.77f;
+
+        }
+    }
+
 
 
 

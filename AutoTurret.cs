@@ -9,7 +9,7 @@ public class AutoTurret : MonoBehaviour
     public static List<string> turret_types = new List<string>(new string[] {"Normal","Double",
     "Catapult", "Heavy", "Sniper", "Gattling", "LightGun", "Military"});
     private bool plyr_n_sight = false;
-    public GameObject plyr_gm;
+    private GameObject plyr_gm;
 
     private enum turret_Type{
         Normal,
@@ -60,6 +60,8 @@ public class AutoTurret : MonoBehaviour
 
     private void Start()
     {
+        plyr_gm = GameObject.FindGameObjectsWithTag("Player")[0];
+
         InvokeRepeating("target_check", 0, 0.25f);
         //InvokeRepeating("shoot_prjcle", 0, 0.50f);
         // ASSIGNEMENT OF BARRELS AND SHOOTS POINTS
@@ -271,18 +273,20 @@ public class AutoTurret : MonoBehaviour
                         projectile_scrpt.blt_type = A_T_Projectile.turret_Type.Normal;
                         break;
                     case turret_Type.Double:
-                        for(int i = 0; i < j; i ++){
-                            LeanTween.scale(tr_barrels[i], tr_barrels[i].transform.localScale * 1.6f, shootCoolDown - 0.4f).setEasePunch();
+                        StartCoroutine(double_(msl_scale));
+                        // for(int i = 0; i < j; i ++)
+                        // {
+                        //     LeanTween.scale(tr_barrels[i], tr_barrels[i].transform.localScale * 1.6f, shootCoolDown - 0.4f).setEasePunch();
 
-                            GameObject m_Go = Instantiate(turret_bullet, tr_sht_points[i].transform.position, tr_sht_points[i].transform.rotation);
-                            m_Go.transform.localScale = new Vector3(msl_scale.x * (4*(gameObject.transform.localScale.x / 5)), msl_scale.y * (4*(gameObject.transform.localScale.y / 5)),
-                                msl_scale.z * (4*(gameObject.transform.localScale.z / 5))
-                            );
+                        //     GameObject m_Go = Instantiate(turret_bullet, tr_sht_points[i].transform.position, tr_sht_points[i].transform.rotation);
+                        //     m_Go.transform.localScale = new Vector3(msl_scale.x * (4*(gameObject.transform.localScale.x / 5)), msl_scale.y * (4*(gameObject.transform.localScale.y / 5)),
+                        //         msl_scale.z * (4*(gameObject.transform.localScale.z / 5))
+                        //     );
 
-                            A_T_Projectile pj_scrpt = m_Go.GetComponent<A_T_Projectile>();
-                            pj_scrpt.plyr_target = plyr_gm.transform;
-                            pj_scrpt.blt_type = A_T_Projectile.turret_Type.Double;
-                        }
+                        //     A_T_Projectile pj_scrpt = m_Go.GetComponent<A_T_Projectile>();
+                        //     pj_scrpt.plyr_target = plyr_gm.transform;
+                        //     pj_scrpt.blt_type = A_T_Projectile.turret_Type.Double;
+                        // }
                         break;
                     case turret_Type.Heavy:
                         LeanTween.scale(tr_barrels[0], tr_barrels[0].transform.localScale * 1.35f, shootCoolDown - 0.05f).setEasePunch();
@@ -331,6 +335,27 @@ public class AutoTurret : MonoBehaviour
         }
     }
     
+    private IEnumerator double_(Vector3 msl_scale)
+    {
+        for(int i = 0; i < j; i ++)
+        {
+            LeanTween.scale(tr_barrels[i], tr_barrels[i].transform.localScale * 1.6f, shootCoolDown - 0.4f).setEasePunch();
+
+            GameObject m_Go = Instantiate(turret_bullet, tr_sht_points[i].transform.position, tr_sht_points[i].transform.rotation);
+            m_Go.transform.localScale = new Vector3(msl_scale.x * (4*(gameObject.transform.localScale.x / 5)), msl_scale.y * (4*(gameObject.transform.localScale.y / 5)),
+                msl_scale.z * (4*(gameObject.transform.localScale.z / 5))
+            );
+
+            A_T_Projectile pj_scrpt = m_Go.GetComponent<A_T_Projectile>();
+            pj_scrpt.plyr_target = plyr_gm.transform;
+            pj_scrpt.blt_type = A_T_Projectile.turret_Type.Double;
+            
+            yield return new WaitForSeconds(0.65f);
+        }
+        yield break;
+    }
+
+
     private IEnumerator gtlng_(Vector3 msl_scale)
     {
         for(int i = 0; i < j; i ++)

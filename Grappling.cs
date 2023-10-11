@@ -95,9 +95,9 @@ public class Grappling : MonoBehaviour
     public void soft_Grapple()
     {
         if(hld_joint)
-            hld_joint.spring *= 2f; // ELASTIC STRENGTH
-            hld_joint.damper *= 2f;
-            hld_joint.maxDistance = hld_joint.maxDistance * 1.25f;
+            hld_joint.spring *= 1.2f; // ELASTIC STRENGTH
+            hld_joint.damper *= 1.2f;
+            hld_joint.maxDistance = hld_joint.maxDistance * 1.05f;
 
     }
 

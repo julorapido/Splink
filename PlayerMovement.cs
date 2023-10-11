@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using UnityEngine;
+using UnityEngine.Animations.Rigging;
 using System;
 using PathCreation.Utility;
 using PathCreation;
@@ -16,13 +17,13 @@ public class PlayerMovement : MonoBehaviour
     public Transform plyr_cam;
 
     [Header ("Movement Values")]
-    [SerializeField] private const float jumpAmount = 32f;
-    [SerializeField] private float strafe_speed;
+    private const float jumpAmount = 32f;
+    private const float strafe_speed = 0.225f;
 
     [Header ("Character Animators")]
+    [SerializeField] private GameObject pico_character;
     private Animator _anim = null;
     private CharacterController _controller = null;
-
 
     [Header ("Animation Center Fixes")]
     private Vector3[] colliders_references = new Vector3[10];
@@ -52,6 +53,7 @@ public class PlayerMovement : MonoBehaviour
     [Header ("Player Attached Partcl")]
     public ParticleSystem jump_prtcl;
     public ParticleSystem doubleJump_prtcl;
+    public ParticleSystem   slide_prtcl;
 
 
     [Header ("Rotate booleans")]
@@ -62,18 +64,46 @@ public class PlayerMovement : MonoBehaviour
     private float last_tyro_trvld = 0.05f;
     private Transform tyro_handler_child;
     private PathCreator actual_path;
-    private const float tyro_speed = 12f;
+    private const float tyro_speed = 11.5f;
     private Vector3 end_tyroPos;
 
     [Header ("Grapple Vars")]
     private Vector3 grap_pnt = new Vector3(0,0,0);
     private bool grpl_sns = false;
 
+    [Space(10)] // 10 pixels of spacing here.
+
     [Header ("Game State")]
     private bool gameOver_ = false;
 
+    [Header ("WallRun Forced Strafes")]
+    private bool lft_Straf = false;
+    private bool rght_Straf = false;
+
+    [Space(10)] // 10 pixels of spacing here.
+
+    [Header ("Player Gun")]
+    [SerializeField] private GameObject player_hidden_gunSlot;
+    [SerializeField] private GameObject player_hand_gunSlot;
+
+    [Space(10)]
+
+    [Header ("Player Rigs & Constraints")]
+    [SerializeField] private Rig player_rig;
+    [SerializeField] private MultiAimConstraint[] player_aims;
+    [SerializeField] private Animator rig_animController;
+    
+    private float[] saved_aimsWeigths = new float[4]{0.0f,  0.0f, 0.0f, 0.0f};
 
 
+    [Space(10)] // 10 pixels of spacing here.
+
+
+    [Header ("Player Targets")]
+    [SerializeField] private Transform body_TARGET; 
+    [SerializeField] private Transform head_TARGET; 
+
+    private int ammo = 0;
 
 
 
@@ -103,8 +133,17 @@ public class PlayerMovement : MonoBehaviour
             }
             
         }
-    }
 
+
+        for(int j = 0; j < player_aims.Length; j ++)
+        { 
+            saved_aimsWeigths[j] = player_aims[j].weight;
+            player_aims[j].weight = 0.0f;
+        }
+
+        player_rig.weight = 0.0f;
+        rig_animController.enabled = false;
+    }
 
 
 
@@ -118,8 +157,8 @@ public class PlayerMovement : MonoBehaviour
         // movement auth && jump auth
         if(movement_auth && jump_auth)
         {
-            if ( Input.GetKeyDown(KeyCode.Space) && (jumpCnt > 0) ){
-
+            if ( Input.GetKeyDown(KeyCode.Space) && (jumpCnt > 0) )
+            {
 
                 // JUMP
                 if(jumpCnt == 2)
@@ -182,6 +221,7 @@ public class PlayerMovement : MonoBehaviour
                 // turn back gravity
                 plyr_rb.useGravity = true;
 
+                FindObjectOfType<CameraMovement>().tyro_offset(true);
             }
 
         }
@@ -197,10 +237,27 @@ public class PlayerMovement : MonoBehaviour
     private void FixedUpdate()
     {
 
+        if(ammo > 0 && !_anim.GetBool("gunEquipped") )
+        {
+            rig_animController.enabled = true;
+            player_rig.weight = 1.0f;
+            for(int i = 0; i < player_aims.Length; i ++) player_aims[i].weight = saved_aimsWeigths[i];
+            _anim.SetBool("gunEquipped", true); 
+            Debug.Log("Equip rules");
+        }
+        else if(ammo == 0 && _anim.GetBool("gunEquipped") )
+        {
+            for(int j = 0; j < player_aims.Length; j ++) player_aims[j].weight = 0.0f;
+            _anim.SetBool("gunEquipped", false); 
+            Debug.Log("Desequip rules");
+        }
+    
+        // if(true) return;
+
         if (!gameOver_ && !plyr_tyro)
         {
 
-            if(!plyr_tyro && !plyr_intro_tyro)
+            if(!plyr_tyro && !plyr_intro_tyro && !plyr_wallRninng)
             {
                 if (!Input.GetKey("q") && !Input.GetKey("d"))  rotate_bck();
                 if(Input.GetKey("q") || Input.GetKey("d"))  rt_auth = false; 
@@ -221,12 +278,12 @@ public class PlayerMovement : MonoBehaviour
             if (movement_auth)
             {
                 // MAIN MOVEMENT SPEED //
-                
+                    
                 // SLIDING SPEED
                 if(plyr_sliding) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 15);
                 
                 // WALL RUN 
-                else if(plyr_wallRninng) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 12);
+                else if(plyr_wallRninng) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 3.5f, 12);
                 
 
                 // RUNNING SPEED
@@ -234,10 +291,10 @@ public class PlayerMovement : MonoBehaviour
                 {
                 
                     // DEFAULT SPEED
-                    if (!Input.GetKey("q") && !Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 8.5f);
+                    if (!Input.GetKey("q") && !Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 7f);
                     
                     // STRAFE SPEED
-                    if (Input.GetKey("q") || Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 5);
+                    if (Input.GetKey("q") || Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 3);
                        
                 }
 
@@ -247,12 +304,11 @@ public class PlayerMovement : MonoBehaviour
                 {
                     // LEFT ROTATION
                     if(!plyr_wallRninng)
-                    {
                         if ( (plyr_trsnfm.rotation.eulerAngles.y >= 315.0f && plyr_trsnfm.rotation.eulerAngles.y <= 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y <= 47.0f) )
                         {
                             plyr_.transform.Rotate(0, -2.50f, 0, Space.Self);
                         } 
-                    }
+                    
                     
                     // LEFT STRAFE
                     if(plyr_rb.velocity.x > -11)  plyr_rb.AddForce((-4 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
@@ -264,12 +320,11 @@ public class PlayerMovement : MonoBehaviour
                     
                     // RIGHT ROTATION
                     if(!plyr_wallRninng)
-                    {
                         if ( (plyr_trsnfm.rotation.eulerAngles.y >= 311.0f) || ( Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) >= 0.0f && Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) <= 44.0f) )
                         {
                             plyr_.transform.Rotate(0, 2.50f, 0, Space.Self);
                         }
-                    }
+                    
 
                     // RIGHT STRAFE
                     if(plyr_rb.velocity.x < 11)  plyr_rb.AddForce((-4 * (Vector3.left * strafe_speed) ), ForceMode.VelocityChange);
@@ -288,8 +343,8 @@ public class PlayerMovement : MonoBehaviour
                 plyr_trsnfm.rotation = Quaternion.Euler(plyr_trsnfm.rotation.eulerAngles.x, plyr_trsnfm.rotation.eulerAngles.y, grpl_sns ? -10 : 10);
 
                 // swing strafe
-                if (Input.GetKey("q"))  plyr_rb.AddForce((2.6f * (Vector3.left * strafe_speed)), ForceMode.VelocityChange);
-                if (Input.GetKey("d"))  plyr_rb.AddForce((2.6f * (Vector3.right * strafe_speed)), ForceMode.VelocityChange);
+                if (Input.GetKey("q"))  plyr_rb.AddForce((2.6f * (Vector3.left * strafe_speed)), ForceMode.VelocityChange); pico_character.transform.Rotate(0.4f, 0, 0, Space.Self);
+                if (Input.GetKey("d"))  plyr_rb.AddForce((2.6f * (Vector3.right * strafe_speed)), ForceMode.VelocityChange); pico_character.transform.Rotate(-0.4f, 0, 0, Space.Self);
 
                 if (Input.GetKey("d") || Input.GetKey("q"))  plyr_rb.AddForce( new Vector3(0f, 0.32f, 0f), ForceMode.VelocityChange);
 
@@ -302,8 +357,8 @@ public class PlayerMovement : MonoBehaviour
                     }
                     else
                     {
-                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 22);
-                        plyr_rb.AddForce( new Vector3(0, -0.25f,  0), ForceMode.VelocityChange);
+                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 23);
+                        plyr_rb.AddForce( new Vector3(0, -0.20f,  0), ForceMode.VelocityChange);
                     }
                 }
             }
@@ -317,7 +372,7 @@ public class PlayerMovement : MonoBehaviour
 
     // Public fnc for cllision 
     public void animateCollision(string cls_type, Vector3 cls_size,  GameObject optional_gm = null)
-    {
+    {   
 
         float jumpForce = Mathf.Sqrt(4.5f * -2 * (Physics.gravity.y));
         List<string> interact_Jmps = new List<string>(new string[3] {"tapTapJump", "bumperJump", "launcherHit"} );
@@ -379,6 +434,16 @@ public class PlayerMovement : MonoBehaviour
                     _anim.SetBool("Flying", false);
                     _anim.SetBool("wallRun", true);
                     plyr_wallRninng = true;
+
+                    GameObject hitWall = optional_gm;
+                    float sns = (hitWall.transform.position.x - gameObject.transform.position.x);
+
+                    Vector3 p_ = new Vector3( sns < 0 ? -0.30f : 0.4f, 0, 0);
+                    Quaternion q_ = Quaternion.Euler(0,  sns <  0 ? -30f : -41f, sns <  0 ? -47f : 47f);
+
+                    pico_character.transform.localRotation = q_;
+                    pico_character.transform.localPosition = p_;
+
                 }
                 break;
 
@@ -390,6 +455,9 @@ public class PlayerMovement : MonoBehaviour
                     _anim.SetBool("Flying", true);
                     _anim.SetBool("wallRun", false);
                     plyr_wallRninng = false;
+
+                    pico_character.transform.rotation = new Quaternion(0, 0, 0, 0);
+                    pico_character.transform.localPosition = new Vector3(0, 0, 0);
                 }
                 break;
 
@@ -416,6 +484,8 @@ public class PlayerMovement : MonoBehaviour
                 _anim.SetBool("slide", true);
                 rotate_bck();
          
+                slide_prtcl.Play();
+
                 jumpCnt = 2;
                 
                 plyr_rb.AddForce( new Vector3(0, jumpForce * 0.15f, 5), ForceMode.VelocityChange);
@@ -428,6 +498,9 @@ public class PlayerMovement : MonoBehaviour
                 
                 plyr_rb.AddForce( new Vector3(0, jumpForce * 1.2f, -6), ForceMode.VelocityChange);
                 fix_Cldrs_pos(-0.42f, false);    
+
+                slide_prtcl.Stop();
+
                 break;
 
             // case string jmp when interact_Jmps.Contains(jmp):
@@ -456,6 +529,32 @@ public class PlayerMovement : MonoBehaviour
                 }
                 break;
 
+            case "gun":
+                if(player_hand_gunSlot.activeSelf == false) player_hand_gunSlot.SetActive(true);
+                LeanTween.scale(player_hand_gunSlot, player_hand_gunSlot.transform.localScale * 1.3f, 0.7f).setEasePunch();    
+
+                
+                ammo = 12; 
+
+                head_TARGET.parent = body_TARGET.parent = transform;
+                body_TARGET.localPosition = new Vector3(2.99f,-5.13f,-0.40f);
+                head_TARGET.localPosition = new Vector3(3.66f,-0.55f,12.34f);
+                break;
+
+            case "newEnemyAim":
+                head_TARGET.parent = body_TARGET.parent = optional_gm.transform;
+                head_TARGET.localPosition =  body_TARGET.localPosition = new Vector3(0, 0, 0);
+
+
+                break;
+
+            case "emptyEnemyAim":
+                head_TARGET.parent = body_TARGET.parent = transform;
+                body_TARGET.localPosition = new Vector3(2.99f,-5.13f,-0.40f);
+                head_TARGET.localPosition = new Vector3(3.66f,-0.55f,12.34f);
+              
+                // for(int i = 0; i < player_aims.Length; i ++) player_aims[i].data.constrainedObject = null;
+                break;
             default:
                 break;
         }
@@ -507,14 +606,17 @@ public class PlayerMovement : MonoBehaviour
 
         plyr_intro_tyro = true;
 
+        LeanTween.scale(tyro_handler_child.gameObject, tyro_handler_child.localScale * 2f, 1.5f).setEasePunch();
+
         Vector3 moveTo_ = actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, -2.1f, -0.1f);
         LeanTween.move(gameObject, moveTo_, 0.6f).setEaseInSine(); 
         LeanTween.move(tyro_handler_child.gameObject, actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, 0.05f, 0), 0.6f).setEaseInSine(); 
 
-        LeanTween.rotate(tyro_handler_child.gameObject, new Vector3(0, actual_path.path.GetRotationAtDistance(1f).eulerAngles.y, 0), 0.6f).setEaseInSine();
-        LeanTween.rotate(gameObject, new Vector3(0, actual_path.path.GetRotationAtDistance(1f).eulerAngles.y, 0), 1.2f).setEaseInSine();
+        LeanTween.rotate(tyro_handler_child.gameObject, new Vector3(0, actual_path.path.GetRotationAtDistance(1f).eulerAngles.y / 2f, 0), 0.6f).setEaseInSine();
+        LeanTween.rotate(gameObject, new Vector3(0, actual_path.path.GetRotationAtDistance(1f).eulerAngles.y / 4.30f, 0), 0.65f).setEaseInSine();
         
-        Invoke("activateTyro", 0.70f);
+        Invoke("activateTyro", 1.0f);
+        FindObjectOfType<CameraMovement>().tyro_offset(false);
         //plyr_tyro = true;
         
     }
@@ -543,7 +645,7 @@ public class PlayerMovement : MonoBehaviour
         {
             if(y_off_pos < 0 && colList[i].isTrigger)
             {
-                StartCoroutine(disbl_cldr(colList[i], 0.2f));
+                StartCoroutine(disbl_cldr(colList[i], 0.1f));
             }
 
             string[] coldr_type = colList[i].GetType().ToString().Split('.');
