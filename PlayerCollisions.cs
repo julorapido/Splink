@@ -10,7 +10,7 @@ public class PlayerCollisions : MonoBehaviour
     //public Collider mmbr_collider;
 
     [Header ("Collisions Constants")]
-    public string[] colsions_values = new string[6]{"ground", "frontwall","sidewall", "slider", "missiles", "collectibles"};
+    public string[] colsions_values = new string[7]{"ground", "frontwall","sidewall", "slider", "missiles", "collectibles", "boxAutoAim"};
 
     [Header ("SubCollisions Constants")]
     private string[] subcolsions_values = new string[5]{"obstacleHit", "launcherHit","tyro", "bumper", "tapTapJump"};
@@ -22,80 +22,155 @@ public class PlayerCollisions : MonoBehaviour
     [HideInInspector] public PhysicMaterial grnd_mat;
 
     [Header ("Start Delay")]
+    [SerializeField]  private Transform ply_transform;
     private float strt_delay = 0.5f;
     private bool can_trgr = false;
-    [SerializeField]  private Transform ply_transform;
     private Vector3 currentVelocity;
 
     [Header ("Sider Wall last_registered_gm")]
     private int lst_wall;
 
-    [Header ("Currently Aimed Turret")]
-    private GameObject stored_aimed_turret;
-    private GameObject aimed_turret;
+    [Header ("Currently Aimed Enemy (Sphere)")]
+    private GameObject sphereStored_aimed_turret;
+    private GameObject sphere_aimed_turret;
     private int turretInSight = 0;
+    private const int player_attackRange = 75;
 
-    // private List<float> colliders_distances = new List<float>(new float[7] {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
-    // private List<float> colliders_zDistances = new List<float>(new float[7] {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
+    [Header ("Currently Auto-Aimed Enemy [Default]")]
+    private Collider m_Collider;
+    private RaycastHit[] m_Hits;
+    private GameObject aimed_enemy;
+    private GameObject storedAimed_enemy;
+    private int enemy_inSight = 0;
+    private bool firstEverDetectedEnemy = false;
+    
     // private List<GameObject?> colliders_gm = new List<GameObject?>(new GameObject[7] {null, null, null, null, null, null, null});
 
     private void Start()
     {
+        m_Collider = gameObject.GetComponent<Collider>();
         StartCoroutine(delay_trgrs(strt_delay));
     }
   
-  
+ 
+
     private void FixedUpdate()
     {
-        float minDistance = float.MaxValue;
- 
-        // Detect Turrets & Enemies
-        Collider[] hitColliders = Physics.OverlapSphere(gameObject.transform.position, 50f);
 
-
-        if(hitColliders.Length > 0)
+        // player shots auto-aim
+        if(slcted_clsion == "boxCastAutoAim")
         {
-            turretInSight = 0;
+            enemy_inSight = 0;
 
-            for (int i = 0; i < hitColliders.Length; i ++)
-            {   
-                if(hitColliders[i].tag == "TURRET" || hitColliders[i].tag == "ENEMY" )
+            RaycastHit[] top = Physics.BoxCastAll(m_Collider.bounds.center, transform.localScale, transform.forward, transform.rotation, 200f);
+            RaycastHit[] bottom = Physics.BoxCastAll(m_Collider.bounds.center, transform.localScale + new Vector3(0, -1, 0), transform.forward, transform.rotation, 200f);
+            m_Hits  = new RaycastHit[top.Length + bottom.Length];
+            top.CopyTo(m_Hits, 0);
+            bottom.CopyTo(m_Hits, top.Length);
+
+            for(int i = 0; i < m_Hits.Length; i ++)
+            {
+                // Debug.Log( (m_Hits[i].collider.name)  + " / " + m_Hits[i].collider.tag);
+
+                if ( (m_Hits[i].collider.tag == "TURRET") )
                 {
-                    Vector3 possiblePosition = hitColliders[i].transform.position;
-                
-                    float currDistance = Vector3.Distance(transform.position, possiblePosition);
-                
-                    // If the distance is smaller than the one before...
-                    if ( (currDistance < minDistance) )
+                    //Output the name of the enemy you hits
+                    Debug.Log("Hit : " + m_Hits[i].collider.name);
+
+                    aimed_enemy = m_Hits[i].transform.gameObject;
+                    if(storedAimed_enemy != aimed_enemy)
                     {
-                        aimed_turret = hitColliders[i].gameObject;
-                
-                        minDistance = currDistance;
+                        storedAimed_enemy = aimed_enemy;
+                        FindObjectOfType<PlayerMovement>().animateCollision("newEnemyAim", new Vector3(0, 0, 0), storedAimed_enemy);
                     }
 
-                    turretInSight++;
+                    enemy_inSight++;
+
+                    break;
                 }
             }
 
-
-            if(stored_aimed_turret != aimed_turret)
-            {
-                FindObjectOfType<PlayerMovement>().animateCollision("newEnemyAim", new Vector3(0, 0, 0), aimed_turret);
-                stored_aimed_turret = aimed_turret;
-            }
-
-
-            if( turretInSight == 0  && aimed_turret != null) 
+            if(enemy_inSight == 0 && (aimed_enemy != null) )
                 FindObjectOfType<PlayerMovement>().animateCollision("emptyEnemyAim", new Vector3(0, 0, 0));
-                aimed_turret = null;
-        }else
-        {
-            return;
+                aimed_enemy = null;
+   
         }
+
+
+
+        // Sphere around player auto-aim turrets
+        if(slcted_clsion == "boxAutoAim")
+        {
+            float minDistance = float.MaxValue;
+    
+            // Detect Turrets & Enemies
+            // Collider[] hitColliders = Physics.OverlapSphere(gameObject.transform.position, 50f);
+            Collider[] hitColliders = Physics.OverlapBox(gameObject.transform.position, new Vector3(m_Collider.bounds.size.x, m_Collider.bounds.size.y, player_attackRange), transform.rotation);
+            if(hitColliders.Length > 0)
+            {   
+                turretInSight = 0;
+                for (int i = 0; i < hitColliders.Length; i ++)
+                {   
+                    if(hitColliders[i].tag == "TURRET" || hitColliders[i].tag == "ENEMY")
+                    {
+                        Vector3 possiblePosition = hitColliders[i].transform.position;
+                    
+                        float currDistance = Vector3.Distance(transform.position, possiblePosition);
+                        float zDist = possiblePosition.z - transform.position.z;
+
+                        if(zDist < 3f) continue;
+
+                        // If the distance is smaller than the one before...
+                        if ( (currDistance < minDistance) )
+                        {
+                            sphere_aimed_turret = hitColliders[i].transform.gameObject;
+                            minDistance = currDistance;
+                        }
+
+                        turretInSight++;
+                    }
+                }
+
+                if( (sphereStored_aimed_turret != sphere_aimed_turret) && (!firstEverDetectedEnemy || (sphere_aimed_turret != null) ) )
+                {
+                    FindObjectOfType<PlayerMovement>().animateCollision("newEnemyAim", new Vector3(0, 0, 0), sphere_aimed_turret);
+                    sphereStored_aimed_turret = sphere_aimed_turret;
+                    firstEverDetectedEnemy = true;
+                }
+
+                if( turretInSight == 0  && (sphere_aimed_turret != null) )
+                {
+                    FindObjectOfType<PlayerMovement>().animateCollision("emptyEnemyAim", new Vector3(0, 0, 0));
+                    sphere_aimed_turret = null;
+                    sphereStored_aimed_turret = null;
+                }
+            }
+        }
+
+
+
+   
     }
 
+//    private void OnDrawGizmos()
+//     {
+//         Gizmos.color = Color.red;
 
-    // private void OnCollisionEnter(Collision other){
+//         //Check if there has been a hit yet
+//         if (aimed_enemy != null)
+//         {
+//             for(int j = 0; j < m_Hits.Length; j ++)
+//             {
+//                 //Draw a Ray forward from GameObject toward the hit
+//                 Gizmos.DrawRay(transform.position, transform.forward * m_Hits[j].distance);
+//                 //Draw a cube that extends to where the hit exists
+//                 Gizmos.DrawWireCube(transform.position + transform.forward * m_Hits[j].distance, transform.localScale);
+//             }
+//         }
+//     }
+
+    // private void OnCollisionEnter(Collision other)
+    // {
     //     Vector3 _size = other.collider.bounds.size;
     //     switch (slcted_clsion){
     //             case "ground":

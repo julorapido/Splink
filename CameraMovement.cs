@@ -275,7 +275,7 @@ public class CameraMovement : MonoBehaviour
         {
             // Dampen towards the target rotation
             Quaternion desired_rt  = new Quaternion(xRot + supl_xRot + rot_dc["wallR_rot_x_offst"],
-                 (x_offst / 105.0f) + rot_dc["wallR_rot_y_offst"], 
+                 (x_offst / 140.0f) + rot_dc["wallR_rot_y_offst"], 
                 (x_offst / 10000.0f) + rot_dc["wallR_rot_z_offst"],
                  1
             );
