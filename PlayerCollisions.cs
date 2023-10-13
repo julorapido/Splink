@@ -334,7 +334,5 @@ public class PlayerCollisions : MonoBehaviour
         can_trgr = true;
     }
     
-    private IEnumerator sid_wl_delay(){
-        yield return new WaitForSeconds(0.6f);
-    }
+
 }

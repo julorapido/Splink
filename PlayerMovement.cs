@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
+using UnityEngine.Animations;
 using System;
 using PathCreation.Utility;
 using PathCreation;
@@ -16,7 +17,6 @@ public class PlayerMovement : MonoBehaviour
     public Transform plyr_trsnfm;
     public Transform plyr_cam;
     public Transform aimed_enemy;
-    private Transform lastAimed_enemy;
     
     [Header ("Movement Values")]
     private const float jumpAmount = 32f;
@@ -91,13 +91,18 @@ public class PlayerMovement : MonoBehaviour
 
     [Space(10)]
 
+    [Header ("Player Left-Arm Rig")]
+    [SerializeField] private MultiAimConstraint[] arm_aims;
+    [SerializeField] private Transform[] arm_transforms;
+
     [Header ("Player Rigs & Constraints")]
+    [SerializeField] private RigBuilder player_Rig;
     [SerializeField] private MultiAimConstraint[] player_aims;
     [SerializeField] private Animator rig_animController;
     private float[] noAim_aimsWeigths = new float[4]{0.80f, 1.0f, 0.0f, 0.0f};
     private float[] autoAim_aimsWeigths = new float[4]{1.0f,  0.50f, 0.0f, 0.0f};
     [SerializeField] private Transform[] headAndNeck;
-
+    private bool lastAimSettings_isArm;
 
     [Header ("Authorized Shooting Animations")]
     private string[] authorizedShooting_ = new string[4] { "gunRun", "flying", "slide", "wallRun" };
@@ -105,9 +110,12 @@ public class PlayerMovement : MonoBehaviour
     [Header ("Player Targets")]
     [SerializeField] private Transform body_TARGET; 
     [SerializeField] private Transform head_TARGET; 
+    [SerializeField] private Transform leftArm_TARGET; 
+    private Transform lastAimed_enemy;
 
 
 
+    private bool FLYYY = false;
 
     private void Start()
     {
@@ -224,13 +232,100 @@ public class PlayerMovement : MonoBehaviour
 
     }
 
+    private enum Axis{
+            X,
+            X_NEG,
+            Y,
+            Y_NEG,
+            Z,
+            Z_NEG
+    };
 
-
-    private void setAimSettings(bool isAutoAim, Transform target = null)
+    static Vector3 Convert(Axis axis)
     {
-        // player_rig.weight = is_active ? 1.0f : 0.0f;
-        if(!isAutoAim) lastAimed_enemy = null;
-        else lastAimed_enemy = target;
+        switch (axis)
+        {
+            case Axis.X:
+                return Vector3.right;
+            case Axis.X_NEG:
+                return Vector3.left;
+            case Axis.Y:
+                return Vector3.up;
+            case Axis.Y_NEG:
+                return Vector3.down;
+            case Axis.Z:
+                return Vector3.forward;
+            case Axis.Z_NEG:
+                return Vector3.back;
+            default:
+                return Vector3.up;
+        }
+    }
+
+    private UnityEngine.Animations.Rigging.MultiAimConstraintData.Axis[] all_axisS = new UnityEngine.Animations.Rigging.MultiAimConstraintData.Axis[6]
+    {
+        UnityEngine.Animations.Rigging.MultiAimConstraintData.Axis.X,
+        UnityEngine.Animations.Rigging.MultiAimConstraintData.Axis.X_NEG, 
+        UnityEngine.Animations.Rigging.MultiAimConstraintData.Axis.Y,
+        UnityEngine.Animations.Rigging.MultiAimConstraintData.Axis.Y_NEG,
+        UnityEngine.Animations.Rigging.MultiAimConstraintData.Axis.Z,
+        UnityEngine.Animations.Rigging.MultiAimConstraintData.Axis.Z_NEG  
+    };
+
+    private IEnumerator CheckAllArmRigAxies()
+    {
+        Vector3[] all_axis = new Vector3[6]{Vector3.left, Vector3.right, Vector3.down, Vector3.up, Vector3.back, Vector3.forward};
+
+        while(true)
+        {
+    
+            int rdm_ = UnityEngine.Random.Range(0, all_axis.Length - 1);
+            int rdm_2 = UnityEngine.Random.Range(0, all_axis.Length - 1);
+
+            for(int m = 0; m < arm_aims.Length; m ++)
+            {
+                UnityEngine.Animations.Rigging.MultiAimConstraintData.Axis m_AimAxis;
+                UnityEngine.Animations.Rigging.MultiAimConstraintData.Axis m_UpAxis;
+          
+
+                // UnityEngine.Animations.Rigging.IMultiAimConstraintData upAxis = all_axisS[rdm_];
+                m_AimAxis = all_axisS[rdm_];
+                m_UpAxis = all_axisS[rdm_2];
+
+                arm_aims[m].data.aimAxis = m_AimAxis;
+                arm_aims[m].data.upAxis = m_UpAxis;
+            //    arm_aims[m].data.constrainedObject = arm_transforms[m];
+            //    arm_aims[m].weight = 1.0f;
+            }
+            player_Rig.Build();
+            yield return new WaitForSeconds(3f);
+        }
+    }
+
+
+    private void setAimSettings(bool isAutoAim, Transform target = null, bool toogleArmRig = false, string armRig_ClipInfo = "")
+    {
+
+        if(!isAutoAim)
+        {
+            lastAimed_enemy = null; 
+            // arm_animController.enabled = true; 
+            if(arm_aims[0].data.constrainedObject != null)
+            {
+                for(int m = 0; m < arm_aims.Length; m ++)
+                {
+                   arm_aims[m].data.constrainedObject = arm_transforms[m];
+                   arm_aims[m].weight = 0f;
+
+                   arm_aims[m].data.aimAxis = all_axisS[0];
+                   arm_aims[m].data.upAxis = all_axisS[0];
+                }
+               player_Rig.Build();  
+               // StopCoroutine(CheckAllArmRigAxies());    
+            }
+        }
+        else{  lastAimed_enemy = target; }
+
         for(int i = 0; i < player_aims.Length; i ++)
         {
             player_aims[i].weight = isAutoAim ? autoAim_aimsWeigths[i] : noAim_aimsWeigths[i];
@@ -238,7 +333,32 @@ public class PlayerMovement : MonoBehaviour
             // switch between head & neck
             if(i == 1) player_aims[i].data.constrainedObject = isAutoAim ?  headAndNeck[0] : headAndNeck[1];
         }
+
+
+        if(toogleArmRig)
+        {
+            for(int m = 0; m < arm_aims.Length; m ++)
+            {
+               arm_aims[m].data.constrainedObject = arm_transforms[m];
+               arm_aims[m].weight = 1.0f;
+
+                if(armRig_ClipInfo == "flying")
+                {
+                    arm_aims[m].data.aimAxis = all_axisS[1]; // -X
+                    arm_aims[m].data.upAxis = all_axisS[3]; // -Y
+                }else
+                {
+                    arm_aims[m].data.aimAxis = all_axisS[4]; // -Z
+                    arm_aims[m].data.upAxis = all_axisS[0]; // X
+                }
+            }
+            player_Rig.Build();
+            // StartCoroutine(CheckAllArmRigAxies());
+        }
     }
+
+
+
 
 
     private void FixedUpdate()
@@ -253,7 +373,6 @@ public class PlayerMovement : MonoBehaviour
                 (_anim.GetCurrentAnimatorClipInfo(0)[0].clip.name == "wallRun" || _anim.GetCurrentAnimatorClipInfo(0)[0].clip.name == "gunRun") 
             ){
                 rig_animController.enabled = true;
-                // setAimSettings(false);
             }
 
             // all others aim settings  
@@ -268,25 +387,37 @@ public class PlayerMovement : MonoBehaviour
         bool canShot = false;
         if (aimed_enemy != null && ammo > 0)
         {
+            string animClip_info = _anim.GetCurrentAnimatorClipInfo(0)[0].clip.name;
+            bool armRigMaybe = ((animClip_info == "slide") || (animClip_info == "flying"));
+            
             // force aimed enemy to be recognized once (so it doesn't get called infintely)
-            if(aimed_enemy != lastAimed_enemy)
+            // optional re-call for differents aims types settings [arm || not-arm]
+            if( (aimed_enemy != lastAimed_enemy) && (lastAimSettings_isArm != armRigMaybe ))
             {
                 // can only auto-aim while [flying, running, wallrunnning, sliding, grappling]
                 for(int s = 0; s < authorizedShooting_.Length; s ++)
                 {
-                    if( authorizedShooting_[s].Contains(_anim.GetCurrentAnimatorClipInfo(0)[0].clip.name) )
+                    if( authorizedShooting_[s].Contains(animClip_info) )
                     {
+                        // bool armRigMaybe = false;
+                        // if( (animClip_info == "slide") || (animClip_info == "flying") ) {
+                        //     armRigMaybe = true;
+                        // }
+
+                        lastAimSettings_isArm = armRigMaybe;
                         rig_animController.enabled = true;
-                        setAimSettings(true, aimed_enemy);
+                        setAimSettings(true, aimed_enemy, armRigMaybe, animClip_info);
                         canShot = true;
                         break;
                     }
                 }
-                // turnOff
+
+                // Enemy aimed but can't auto-aim !
                 if(!canShot)
                 {
                     rig_animController.enabled = false;
                 }
+
             }
         }
 
@@ -324,8 +455,9 @@ public class PlayerMovement : MonoBehaviour
                 // MAIN MOVEMENT SPEED //
                     
                 // SLIDING SPEED
-                if(plyr_sliding) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 15);
-                
+                if(plyr_sliding) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 0.3f);
+                //if(plyr_sliding) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 15);
+
                 // WALL RUN 
                 else if(plyr_wallRninng) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 3.5f, 12);
                 
@@ -334,12 +466,13 @@ public class PlayerMovement : MonoBehaviour
                 {
 
                     // DEFAULT SPEED
-                    if (!Input.GetKey("q") && !Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 2f);
+                    if (!Input.GetKey("q") && !Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 7f);
                     
                     // STRAFE SPEED
-                    if (Input.GetKey("q") || Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 3);
+                    if (Input.GetKey("q") || Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 3f);
                        
-                    if(aimed_enemy != null ) plyr_rb.velocity = new Vector3(0, 0, 0.4f);
+                    if(Input.GetKey("f")) FLYYY = true;
+                    if(FLYYY) plyr_rb.velocity = new Vector3(0, 0.55f, 0);
                 }
 
 
@@ -355,8 +488,8 @@ public class PlayerMovement : MonoBehaviour
                     
                     
                     // LEFT STRAFE
-                    if(plyr_rb.velocity.x > -11)  plyr_rb.AddForce((-4 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
-                    else  plyr_rb.velocity = new Vector3(-11, plyr_rb.velocity.y, plyr_rb.velocity.z);
+                    if(plyr_rb.velocity.x > -10)  plyr_rb.AddForce((-4 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
+                    else  plyr_rb.velocity = new Vector3(-10, plyr_rb.velocity.y, plyr_rb.velocity.z);
                 }
 
                 if (Input.GetKey("d"))
@@ -371,8 +504,8 @@ public class PlayerMovement : MonoBehaviour
                     
 
                     // RIGHT STRAFE
-                    if(plyr_rb.velocity.x < 11)  plyr_rb.AddForce((-4 * (Vector3.left * strafe_speed) ), ForceMode.VelocityChange);
-                    else  plyr_rb.velocity = new Vector3(11, plyr_rb.velocity.y, plyr_rb.velocity.z);
+                    if(plyr_rb.velocity.x < 10)  plyr_rb.AddForce((-4 * (Vector3.left * strafe_speed) ), ForceMode.VelocityChange);
+                    else  plyr_rb.velocity = new Vector3(10, plyr_rb.velocity.y, plyr_rb.velocity.z);
                 }
             }
 
@@ -596,8 +729,10 @@ public class PlayerMovement : MonoBehaviour
                     );
 
                     head_TARGET.parent = aimed_enemy.transform; body_TARGET.parent = aimed_enemy.transform;
-                    head_TARGET.localPosition = adjustedAimG;
-                    body_TARGET.localPosition = adjustedAimG;
+                    leftArm_TARGET.parent = aimed_enemy.transform;
+
+                    head_TARGET.localPosition = adjustedAimG; body_TARGET.localPosition = adjustedAimG;
+                    leftArm_TARGET.localPosition = adjustedAimG;
                 }
                 break;
 
@@ -608,14 +743,17 @@ public class PlayerMovement : MonoBehaviour
                 );
 
                 head_TARGET.parent = optional_gm.transform; body_TARGET.parent = optional_gm.transform;
+                leftArm_TARGET.parent = optional_gm.transform;
+
                 head_TARGET.localPosition = adjustedAim; 
                 body_TARGET.localPosition = adjustedAim;
+                leftArm_TARGET.localPosition = new Vector3(0, 0, 0);
 
                 aimed_enemy = optional_gm.transform;
                 break;
 
             case "emptyEnemyAim":                
-                head_TARGET.parent = transform; body_TARGET.parent = transform;
+                head_TARGET.parent = transform; body_TARGET.parent = transform; leftArm_TARGET.parent = transform;
                 body_TARGET.localPosition = new Vector3(2.99f,-5.13f,-0.40f);
                 head_TARGET.localPosition = new Vector3(6.80f,-10.57f,16.06f);
               
