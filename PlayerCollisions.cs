@@ -34,7 +34,7 @@ public class PlayerCollisions : MonoBehaviour
     private GameObject sphereStored_aimed_turret;
     private GameObject sphere_aimed_turret;
     private int turretInSight = 0;
-    private const int player_attackRange = 75;
+    private const int player_attackRange = 50;
 
     [Header ("Currently Auto-Aimed Enemy [Default]")]
     private Collider m_Collider;
@@ -53,6 +53,117 @@ public class PlayerCollisions : MonoBehaviour
     }
   
  
+
+    private void DisplayBox(Vector3 center, Vector3 HalfExtend, Quaternion rotation, float Duration = 0)
+    {
+        Vector3[] Vertices = new Vector3[8];
+        int i = 0;
+        // Each loop from -1 to 1 [To extend behind and beyond] from the center
+        for (int x = -1; x < 2; x += 2) // X-Axis
+        {
+            for (int y = -1; y < 2; y += 2)// Y-Axis
+            {
+                for (int z = -1; z < 2; z += 2) // Z-Axis
+                {
+                    Vertices[i] = center + new Vector3(HalfExtend.x * x, HalfExtend.y * y, HalfExtend.z * z);
+                    i++;
+                }
+            }
+        }
+
+        Vertices = RotateObject(Vertices, rotation.eulerAngles, center);
+
+        Debug.DrawLine(Vertices[0], Vertices[1], Color.white, Duration);
+        Debug.DrawLine(Vertices[1], Vertices[3], Color.white, Duration);
+        Debug.DrawLine(Vertices[2], Vertices[3], Color.white, Duration);
+        Debug.DrawLine(Vertices[2], Vertices[0], Color.white, Duration);
+        Debug.DrawLine(Vertices[4], Vertices[0], Color.white, Duration);
+        Debug.DrawLine(Vertices[4], Vertices[6], Color.white, Duration);
+        Debug.DrawLine(Vertices[2], Vertices[6], Color.white, Duration);
+        Debug.DrawLine(Vertices[7], Vertices[6], Color.white, Duration);
+        Debug.DrawLine(Vertices[7], Vertices[3], Color.white, Duration);
+        Debug.DrawLine(Vertices[7], Vertices[5], Color.white, Duration);
+        Debug.DrawLine(Vertices[1], Vertices[5], Color.white, Duration);
+        Debug.DrawLine(Vertices[4], Vertices[5], Color.white, Duration);
+    }
+
+
+    private Vector3[] RotateObject(Vector3[] VerticesToRotate, Vector3 DegreesToRotate, Vector3 Around)//rotates a set of dots counterclockwise
+    {
+        for (int i = 0; i < VerticesToRotate.Length; i++)
+        {
+            VerticesToRotate[i] -= Around;
+        }
+
+        // Quaternion Euler Angles to Radians
+        DegreesToRotate.z = Mathf.Deg2Rad * DegreesToRotate.z;
+        DegreesToRotate.x = Mathf.Deg2Rad * DegreesToRotate.x;
+        DegreesToRotate.y = -Mathf.Deg2Rad * DegreesToRotate.y;
+
+        for(int j = 0; j < 3; j ++)
+        {
+            for (int i = 0; i < VerticesToRotate.Length; i++)
+            {
+
+                float CosA, cosB, SinA, SinB;
+                CosA = cosB = SinA = SinB = 0.0f;
+                float H = Vector3.Distance(Vector3.zero, VerticesToRotate[i]);
+
+                float x_ratio = H * ((CosA * cosB) - (SinA * SinB));
+                float y_ratio = H * ((SinA * cosB) + (CosA * SinB));
+
+                if (H != 0)
+                {
+                    if(j == 0)
+                    {
+                        CosA = VerticesToRotate[i].x / H;
+                        cosB = Mathf.Cos(DegreesToRotate.z);
+
+                        SinA = VerticesToRotate[i].y / H;
+                        SinB = Mathf.Sin(DegreesToRotate.z);
+
+                        x_ratio = H * ((CosA * cosB) - (SinA * SinB));
+                        y_ratio = H * ((SinA * cosB) + (CosA * SinB));
+                        VerticesToRotate[i] = new Vector3(x_ratio, y_ratio, VerticesToRotate[i].z);
+                        // Z-Axis
+                    }
+                    else if (j == 1)
+                    {
+                        CosA = VerticesToRotate[i].y / H;
+                        cosB = Mathf.Cos(DegreesToRotate.x);
+
+                        SinA = VerticesToRotate[i].z / H;
+                        SinB = Mathf.Sin(DegreesToRotate.x);
+
+                        x_ratio = H * ((CosA * cosB) - (SinA * SinB));
+                        y_ratio = H * ((SinA * cosB) + (CosA * SinB));
+                        VerticesToRotate[i] = new Vector3(VerticesToRotate[i].x, x_ratio, y_ratio);
+                        // X-Axis
+                    }
+                    else if (j == 2)
+                    {
+                        CosA = VerticesToRotate[i].x / H;
+                        cosB = Mathf.Cos(DegreesToRotate.y);
+
+                        SinA = VerticesToRotate[i].z / H;
+                        SinB = Mathf.Sin(DegreesToRotate.y);
+
+
+                        x_ratio = H * ((CosA * cosB) - (SinA * SinB));
+                        y_ratio = H * ((SinA * cosB) + (CosA * SinB));
+                        VerticesToRotate[i] = new Vector3(x_ratio, VerticesToRotate[i].y, y_ratio);
+                        // Y-Axis
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < VerticesToRotate.Length; i++)
+            VerticesToRotate[i] += Around;
+
+        return VerticesToRotate;
+    }
+
 
     private void FixedUpdate()
     {
@@ -105,7 +216,8 @@ public class PlayerCollisions : MonoBehaviour
     
             // Detect Turrets & Enemies
             // Collider[] hitColliders = Physics.OverlapSphere(gameObject.transform.position, 50f);
-            Collider[] hitColliders = Physics.OverlapBox(gameObject.transform.position, new Vector3(m_Collider.bounds.size.x, m_Collider.bounds.size.y, player_attackRange), transform.rotation);
+            DisplayBox(transform.position,  new Vector3(4, 6, player_attackRange), transform.rotation);
+            Collider[] hitColliders = Physics.OverlapBox(transform.position, new Vector3(4, 6, player_attackRange), transform.rotation);
             if(hitColliders.Length > 0)
             {   
                 turretInSight = 0;
@@ -150,6 +262,15 @@ public class PlayerCollisions : MonoBehaviour
 
 
    
+    }
+
+    //Draw the Box Overlap as a gizmo to show where it currently is testing. Click the Gizmos button to see this
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        //Check that it is being run in Play Mode, so it doesn't try to draw this in Editor mode
+            //Draw a cube where the OverlapBox is (positioned where your GameObject is as well as a size)
+        // Gizmos.DrawWireCube(transform.position,  new Vector3(2 * 2, 6 * 2, 100 * 2) );
     }
 
 //    private void OnDrawGizmos()
@@ -329,10 +450,11 @@ public class PlayerCollisions : MonoBehaviour
         }
     }
 
-    private IEnumerator delay_trgrs(float dl){
+    private IEnumerator delay_trgrs(float dl)
+    {
         yield return new WaitForSeconds(dl);
         can_trgr = true;
     }
-    
+
 
 }
