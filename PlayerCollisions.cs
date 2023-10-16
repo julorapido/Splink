@@ -216,8 +216,8 @@ public class PlayerCollisions : MonoBehaviour
     
             // Detect Turrets & Enemies
             // Collider[] hitColliders = Physics.OverlapSphere(gameObject.transform.position, 50f);
-            DisplayBox(transform.position,  new Vector3(4, 6, player_attackRange), transform.rotation);
-            Collider[] hitColliders = Physics.OverlapBox(transform.position, new Vector3(4, 6, player_attackRange), transform.rotation);
+            DisplayBox(transform.position,  new Vector3(3.8f, 6, player_attackRange), transform.rotation);
+            Collider[] hitColliders = Physics.OverlapBox(transform.position, new Vector3(3.8f, 6, player_attackRange), transform.rotation);
             if(hitColliders.Length > 0)
             {   
                 turretInSight = 0;
@@ -230,7 +230,7 @@ public class PlayerCollisions : MonoBehaviour
                         float currDistance = Vector3.Distance(transform.position, possiblePosition);
                         float zDist = possiblePosition.z - transform.position.z;
 
-                        if(zDist < 3f) continue;
+                        if(zDist < 2f) continue;
 
                         // If the distance is smaller than the one before...
                         if ( (currDistance < minDistance) )

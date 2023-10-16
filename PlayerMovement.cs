@@ -94,10 +94,10 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private MultiAimConstraint[] arm_aims;
     [SerializeField] private Transform[] arm_transforms;
     private Vector3[] adjustFly_vectors = new Vector3[4] {
-        new Vector3(0,-40f,-30f), new Vector3(0,0,-25f), new Vector3(0,0,0), new Vector3(-75f,0,0) 
+        new Vector3(0,-40f,-10f), new Vector3(120f,0,-25f), new Vector3(0,0,0), new Vector3(-75f,0,0) 
     };
     private Vector3[] adjustSlide_vectors = new Vector3[4]{
-        new Vector3(80f,-24f, 0f), new Vector3(0, -90f, -37f), new Vector3(0, 0f, -58f), new Vector3(0, 180f, -120f) 
+        new Vector3(0f, 0f, 0f), new Vector3(180f, 0f, 0f), new Vector3(0f, 0f, -0f), new Vector3(0, 0f, 0f) 
     };
 
 
@@ -315,28 +315,32 @@ public class PlayerMovement : MonoBehaviour
 
     private void setAimSettings(bool isAutoAim, Transform target = null, bool toogleArmRig = false, string armRig_ClipInfo = "")
     {
+
         if(!isAutoAim)
         {
             lastAimed_enemy = null; 
-            // arm_animController.enabled = true; 
             if(arm_aims[0].data.constrainedObject != null)
             {
                 for(int m = 0; m < arm_aims.Length; m ++)
                 {
                    arm_aims[m].data.offset = new Vector3(0, 0, 0);
+                   arm_aims[m].data.maintainOffset = false;
 
                    arm_aims[m].data.constrainedObject = arm_transforms[m];
                    arm_aims[m].weight = 0f;
 
-                   arm_aims[m].data.aimAxis = all_axisS[0];
-                   arm_aims[m].data.upAxis = all_axisS[0];
+                   // arm_aims[m].data.aimAxis = all_axisS[0];
+                   // arm_aims[m].data.upAxis = all_axisS[0];
                 }
-               player_Rig.Build();  
                // StopCoroutine(CheckAllArmRigAxies());    
             }
         }
-        else{  lastAimed_enemy = target; }
+        else{  
+            lastAimed_enemy = target; 
+            rig_animController.enabled = false;
+        }
 
+     
         for(int i = 0; i < player_aims.Length; i ++)
         {
             player_aims[i].weight = isAutoAim ? autoAim_aimsWeigths[i] : noAim_aimsWeigths[i];
@@ -344,42 +348,52 @@ public class PlayerMovement : MonoBehaviour
             // switch between head & neck
             if(i == 1) player_aims[i].data.constrainedObject = isAutoAim ?  headAndNeck[0] : headAndNeck[1];
         }
-
+        
 
         if(toogleArmRig)
         {
             for(int m = 0; m < arm_aims.Length; m ++)
             {
-               arm_aims[m].data.constrainedObject = arm_transforms[m];
-               arm_aims[m].weight = 1.0f;
+                // arm_aims[m].weight = 0f;
+                // arm_aims[m].data.sourceObjects.Clear();
+
+                arm_aims[m].data.constrainedObject = arm_transforms[m];
 
                 if(armRig_ClipInfo == "flying")
                 {
-                    arm_aims[m].data.offset = adjustFly_vectors[m];
+                    // arm_aims[m].data.offset = adjustFly_vectors[m];
 
                     arm_aims[m].data.aimAxis = all_axisS[1]; // -X
                     arm_aims[m].data.upAxis = all_axisS[3]; // -Y
 
-                    // if(m == 1) arm_aims[m].data.aimAxis = all_axisS[4]; // Z for Arm
-                }else
+                }
+                else if (armRig_ClipInfo == "slide")
                 {
+                    
                     arm_aims[m].data.offset = adjustSlide_vectors[m];
 
-                    arm_aims[m].data.aimAxis = all_axisS[2]; // -Y
-                    arm_aims[m].data.upAxis = all_axisS[0]; // X
+                    arm_aims[m].data.aimAxis = all_axisS[1]; // -X
+                    arm_aims[m].data.upAxis = all_axisS[4]; // Z
+
                 }
+
+                arm_aims[m].weight = 1.0f;
             }
-            // StartCoroutine(CheckAllArmRigAxies());
+
+             if(armRig_ClipInfo == "slide") player_aims[0].weight = 0f;
         }
+
+        
+        rig_animController.enabled = true;
         player_Rig.Build();
     }
 
 
 
 
-
     private void FixedUpdate()
     {
+
         // Nothing to aim settings 
         if (aimed_enemy == null && ammo > 0)
         {
@@ -402,6 +416,7 @@ public class PlayerMovement : MonoBehaviour
  
 
 
+
         // Auto aim settings
         bool canShot = false;
         if (aimed_enemy != null && ammo > 0)
@@ -418,14 +433,10 @@ public class PlayerMovement : MonoBehaviour
                 {
                     if( authorizedShooting_[s].Contains(animClip_info) )
                     {
-                        // bool armRigMaybe = false;
-                        // if( (animClip_info == "slide") || (animClip_info == "flying") ) {
-                        //     armRigMaybe = true;
-                        // }
 
                         lastAimSettings_isArm = armRigMaybe;
                         lastArmSetting_type = animClip_info;
-                        rig_animController.enabled = true;
+                        // if(animClip_info == "flying") Debug.Log("flying aim build");
                         setAimSettings(true, aimed_enemy, armRigMaybe, animClip_info);
                         canShot = true;
                         break;
@@ -445,10 +456,11 @@ public class PlayerMovement : MonoBehaviour
 
 
 
+
         // Aim adjustments [Flying & Sliding]
         if( (aimed_enemy != null) && (ammo > 0) && (plyr_flying || plyr_sliding)) 
         {
-            if(plyr_flying && !plyr_sliding)
+            if(plyr_flying && !plyr_sliding) // flying
             {
                 if(horizontal_enemy)
                 {
@@ -459,17 +471,26 @@ public class PlayerMovement : MonoBehaviour
 
                     body_TARGET.localPosition = new Vector3(-5f, 1.5f, -4f);
                 }
-            }else
-            {
-                    head_TARGET.localPosition = new Vector3(15, -1, 0);
+            }else // sliding
+            {   
+                // body_TARGET.localPosition = new Vector3(-1.70f, 3.0f, 0);
+                head_TARGET.localPosition = new Vector3(0, -1, 0);
             }
  
         }
+        // Aim adjustment [Running]
+        if( (aimed_enemy != null) && (ammo > 0)  && (!plyr_flying && !plyr_sliding) ) body_TARGET.localPosition = saved_bodyTarget;
+
+
+
 
 
         if( (ammo > 0) && !_anim.GetBool("gunEquipped") ) _anim.SetBool("gunEquipped", true); 
         else if( (ammo == 0) && _anim.GetBool("gunEquipped") )  _anim.SetBool("gunEquipped", false); 
         
+
+
+
 
         if (!gameOver_ && !plyr_tyro)
         {
@@ -800,9 +821,21 @@ public class PlayerMovement : MonoBehaviour
                 body_TARGET.localPosition = adjusteBodyAim;
                 saved_bodyTarget = adjusteBodyAim;  saved_headTarget = adjusteHeadAim;
 
+                // enemy to enemy 
+                if(aimed_enemy != null)
+                {
+                // LeanTween.moveLocal(head_TARGET.gameObject, adjusteHeadAim, 0.5f).setEaseInSine();
+                // LeanTween.moveLocal(body_TARGET.gameObject, adjusteBodyAim, 0.5f).setEaseInSine();
+                }else
+                {
+
+                }
+
+
                 leftArm_TARGET.localPosition =  (horizontal_enemy ?
                     new Vector3(0.37f,1.15f,-0.56f) : new Vector3(0, 1.5f, 0) );
 
+                // if(lastAimed_enemy == null) lastAimed_enemy = optional_gm.transform;
                 aimed_enemy = optional_gm.transform;
                 break;
 
