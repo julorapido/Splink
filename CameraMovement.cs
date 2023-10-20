@@ -99,7 +99,12 @@ public class CameraMovement : MonoBehaviour
 
     private Camera c_;
 
-    private void Start(){
+    private PlayerMovement plyr_mv;
+
+
+    private void Start()
+    {
+        plyr_mv = FindObjectOfType<PlayerMovement>();
 
         p_anim = p_gm.GetComponentInChildren<Animator>();
 
@@ -141,14 +146,14 @@ public class CameraMovement : MonoBehaviour
 
 
 
-
+    
 
     private void FixedUpdate()
     {
         player_velocity = player_rb.velocity;
 
-        tyro_on = FindObjectOfType<PlayerMovement>().plyr_tyro;
-        sliding_on =  FindObjectOfType<PlayerMovement>().plyr_sliding;
+        tyro_on = plyr_mv.plyr_tyro;
+        sliding_on =  plyr_mv.plyr_sliding;
 
 
         // Smooth damp function
@@ -245,13 +250,14 @@ public class CameraMovement : MonoBehaviour
         // x_offst definition
         x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ? -1 *   (60 - (player_rb.rotation.eulerAngles.y - 300.0f)) : player_rb.rotation.eulerAngles.y);
 
+        float x_ratio = -0.0590f;
         // Lerp Position
-        if(((-0.043f * x_offst)) != lst_offst_x)
+        if(((x_ratio * x_offst)) != lst_offst_x)
         {
             desired_  = (player.position + offset);
-            desired_.x = desired_.x +  ((-0.043f * x_offst));
-            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 80f;
-            lst_offst_x = ((-0.43f * x_offst));
+            desired_.x = desired_.x +  ((x_ratio * x_offst));
+            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 90f;
+            lst_offst_x = ((x_ratio * x_offst));
         }
 
         // end grapl transition detection
@@ -273,14 +279,15 @@ public class CameraMovement : MonoBehaviour
     {
         if (!game_Over_)
         {
+
             // Dampen towards the target rotation
             Quaternion desired_rt  = new Quaternion(xRot + supl_xRot + rot_dc["wallR_rot_x_offst"],
-                 (x_offst / 140.0f) + rot_dc["wallR_rot_y_offst"], 
-                (x_offst / 10000.0f) + rot_dc["wallR_rot_z_offst"],
+                 (x_offst / 110.0f) + rot_dc["wallR_rot_y_offst"], 
+                (x_offst / 1000.0f) + rot_dc["wallR_rot_z_offst"],
                  1
             );
 
-            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt,  (tyro_on || grappl_on) ? (grappl_on ? 0.07f : 0.045f) : 0.12f );
+            transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt,  (tyro_on || grappl_on) ? (grappl_on ? 0.07f : 0.030f) : 0.12f );
 
             // Smooth Damp
             Vector3 smoothFollow = Vector3.SmoothDamp(
@@ -299,7 +306,7 @@ public class CameraMovement : MonoBehaviour
             transform.LookAt(player);
         }
 
-        if(grappl_on) transform.LookAt(player);
+        if(end_trans_called) transform.LookAt(player);
     }
 
 
@@ -322,7 +329,7 @@ public class CameraMovement : MonoBehaviour
         for(int b = 0; b < iterator_; b ++)
         {
             bool s_ =  nms_.Contains(values_ref[b]);
-            if(s_) rot_dc[values_ref[b]] = 0.0f;
+            if(!s_) rot_dc[values_ref[b]] = 0.0f;
             else pos_dc[values_ref[b]] = 0.0f;
         }
     }
@@ -517,7 +524,7 @@ public class CameraMovement : MonoBehaviour
         reset_smoothDmpfnc();  
 
         iterator_ = 3;
-        List<float> v_flt = new List<float>(new float[6] {-0.170f, -1.10f, is_dblJmp ?  -0.0670f : 0.0550f, 0.0f, 0.0f, 0.0f} ); 
+        List<float> v_flt = new List<float>(new float[6] {-0.170f, -1.10f, is_dblJmp ?  -0.0770f : 0.0770f, 0.0f, 0.0f, 0.0f} ); 
         List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "", "",""} ); 
  
         values_ref = s_arr;

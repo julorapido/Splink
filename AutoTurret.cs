@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class AutoTurret : MonoBehaviour
 {
@@ -10,6 +11,10 @@ public class AutoTurret : MonoBehaviour
     "Catapult", "Heavy", "Sniper", "Gattling", "LightGun", "Military"});
     private bool plyr_n_sight = false;
     private GameObject plyr_gm;
+
+
+    [Header ("Turret Health")]
+    private int turret_health;
 
     private enum turret_Type{
         Normal,
@@ -58,6 +63,13 @@ public class AutoTurret : MonoBehaviour
     [Header ("Turret FireRate")]
     private ParticleSystem fire_;
 
+
+    [Header ("Turret Damages Text")]
+    [SerializeField] private Transform turret_textsParent;
+    [SerializeField] private GameObject dmg_text_prefab;
+
+    private Transform stored_player_trnsfrm;
+
     private void Start()
     {
         plyr_gm = GameObject.FindGameObjectsWithTag("Player")[0];
@@ -68,7 +80,7 @@ public class AutoTurret : MonoBehaviour
         Transform[] tr_trsnfrms = GetComponentsInChildren<Transform>();
 
         ParticleSystem[] tr_ps = GetComponentsInChildren<ParticleSystem>();
-        fire_  = tr_ps[0];
+        fire_  = tr_ps.Length > 0 ? tr_ps[0] : null;
 
         foreach(Transform chld_ in tr_trsnfrms)
         {
@@ -81,8 +93,10 @@ public class AutoTurret : MonoBehaviour
                 tr_sht_points[j] = chld_g; 
                  j++;
             }
-            if(t_type != turret_Type.Catapult){
-                if(is_horizontal ? chld_g?.tag == "tr_BarrelHz" : chld_g?.tag == "tr_BarrelHz"){
+            if(t_type != turret_Type.Catapult)
+            {
+                if(is_horizontal ? chld_g?.tag == "tr_BarrelHz" : chld_g?.tag == "tr_BarrelHz")
+                {
                     tr_body[k] = chld_;
                     k++; 
                 }
@@ -96,11 +110,14 @@ public class AutoTurret : MonoBehaviour
                 tr_stand[l] = chld_;
                 l ++;
             }
+
+            if(chld_g?.tag == "Turret_Texts"){turret_textsParent = chld_;}
         }
         // HORIZONTAL START X-AXIS DEGREE GAP
         float randm_flt_a =  UnityEngine.Random.Range(40f, 70f);
         float randm_flt_vrt =  UnityEngine.Random.Range(23f, 42f);
-        for(int b = 0; b < k; b ++){
+        for(int b = 0; b < k; b ++)
+        {
             randomRot_a[b] = is_horizontal ? randm_flt_a : (tr_body[k-1].rotation.y + randm_flt_a);
             randomRot_vrt[b] = tr_body[b].rotation.eulerAngles.x + randm_flt_vrt;
 
@@ -139,6 +156,30 @@ public class AutoTurret : MonoBehaviour
             {
                 for(int c = 0; c < k; c ++) tr_body[c].rotation = Quaternion.Euler(strt_rt[c].x , -180, strt_rt[c].z);
                 reset_bl = true;
+            }
+        }
+
+
+        // dmg texts rotations
+        if(turret_textsParent.childCount > 0 && turret_textsParent != null)
+        {
+            for(int txt_r = 0; txt_r < (( turret_textsParent.childCount ) ); txt_r ++)
+            {
+                if(stored_player_trnsfrm != null)
+                {
+                    GameObject txt = turret_textsParent.GetChild(txt_r).gameObject;
+                    RectTransform txt_rect = txt.GetComponent<RectTransform>();
+
+                    // txt_rect.transform.LookAt(stored_player_trnsfrm, Vector3.left);
+
+                    Quaternion rt_ = Quaternion.LookRotation(stored_player_trnsfrm.position);
+
+                    txt_rect.localRotation = Quaternion.Slerp(
+                        txt_rect.localRotation,
+                        new Quaternion(0f, 100f, 200f, 1f)
+                     , 0.1f
+                    );
+                }
             }
         }
     }
@@ -306,7 +347,7 @@ public class AutoTurret : MonoBehaviour
                         GameObject missle_Go_s = Instantiate(turret_bullet, tr_sht_points[0].transform.position, tr_sht_points[0].transform.rotation);
                         if(!missle_Go_s) return;
 
-                        missle_Go_s.transform.localScale = new Vector3(msl_scale.x * (4*(gameObject.transform.localScale.x / 5)), msl_scale.y * (4*(gameObject.transform.localScale.y / 5)),
+                        missle_Go_s.transform.localScale = new Vector3( msl_scale.x * (4*(gameObject.transform.localScale.x / 5)), msl_scale.y * (4*(gameObject.transform.localScale.y / 5)),
                             msl_scale.z * (4*(gameObject.transform.localScale.z / 5))
                         );
 
@@ -401,10 +442,67 @@ public class AutoTurret : MonoBehaviour
     private void turret_explode()
     {
         GameObject[] g_l = GetComponentsInChildren<GameObject>();
-        for (int i = 0; i < g_l.Length; i++){
+        for (int i = 0; i < g_l.Length; i++)
+        {
             GameObject go_ = g_l[i];
+            if(g_l[i].transform.parent != gameObject.transform) 
+                g_l[i].transform.SetParent(gameObject.transform);
+
+            if(g_l[i].tag == "tr_Shootp") g_l[i].SetActive(false);
             
+            Rigidbody turret_part = go_.AddComponent<Rigidbody>();
+    
+            float x_ =  UnityEngine.Random.Range(-100f, 100f); float y_ =  UnityEngine.Random.Range(-50f, 50f);
+            float z_ =  UnityEngine.Random.Range(-50f, 50f);
+            turret_part.AddForce(x_, y_, z_, ForceMode.Impulse);
         }
+    }
+
+
+    public void turret_damage(string dmg_status, float wpn_damage, GameObject turret_part, Transform player_)
+    {
+        if(stored_player_trnsfrm == null) stored_player_trnsfrm = player_;
+
+        LeanTween.scale(turret_part, turret_part.transform.localScale * 0.8f, 1f).setEasePunch();
+        int dmg = 0;
+        switch(dmg_status)
+        {
+            case "tr_Shootp":
+                dmg = (int) (wpn_damage * 1.5f);
+                break;
+            case "tr_Stand":
+                dmg = (int) (wpn_damage * 0.625f);
+                break;
+            case "tr_Barrel":
+            case "tr_BarrelHz":
+                int a_ = UnityEngine.Random.Range(0, 2);
+                dmg = a_ == 0 ? (int) (wpn_damage * 1.12f) : (int) (wpn_damage * 1.0f);
+                break;
+            case "tr_Plate":
+                dmg = (int) (wpn_damage * 0.4f);
+                break;
+            case "tr_Radar":
+                dmg = (int) (wpn_damage * 2.5f);
+                break;
+        }
+        int b_ = UnityEngine.Random.Range(-7, 7);
+        dmg += b_;
+
+        GameObject dmg_textObj = Instantiate(dmg_text_prefab, Vector3.zero, Quaternion.identity, turret_textsParent);
+        RectTransform m_RectTransform = dmg_textObj.GetComponent<RectTransform>();
+        TextMeshPro dmg_text = dmg_textObj.GetComponent<TextMeshPro>();
+
+        m_RectTransform.transform.localPosition = new Vector3 (
+            (is_horizontal) ? 2f : 0f,
+            ((is_horizontal) ? (transform.rotation.eulerAngles.y > 180f) ?
+                (2f): (1.5f) 
+            : 0f),
+            0f
+        );
+
+        dmg_text.text = dmg.ToString();
+        LeanTween.scale(dmg_textObj, dmg_textObj.transform.localScale * 1.5f, 2f).setEasePunch();
+        // LeanTween.moveY(dmg_textObj, dmg_textObj.transform.localScale * 1.5f, 2f).setEasePunch();
     }
     
 }

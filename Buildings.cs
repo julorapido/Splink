@@ -34,7 +34,7 @@ public class Buildings : MonoBehaviour
     // Start is called before the first frame update
     private void Start()
     {
-        // spawn_space 
+        RenderSettings.skybox.SetFloat("_Rotation", 0f);
 
         // Gen_Bldngs(20);
         Gen_PrefbSections(2);
@@ -43,7 +43,12 @@ public class Buildings : MonoBehaviour
     // fixedupdate for player transform
     private void FixedUpdate()
     {
-
+        // skybox
+        float p =  RenderSettings.skybox.GetFloat("_Rotation");
+        if(p == 359.5f)
+            RenderSettings.skybox.SetFloat("_Rotation", 0);
+        
+        RenderSettings.skybox.SetFloat("_Rotation", p + (Time.deltaTime * 0.20f) );
     }
 
     private void Gen_Bldngs(int z_len)
@@ -459,7 +464,6 @@ public class Buildings : MonoBehaviour
                     
                     } catch(Exception err) {
                         Debug.Log(err);
-                        //Debug.Log("no turret type");
                     }
     
                } 
@@ -703,8 +707,12 @@ public class Buildings : MonoBehaviour
         //Debug.Log(allBuildngs_.Length);
         for(int i = 0; i < allBuildngs_.Length; i ++)
         {
-            Mesh bldg_mesh = allBuildngs_[i].GetComponent<MeshFilter>().sharedMesh;
+            if(!allBuildngs_[i].activeSelf) continue; // since all buildings were baked/combined
 
+            Mesh bldg_mesh = allBuildngs_[i].GetComponent<MeshFilter>().sharedMesh;
+            Collider[] bldg_colldrs = allBuildngs_[i].GetComponents<Collider>();
+            
+            
         }
     }
 

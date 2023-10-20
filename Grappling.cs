@@ -64,9 +64,9 @@ public class Grappling : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown("e")) StartGrapple();
+        if (Input.GetKeyDown("r")) StartGrapple();
 
-        if ( (Input.GetKeyUp("e") ||  grpl_TimeValue < 0.01f) && is_grpling_) StopGrapple();
+        if ( (Input.GetKeyUp("r") ||  grpl_TimeValue < 0.01f) && is_grpling_) StopGrapple();
             
         
         if(grpl_TimeValue > 0) grpl_TimeValue -= Time.deltaTime;

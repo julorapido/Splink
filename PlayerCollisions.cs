@@ -7,7 +7,6 @@ using System;
 
 public class PlayerCollisions : MonoBehaviour
 {
-    //public Collider mmbr_collider;
 
     [Header ("Collisions Constants")]
     public string[] colsions_values = new string[7]{"ground", "frontwall","sidewall", "slider", "missiles", "collectibles", "boxAutoAim"};
@@ -44,7 +43,9 @@ public class PlayerCollisions : MonoBehaviour
     private int enemy_inSight = 0;
     private bool firstEverDetectedEnemy = false;
     
-    // private List<GameObject?> colliders_gm = new List<GameObject?>(new GameObject[7] {null, null, null, null, null, null, null});
+    [Header ("Wall Run Aim Hitbox")]
+    [HideInInspector] public bool wallRun_aimBox = false;
+    [HideInInspector] public float z_wallRun_aimRotation = 0.0f;
 
     private void Start()
     {
@@ -168,6 +169,7 @@ public class PlayerCollisions : MonoBehaviour
     private void FixedUpdate()
     {
 
+
         // player shots auto-aim
         if(slcted_clsion == "boxCastAutoAim")
         {
@@ -209,6 +211,10 @@ public class PlayerCollisions : MonoBehaviour
 
 
 
+
+
+
+
         // Sphere around player auto-aim turrets
         if(slcted_clsion == "boxAutoAim")
         {
@@ -216,8 +222,17 @@ public class PlayerCollisions : MonoBehaviour
     
             // Detect Turrets & Enemies
             // Collider[] hitColliders = Physics.OverlapSphere(gameObject.transform.position, 50f);
-            DisplayBox(transform.position,  new Vector3(3.8f, 6, player_attackRange), transform.rotation);
-            Collider[] hitColliders = Physics.OverlapBox(transform.position, new Vector3(3.8f, 6, player_attackRange), transform.rotation);
+
+            DisplayBox(transform.position,  
+                new Vector3(3.8f, 8, player_attackRange), 
+                wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
+            );
+
+            Collider[] hitColliders = Physics.OverlapBox(transform.position,
+                new Vector3(3.8f, 8, player_attackRange),
+                wallRun_aimBox ? Quaternion.Euler(0, transform.rotation.y, z_wallRun_aimRotation) : transform.rotation
+            );
+
             if(hitColliders.Length > 0)
             {   
                 turretInSight = 0;
@@ -230,7 +245,7 @@ public class PlayerCollisions : MonoBehaviour
                         float currDistance = Vector3.Distance(transform.position, possiblePosition);
                         float zDist = possiblePosition.z - transform.position.z;
 
-                        if(zDist < 2f) continue;
+                        if(zDist < 1f) continue;
 
                         // If the distance is smaller than the one before...
                         if ( (currDistance < minDistance) )
@@ -258,6 +273,7 @@ public class PlayerCollisions : MonoBehaviour
                 }
             }
         }
+
 
 
 
