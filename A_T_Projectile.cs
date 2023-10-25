@@ -15,6 +15,7 @@ public class A_T_Projectile : MonoBehaviour
     [HideInInspector] public Vector3 weapon_precision;
     [HideInInspector] public float weapon_dmg;
     [HideInInspector] public Transform player_;
+    private ParticleSystem blt_expl;
 
     [Header ("Player_")]
     [HideInInspector] public Transform plyr_target;
@@ -60,6 +61,10 @@ public class A_T_Projectile : MonoBehaviour
     private bool exploded = false;
 
 
+    [Header ("ExplosionAnimation Position")]
+    private const string turret_parts = "tr_Barrel tr_Stand tr_Plate tr_Radar tr_Shootp tr_BarrelHz";
+
+
 
     // Start is called before the first frame update
     private void Start()
@@ -76,12 +81,15 @@ public class A_T_Projectile : MonoBehaviour
 
 
 
-            Vector3 dir = (plyr_target.position) - transform.position;
-            if(dir.z < 0 ) is_behind = true;
+            float dir =  transform.position.z - (plyr_target.position.z);
+            if(dir < 0 ) is_behind = true;
 
 
             LeanTween.scale(gameObject, transform.localScale * 0.5f, 1f).setEaseInCubic();
         }
+
+        ParticleSystem[] ps_0 = gameObject.GetComponentsInChildren<ParticleSystem>();
+        blt_expl = ps_0.Length > 0 ? ps_0[0] : null;
 
         bullet_rb = gameObject.GetComponent<Rigidbody>();
         bullet_qtrn = Vector3.RotateTowards(transform.forward, (plyr_target.position - transform.position), Time.deltaTime * 100, 0.0f);
@@ -97,15 +105,22 @@ public class A_T_Projectile : MonoBehaviour
     {
         if(blt_type != turret_Type.WeaponBullet)
         {
-            float dst_ = Vector3.Distance(transform.position, plyr_target.position);
-            if( (dst_ < 3) && !plyr_passed) {plyr_passed = true; speed *= 1.3f;}
+            float dst_ = (transform.position.z - plyr_target.position.z);
+            if( (is_behind ? (dst_ > 0) : (dst_ < 0) ) && !plyr_passed) {
+                plyr_passed = true; speed *= 1.3f;
+                Invoke("bullet_explode", 2f);
+            }
 
             if(!exploded)
             {
                 try{
                     Vector3 dir = (plyr_target.position + new Vector3(0f, 1f, 0f) ) - transform.position;
-                    if(!plyr_passed) l_dir = dir;
-                    if(plyr_passed &&  (dst_ > 40) && !exploded) bullet_explode();
+
+                    if(!plyr_passed)
+                        l_dir = dir;
+                        
+                    if(plyr_passed &&  (dst_ > 40) && !exploded)
+                        bullet_explode();
 
                     Vector3 newDirection = Vector3.RotateTowards(transform.forward, dir, Time.deltaTime * turnSpeed, 0.0f);
                     switch(blt_type)
@@ -130,7 +145,7 @@ public class A_T_Projectile : MonoBehaviour
                             Vector3 shoot_dir = dir.normalized;
 
                             // transform.rotation = Quaternion.LookRotation(bullet_qtrn); // Quaternion.Euler(bullet_qtrn.x, bullet_qtrn.y, bullet_qtrn.z);
-                            //transform.LookAt(plyr_target);
+                            // transform.LookAt(plyr_target);
                             transform.rotation = Quaternion.LookRotation(bullet_qtrn);
                             bullet_rb.AddForce(2 * shoot_dir, ForceMode.VelocityChange);
 
@@ -177,7 +192,13 @@ public class A_T_Projectile : MonoBehaviour
                 Vector3 shoot_dir = dir.normalized;
 
                 transform.rotation = Quaternion.LookRotation(bullet_qtrn);
-                bullet_rb.AddForce((plyr_passed ? 7f : 5f) * shoot_dir, ForceMode.VelocityChange);
+                bullet_rb.AddForce((plyr_passed ? 12f : 8f) * shoot_dir, ForceMode.VelocityChange);
+
+                if(plyr_passed)
+                {
+                    float dst = Vector3.Distance(transform.position, plyr_target.position);
+                    if(dst > 40) destry();
+                }
             }
             else
             {
@@ -198,29 +219,36 @@ public class A_T_Projectile : MonoBehaviour
         {
             string member_hit = other.gameObject.tag;
             Transform parent_ = other.gameObject.transform.parent;
-            while(parent_ != null)
-            {
-                if(parent_.parent != null)
-                {
-                    if(member_hit == "Untagged" && parent_.gameObject.tag != "Untagged")
-                    {
-                        member_hit = parent_.gameObject.tag;
-                    }
-                    parent_ = parent_.parent;
 
-                    if( (parent_.gameObject.tag == "TURRET" || parent_.gameObject.tag == "ENEMY") && !exploded)
+            if( turret_parts.Contains(member_hit) )
+            {
+                while(parent_ != null)
+                {
+                    if(parent_.parent != null)
                     {
-                        AutoTurret turret = parent_.GetComponent<AutoTurret>();
-                        turret.turret_damage(member_hit, weapon_dmg, other.gameObject, player_);
-                        enemy_hit();
-                        parent_ = null;
+                        if(member_hit == "Untagged" && parent_.gameObject.tag != "Untagged")
+                        {
+                            member_hit = parent_.gameObject.tag;
+                        }
+
+
+                        parent_ = parent_.parent;
+
+                        if( (parent_.gameObject.tag == "TURRET" || parent_.gameObject.tag == "ENEMY") && !exploded)
+                        {
+                            AutoTurret turret = parent_.GetComponent<AutoTurret>();
+                            turret.turret_damage(member_hit, weapon_dmg, other.gameObject, player_);
+                            enemy_hit();
+                            parent_ = null;
+                            break;
+                        }
+                    }else
+                    {
                         break;
                     }
-                }else
-                {
-                    break;
                 }
             }
+
        }
     }
 
@@ -254,9 +282,8 @@ public class A_T_Projectile : MonoBehaviour
    
         // if (explosion_) explosion_.Play();
 
-        Invoke("destry", 1f);
+        Invoke("destry", 0.75f);
     }
-    private void destry(){ Destroy(gameObject); }
 
 
 
@@ -265,6 +292,8 @@ public class A_T_Projectile : MonoBehaviour
 
         expl_offset = ( transform.position - plyr_target.transform.position );
         exploded = true;
+        Invoke("destry", 0.75f);
+        // if(blt_expl != null) blt_expl.Play();
         // if(bullet_explosions_.Length > 0)
         // {
         //     for (int l = 0; l < bullet_explosions_.Length; l ++)
@@ -272,6 +301,8 @@ public class A_T_Projectile : MonoBehaviour
         // }
    
     }
+
+    private void destry(){ Destroy(gameObject); }
 
 
     private Vector3 CalculateCatapult(Vector3 target, Vector3 origen, float time)

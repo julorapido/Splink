@@ -12,13 +12,13 @@ public class PlayerMovement : MonoBehaviour
 {
     // Start is called before the first frame update
     [Header ("Transforms & Rb")]
-    public GameObject plyr_;
-    public Rigidbody plyr_rb;
-    public Transform plyr_trsnfm;
-    public Transform plyr_cam;
+    [SerializeField] private GameObject plyr_;
+    [SerializeField] private Rigidbody plyr_rb;
+    [SerializeField] private Transform plyr_trsnfm;
+    [SerializeField] private Transform plyr_cam;
 
     [Header ("Movement Values")]
-    private const float jumpAmount = 32f;
+    private const float jumpAmount = 28f;
     private const float strafe_speed = 0.225f;
 
     [Header ("Character Animators")]
@@ -34,16 +34,16 @@ public class PlayerMovement : MonoBehaviour
 
     [Header ("Player Movements Status")]
     private bool plyr_flying = false;
-    [HideInInspector] 
-    public bool plyr_sliding = false;
+    [HideInInspector] public bool plyr_sliding = false;
     private bool plyr_wallRninng = false;
     private bool plyr_obstclJmping = false;
     private bool plyr_swnging = false;
-    [HideInInspector] 
-    public bool plyr_tyro = false;
+    [HideInInspector] public bool plyr_tyro = false;
     private bool plyr_intro_tyro= false;
+    private bool plyr_shooting = false;
+    private bool plyr_jumping = false;
+    private bool plyr_animKilling = false;
 
-    
     [Header ("Authorized Movements")]
     private bool jump_auth = true;
     private bool movement_auth = true;
@@ -52,10 +52,12 @@ public class PlayerMovement : MonoBehaviour
     private int jumpCnt = 2;
 
     [Header ("Player Attached Partcl")]
-    public ParticleSystem jump_prtcl;
-    public ParticleSystem doubleJump_prtcl;
-    public ParticleSystem slide_prtcl;
+    [SerializeField] private ParticleSystem jump_prtcl;
+    [SerializeField] private ParticleSystem doubleJump_prtcl;
+    [SerializeField] private ParticleSystem slide_prtcl;
+    [SerializeField] private ParticleSystem kill_prtcl;
 
+    [Space(10)] 
 
     [Header ("Rotate booleans")]
     private bool rt_auth = false;
@@ -84,9 +86,9 @@ public class PlayerMovement : MonoBehaviour
     [Space(10)] 
 
     [Header ("Player Gun")]
-    private Weapon player_weaponScrpt;
     [SerializeField] private GameObject player_hidden_gunSlot;
     [SerializeField] private GameObject player_hand_gunSlot;
+    private Weapon player_weaponScrpt;
     private int ammo = 0;
 
     [Space(10)]
@@ -111,9 +113,11 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private Transform[] headAndNeck;
     private bool lastAimSettings_isArm;
     private string lastArmSetting_type;
+    private bool wasLastAim_AutoAim = false;
 
     [Header ("Authorized Shooting Animations")]
     private string[] authorizedShooting_ = new string[4] { "gunRun", "flying", "slide", "wallRun" };
+    private const string authorizedShooting_s = "gunRun flying slide wallRun";
 
     [Header ("Player Targets")]
     [SerializeField] private Transform body_TARGET; 
@@ -141,6 +145,10 @@ public class PlayerMovement : MonoBehaviour
         set { aim_Recoil = value; }  // set method
     }
     private bool FLYYY = false;
+
+
+    [Header ("Camera Movement")]
+    private CameraMovement cm_movement;
 
 
 
@@ -177,6 +185,10 @@ public class PlayerMovement : MonoBehaviour
 
 
         rig_animController.enabled = false;
+
+        cm_movement = FindObjectOfType<CameraMovement>();
+
+        dragDistance = Screen.width * 4 / 100; //dragDistance is 4% width of the screen
     }
 
 
@@ -200,7 +212,7 @@ public class PlayerMovement : MonoBehaviour
                     StopCoroutine(delay_jumpInput( 0f ) );  StartCoroutine(delay_jumpInput( 0.55f ) );
 
                     StartCoroutine(Dly_bool_anm(0.52f, "Jump"));
-                    FindObjectOfType<CameraMovement>().jmp(false);
+                    cm_movement.jmp(false);
                     jump_prtcl.Play();
                 }
 
@@ -214,7 +226,7 @@ public class PlayerMovement : MonoBehaviour
                     StopCoroutine(delay_jumpInput( 0f ) );  StartCoroutine(delay_jumpInput( 0.70f ) );
 
                     StartCoroutine(Dly_bool_anm(0.65f, "DoubleJump"));
-                    FindObjectOfType<CameraMovement>().jmp(true);
+                    cm_movement.jmp(true);
                     doubleJump_prtcl.Play();
                 }
 
@@ -337,7 +349,10 @@ public class PlayerMovement : MonoBehaviour
     private void setAimSettings(bool isAutoAim, Transform target = null, bool toogleArmRig = false, string armRig_ClipInfo = "")
     {
         if(aimSettingCalled) return;
+
         aimSettingCalled = true;
+        wasLastAim_AutoAim = isAutoAim;
+
         if(!isAutoAim)
         {
             lastAimed_enemy = null; 
@@ -381,10 +396,10 @@ public class PlayerMovement : MonoBehaviour
             if(i == 1)
             {
                 player_aims[i].data.constrainedObject = isAutoAim ?  headAndNeck[0] : headAndNeck[1]; 
+                player_Rig.Build();    
             }
 
             player_aims[i].weight = 0f;
-            player_Rig.Build();    
 
             player_aims[i].data.sourceObjects.Clear();
             player_aims[i].weight = isAutoAim ? autoAim_aimsWeigths[i] : noAim_aimsWeigths[i];
@@ -428,10 +443,14 @@ public class PlayerMovement : MonoBehaviour
         rig_animController.enabled = true;
         aimSettingCalled = false;
         player_Rig.Build();
-
+        //_anim.Rebind();
     }
 
 
+
+    private Vector3 fp;   //First touch position
+    private Vector3 lp;   //Last touch position
+    private float dragDistance;  //minimum distance for a swipe to be registered
 
 
     private void FixedUpdate()
@@ -481,23 +500,28 @@ public class PlayerMovement : MonoBehaviour
                 if( (aimed_enemy != lastAimed_enemy) || (lastAimSettings_isArm != armRigMaybe )  || (lastArmSetting_type != animClip_info))
                 {
                     // can only auto-aim while [flying, running, wallrunnning, sliding, grappling]
-                    for(int s = 0; s < authorizedShooting_.Length; s ++)
-                    {
-                        if( authorizedShooting_[s].Contains(animClip_info) )
+                    //for(int s = 0; s < authorizedShooting_.Length; s ++)
+                    //{
+                        if( authorizedShooting_s.Contains(animClip_info) )
                         {
                             lastAimSettings_isArm = armRigMaybe;
                             lastArmSetting_type = animClip_info;
                             setAimSettings(true, aimed_enemy, armRigMaybe, animClip_info);
                             canShot = true;
-                            break;
+                            // break;
                         }
-                    }
+                    //}
 
                     // Enemy aimed but can't auto-aim !
                     if(!canShot)
                     {
-                        setAimSettings(false);
-                        rig_animController.enabled = false;
+                        // prevent from non-autoAim setting to be called too much
+                        if(wasLastAim_AutoAim == true)
+                        {
+                            setAimSettings(false);
+                            rig_animController.enabled = false;
+                        }
+          
                     }
                 }
             }
@@ -535,13 +559,6 @@ public class PlayerMovement : MonoBehaviour
             // body_TARGET.position = new Vector3(body_TARGET.position.x, body_TARGET.position.y + aim_Recoil, body_TARGET.position.z);
             leftArm_TARGET.position = new Vector3(saved_WorldPos_armTarget.x, saved_WorldPos_armTarget.y + aim_Recoil, saved_WorldPos_armTarget.z);
 
-
-            if (Input.GetKey("e") && (ammo > 0) && (aimed_enemy != null) )
-            {
-                player_weaponScrpt.Shoot(aimed_enemy, aimed_enemy.GetComponent<AutoTurret>().is_horizontal);
-            };
-                
-            
 
 
 
@@ -582,9 +599,10 @@ public class PlayerMovement : MonoBehaviour
                     
                     // STRAFE SPEED
                     if (Input.GetKey("q") || Input.GetKey("d")) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 3f);
-                       
-                    if(Input.GetKey("f")) FLYYY = true;
-                    if(FLYYY) plyr_rb.velocity = new Vector3(0, 0.6f, 0);
+                    
+            
+                    if(Input.GetKeyDown("f")) FLYYY = !(FLYYY);
+                    if(FLYYY) plyr_rb.velocity = new Vector3(0f, 0.60f, 0f);
                 }
 
 
@@ -621,6 +639,31 @@ public class PlayerMovement : MonoBehaviour
                 }
 
 
+
+                if ( 
+                // Input.GetKey("e") && 
+                (!plyr_obstclJmping && !plyr_jumping && !plyr_animKilling) 
+                                &&
+                (ammo > 0) && (aimed_enemy != null) )
+                {
+                    StopCoroutine(shooting_());StartCoroutine(shooting_());
+                    player_weaponScrpt.Shoot(aimed_enemy, aimed_enemy.GetComponent<AutoTurret>().is_horizontal);
+                };
+                
+            
+
+
+                // shotting y velocity fix
+                if(plyr_shooting && plyr_flying && !plyr_animKilling)
+                {
+                    if(plyr_rb.velocity.y < -11f) plyr_rb.velocity =  new Vector3(plyr_rb.velocity.x, -11f, plyr_rb.velocity.z * 1.2f);
+
+                }
+                // freeze y anim kill anim
+                if(plyr_animKilling)
+                {
+                    plyr_rb.velocity =  new Vector3(plyr_rb.velocity.x/2, plyr_rb.velocity.y, plyr_rb.velocity.z * 0.25f);
+                }
                 
             }
 
@@ -655,10 +698,62 @@ public class PlayerMovement : MonoBehaviour
                 }
             }
 
+
+
+            if (Input.touchCount == 1) // user is touching the screen with a single touch
+            {
+                Touch touch = Input.GetTouch(0); // get the touch
+                if (touch.phase == TouchPhase.Began) //check for the first touch
+                {
+                    fp = touch.position;
+                    lp = touch.position;
+                }
+                else if (touch.phase == TouchPhase.Moved) // update the last position based on where they moved
+                {
+                    lp = touch.position;
+                }
+                else if (touch.phase == TouchPhase.Ended) //check if the finger is removed from the screen
+                {
+                    lp = touch.position;  //last touch position. Ommitted if you use list
+    
+                    //Check if drag distance is greater than 20% of the screen height
+                    if (Mathf.Abs(lp.x - fp.x) > dragDistance || Mathf.Abs(lp.y - fp.y) > dragDistance)
+                    {//It's a drag
+                    
+                        //check if the drag is vertical or horizontal
+                        if (Mathf.Abs(lp.x - fp.x) > Mathf.Abs(lp.y - fp.y))
+                        {   
+                            //If the horizontal movement is greater than the vertical movement...
+                            if ((lp.x > fp.x))  //If the movement was to the right)
+                            {   //Right swipe
+                                Debug.Log("Right Swipe");
+                            }
+                            else
+                            {   //Left swipe
+                                Debug.Log("Left Swipe");
+                            }
+                        }
+
+                        else
+                        {   
+                            //the vertical movement is greater than the horizontal movement
+                            if (lp.y > fp.y)  //If the movement was up
+                            {   //Up swipe
+                                Debug.Log("Up Swipe");
+                            }
+                            else
+                            {   //Down swipe
+                                Debug.Log("Down Swipe");
+                            }
+                        }
+                    }
+                    else
+                    {   //It's a tap as the drag distance is less than 20% of the screen height
+                        Debug.Log("Tap");
+                    }
+                }
+            }
         }
-
-
-  
     }
 
 
@@ -888,6 +983,7 @@ public class PlayerMovement : MonoBehaviour
 
 
                 aimed_enemy = optional_gm.transform;
+                cm_movement.set_aimedTarget = optional_gm.transform;
                 break;
 
             case "emptyEnemyAim":                
@@ -899,6 +995,7 @@ public class PlayerMovement : MonoBehaviour
                 head_TARGET.localPosition = new Vector3(6.80f,-10.57f,16.06f);
               
                 aimed_enemy = null;
+                cm_movement.set_aimedTarget = null;
                 break;
             default:
                 break;
@@ -951,7 +1048,7 @@ public class PlayerMovement : MonoBehaviour
 
         plyr_intro_tyro = true;
 
-        LeanTween.scale(tyro_handler_child.gameObject, tyro_handler_child.localScale * 2f, 1.5f).setEasePunch();
+        //LeanTween.scale(tyro_handler_child.gameObject, tyro_handler_child.localScale * 2f, 1.5f).setEasePunch();
 
         Vector3 moveTo_ = actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, -2.1f, -0.1f);
         LeanTween.move(gameObject, moveTo_, 0.6f).setEaseInSine(); 
@@ -973,10 +1070,15 @@ public class PlayerMovement : MonoBehaviour
     private IEnumerator Dly_bool_anm(float delay, string anim_bool)
     {
         _anim.SetBool(anim_bool, true);
+        if(anim_bool == "Jump" || anim_bool == "DoubleJump") plyr_jumping = true;
+        if(anim_bool == "animKill") plyr_animKilling = true;
 
         //yield on a new YieldInstruction that waits for "delay" seconds.
         yield return new WaitForSeconds(delay);
-                
+
+        if(anim_bool == "Jump" || anim_bool == "DoubleJump") plyr_jumping = false;  
+        if(anim_bool == "animKill") plyr_animKilling = false; 
+
         _anim.SetBool(anim_bool, false);
     }
 
@@ -1149,7 +1251,6 @@ public class PlayerMovement : MonoBehaviour
     public void swing_anm(bool is_ext, Vector3 grapl_pnt)
     {
   
-
         _anim.SetBool("flying", true);
         if(is_ext)
         {
@@ -1178,6 +1279,34 @@ public class PlayerMovement : MonoBehaviour
             plyr_swnging = true; 
             return;
         }
+    }
+
+
+    // Player Shooting
+    private IEnumerator shooting_()
+    {
+        plyr_shooting = true;
+        yield return new WaitForSeconds(0.75f);
+        plyr_shooting = false;
+    }
+
+
+
+    // Player Kill
+    public void player_kill()
+    {
+        int rdm_ =  UnityEngine.Random.Range(1, 6);
+        if(plyr_flying)
+        {
+            cm_movement.kill_am();
+            _anim.SetInteger("killAm", rdm_);
+            StartCoroutine(Dly_bool_anm(1f, "animKill"));
+        }
+
+        // rig_animController.enabled = false;
+        StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(1f));
+        kill_prtcl.Play();
+        plyr_rb.AddForce( new Vector3(0f, 30f - plyr_rb.velocity.y, 10), ForceMode.VelocityChange);
     }
 
 }

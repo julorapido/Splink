@@ -5,16 +5,20 @@ using UnityEngine;
 public class Weapon : MonoBehaviour
 {
     [Header ("Weapon Damage")]
-    private const float damage = 20f;
+    private const float damage = 25f;
 
     [Header ("Weapon Precision")]
     private const float precision_ = 20f;
 
-    [Header ("Player Movement Script")]
+    [Header ("Player Movement/Collision Script")]
     private PlayerMovement pm;
+    private PlayerCollisions pm_cls;
 
     [Header ("Weapon FireRate")]
-    private const float fireRate = 0.30f;
+    private int attackRange_ = 50;
+
+    [Header ("Weapon FireRate")]
+    private const float fireRate = 0.35f;
     private bool canShoot = true;
 
     [Header ("Weapon Recoil")]
@@ -59,6 +63,10 @@ public class Weapon : MonoBehaviour
     private void Start()
     {
         pm = FindObjectOfType<PlayerMovement>();
+
+        pm_cls = FindObjectOfType<PlayerCollisions>();
+        pm_cls.player_attackRange = attackRange_;
+
         ps_shots = gameObject.GetComponentsInChildren<ParticleSystem>();
     }
 
@@ -70,13 +78,12 @@ public class Weapon : MonoBehaviour
         {
             GameObject enemy = other.collider.gameObject;
 
-            foreach (ContactPoint c in other.contacts)
-            {
-                //Debug.Log(c.thisCollider.name);
-            }
+            // foreach (ContactPoint c in other.contacts)
+            // {
+            //     //Debug.Log(c.thisCollider.name);
+            // }
 
             // get index of bullet child in parents 
-
             // split target arr 
             // delete from parent
         }
@@ -131,7 +138,7 @@ public class Weapon : MonoBehaviour
     private IEnumerator shoot_recoil()
     {
         StartCoroutine(delay_shoot());
-        float recoil_time = 0.1f;
+        float recoil_time = 0.05f;
         float recoil_tick_ = recoil_strength / 30;
         
         while(em_recoil < recoil_strength)

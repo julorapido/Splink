@@ -7,15 +7,21 @@ using System.Linq;
 
 public class CameraMovement : MonoBehaviour
 {
+    [Header ("Camera Smooth Auto-Aim divisor")]
+    private const float divisor = 70f;
+
+    [Header ("Camera Main Rotation Ratio")]
+    private const float x_ratio = -0.0590f;
+
 
     [Header ("Player Animator")]
     public GameObject p_gm;
     private Animator p_anim;
 
     [Header ("Player Inspector Values")]
-    public Transform player;
-    public Rigidbody player_rb;
-    public Vector3 player_velocity;
+    [SerializeField] private Transform player;
+    [SerializeField] private Rigidbody player_rb;
+    [SerializeField] private Vector3 player_velocity;
 
     [Header ("Camera Offset Value")]
     public Vector3 offset;
@@ -95,6 +101,15 @@ public class CameraMovement : MonoBehaviour
     [Header ("Grapple Point Position")]
     [HideInInspector] public Vector3 _grplPoint_;
     private bool end_trans_called = false;
+
+
+    [Header ("Aimed Target")]
+    private Transform aimed_target;
+    public Transform set_aimedTarget  
+    {
+        get { return null; } 
+        set { aimed_target = value; }  // set method
+    }
 
 
     private Camera c_;
@@ -250,7 +265,6 @@ public class CameraMovement : MonoBehaviour
         // x_offst definition
         x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ? -1 *   (60 - (player_rb.rotation.eulerAngles.y - 300.0f)) : player_rb.rotation.eulerAngles.y);
 
-        float x_ratio = -0.0590f;
         // Lerp Position
         if(((x_ratio * x_offst)) != lst_offst_x)
         {
@@ -273,16 +287,25 @@ public class CameraMovement : MonoBehaviour
     }
 
 
-
-
     private void LateUpdate()
     {
         if (!game_Over_)
         {
 
+            float xy_ratio = 0.0590f;
+
+            Vector3 player_target_relativePos = aimed_target != null ? aimed_target.position - player.position : Vector3.zero;
+            Quaternion aiming_rotation = aimed_target != null ? Quaternion.LookRotation(player_target_relativePos) : Quaternion.identity; 
+            float euler_y_fixed = aiming_rotation.eulerAngles.y > 180 ?  (aiming_rotation.eulerAngles.y - 360f) : (aiming_rotation.eulerAngles.y);
+            float euler_x_fixed = aiming_rotation.eulerAngles.x > 180f ?  (aiming_rotation.eulerAngles.x - 360f) : (aiming_rotation.eulerAngles.x);
+            
             // Dampen towards the target rotation
-            Quaternion desired_rt  = new Quaternion(xRot + supl_xRot + rot_dc["wallR_rot_x_offst"],
-                 (x_offst / 110.0f) + rot_dc["wallR_rot_y_offst"], 
+            Quaternion desired_rt  = new Quaternion(xRot + supl_xRot + rot_dc["wallR_rot_x_offst"] 
+                  + ((aimed_target == null )? 0 : (euler_x_fixed * xy_ratio) / (divisor / 5))
+                ,
+                 (x_offst / 110.0f) + rot_dc["wallR_rot_y_offst"] 
+                  + ((aimed_target == null )? 0 : (euler_y_fixed * xy_ratio) / divisor)
+                , 
                 (x_offst / 1000.0f) + rot_dc["wallR_rot_z_offst"],
                  1
             );
@@ -308,6 +331,8 @@ public class CameraMovement : MonoBehaviour
 
         if(end_trans_called) transform.LookAt(player);
     }
+
+
 
 
 
@@ -551,6 +576,27 @@ public class CameraMovement : MonoBehaviour
         List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "", "",""} ); 
  
         values_ref = s_arr; values_flt = v_flt;
+        trns_back_arr = new List<bool?>(new bool?[6] {
+            false, false, false ,false, false, false
+        }); 
+
+        trns_fnc = true;
+        trns_back = false;
+      
+    }
+
+
+    // Kill
+    public void kill_am()
+    {
+        reset_smoothDmpfnc();  
+
+        iterator_ = 3;
+        List<float> v_flt = new List<float>(new float[6] {-0.080f, -0.60f, 0.040f, 0.0f, 0.0f, 0.0f} ); 
+        List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "", "",""} ); 
+ 
+        values_ref = s_arr;
+        values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] {
             false, false, false ,false, false, false
         }); 

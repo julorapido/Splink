@@ -33,7 +33,7 @@ public class PlayerCollisions : MonoBehaviour
     private GameObject sphereStored_aimed_turret;
     private GameObject sphere_aimed_turret;
     private int turretInSight = 0;
-    private const int player_attackRange = 50;
+    [HideInInspector] public int player_attackRange = 0;
 
     [Header ("Currently Auto-Aimed Enemy [Default]")]
     private Collider m_Collider;
@@ -47,10 +47,15 @@ public class PlayerCollisions : MonoBehaviour
     [HideInInspector] public bool wallRun_aimBox = false;
     [HideInInspector] public float z_wallRun_aimRotation = 0.0f;
 
+    [Header ("Player Movement Script")]
+    private PlayerMovement p_movement;
+
     private void Start()
     {
         m_Collider = gameObject.GetComponent<Collider>();
         StartCoroutine(delay_trgrs(strt_delay));
+
+        p_movement = FindObjectOfType<PlayerMovement>();
     }
   
  
@@ -194,7 +199,7 @@ public class PlayerCollisions : MonoBehaviour
                     if(storedAimed_enemy != aimed_enemy)
                     {
                         storedAimed_enemy = aimed_enemy;
-                        FindObjectOfType<PlayerMovement>().animateCollision("newEnemyAim", new Vector3(0, 0, 0), storedAimed_enemy);
+                        p_movement.animateCollision("newEnemyAim", new Vector3(0, 0, 0), storedAimed_enemy);
                     }
 
                     enemy_inSight++;
@@ -204,7 +209,7 @@ public class PlayerCollisions : MonoBehaviour
             }
 
             if(enemy_inSight == 0 && (aimed_enemy != null) )
-                FindObjectOfType<PlayerMovement>().animateCollision("emptyEnemyAim", new Vector3(0, 0, 0));
+                p_movement.animateCollision("emptyEnemyAim", new Vector3(0, 0, 0));
                 aimed_enemy = null;
    
         }
@@ -224,12 +229,12 @@ public class PlayerCollisions : MonoBehaviour
             // Collider[] hitColliders = Physics.OverlapSphere(gameObject.transform.position, 50f);
 
             DisplayBox(transform.position,  
-                new Vector3(3.8f, 8, player_attackRange), 
+                new Vector3(3.7f, 10f, player_attackRange), 
                 wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
             );
 
             Collider[] hitColliders = Physics.OverlapBox(transform.position,
-                new Vector3(3.8f, 8, player_attackRange),
+                new Vector3(3.7f, 10f, player_attackRange),
                 wallRun_aimBox ? Quaternion.Euler(0, transform.rotation.y, z_wallRun_aimRotation) : transform.rotation
             );
 
@@ -260,14 +265,14 @@ public class PlayerCollisions : MonoBehaviour
 
                 if( (sphereStored_aimed_turret != sphere_aimed_turret) && (!firstEverDetectedEnemy || (sphere_aimed_turret != null) ) )
                 {
-                    FindObjectOfType<PlayerMovement>().animateCollision("newEnemyAim", new Vector3(0, 0, 0), sphere_aimed_turret);
+                    p_movement.animateCollision("newEnemyAim", new Vector3(0, 0, 0), sphere_aimed_turret);
                     sphereStored_aimed_turret = sphere_aimed_turret;
                     firstEverDetectedEnemy = true;
                 }
 
                 if( turretInSight == 0  && (sphere_aimed_turret != null) )
                 {
-                    FindObjectOfType<PlayerMovement>().animateCollision("emptyEnemyAim", new Vector3(0, 0, 0));
+                    p_movement.animateCollision("emptyEnemyAim", new Vector3(0, 0, 0));
                     sphere_aimed_turret = null;
                     sphereStored_aimed_turret = null;
                 }
