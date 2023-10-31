@@ -60,6 +60,7 @@ public class AutoTurret : MonoBehaviour
 
     [Header ("Turret Orientation")]
     public bool is_horizontal;
+    public bool is_left;
     private bool reset_bl = false;
 
     [Header ("Turret Range")]
@@ -71,7 +72,7 @@ public class AutoTurret : MonoBehaviour
 
 
     [Header ("Turret Damages Text")]
-    [SerializeField] private Transform turret_textsParent;
+    private Transform turret_textsParent;
     [SerializeField] private GameObject dmg_text_prefab;
 
     private Transform stored_player_trnsfrm;
@@ -80,6 +81,8 @@ public class AutoTurret : MonoBehaviour
     {
         plyr_gm = GameObject.FindGameObjectsWithTag("Player")[0];
         plyr_pm = FindObjectOfType<PlayerMovement>();
+
+        if(is_left != true) is_left = false;
 
         InvokeRepeating("target_check", 0, 0.25f);
         //InvokeRepeating("shoot_prjcle", 0, 0.50f);
@@ -320,7 +323,10 @@ public class AutoTurret : MonoBehaviour
                 switch(t_type){
                     case turret_Type.Normal:
                         //Instantiate()
+                        if(! (LeanTween.isTweening(tr_barrels[0]) ))
+                        {
                         LeanTween.scale(tr_barrels[0], tr_barrels[0].transform.localScale * 1.6f, shootCoolDown - 0.4f).setEasePunch();
+                        }
                         //Quaternion r_  = Quaternion.Euler(tr_body[0].rotation.eulerAngles.x + 180, tr_body[0].rotation.eulerAngles.y, tr_body[0].rotation.eulerAngles.z);
                         GameObject missle_Go = Instantiate(turret_bullet, tr_sht_points[0].transform.position, tr_sht_points[0].transform.rotation);
                         //typeof(GameObject) as GameObject;
@@ -350,8 +356,10 @@ public class AutoTurret : MonoBehaviour
                         // }
                         break;
                     case turret_Type.Heavy:
-                        LeanTween.scale(tr_barrels[0], tr_barrels[0].transform.localScale * 1.35f, shootCoolDown - 0.05f).setEasePunch();
-
+                        if(! (LeanTween.isTweening(tr_barrels[0]) ))
+                        {
+                            LeanTween.scale(tr_barrels[0], tr_barrels[0].transform.localScale * 1.35f, shootCoolDown - 0.03f).setEasePunch();
+                        }
                         GameObject missle_Go_h = Instantiate(turret_bullet, tr_sht_points[0].transform.position, tr_sht_points[0].transform.rotation);
                         // missle_Go.transform.localScale = new Vector3(msl_scale.x * (4*(gameObject.transform.localScale.x / 5)), msl_scale.y * (4*(gameObject.transform.localScale.y / 5)),
                         //     msl_scale.z * (4*(gameObject.transform.localScale.z / 5))
@@ -363,7 +371,10 @@ public class AutoTurret : MonoBehaviour
                         proj_scrpt_h.blt_type = A_T_Projectile.turret_Type.Heavy;
                         break;
                     case turret_Type.Sniper:
-                        LeanTween.scale(tr_body[0].gameObject, tr_body[0].localScale * 1.17f, shootCoolDown - 0.4f).setEasePunch();
+                        if(! (LeanTween.isTweening(tr_body[0].gameObject) ))
+                        {
+                            LeanTween.scale(tr_body[0].gameObject, tr_body[0].localScale * 1.17f, shootCoolDown - 0.4f).setEasePunch();
+                        }
                         GameObject missle_Go_s = Instantiate(turret_bullet, tr_sht_points[0].transform.position, tr_sht_points[0].transform.rotation);
                         if(!missle_Go_s) return;
 
@@ -400,8 +411,10 @@ public class AutoTurret : MonoBehaviour
     {
         for(int i = 0; i < j; i ++)
         {
-            LeanTween.scale(tr_barrels[i], tr_barrels[i].transform.localScale * 1.6f, shootCoolDown - 0.4f).setEasePunch();
-
+            if(! (LeanTween.isTweening(tr_barrels[i]) ))
+            {    
+                LeanTween.scale(tr_barrels[i], tr_barrels[i].transform.localScale * 1.6f, shootCoolDown - 0.4f).setEasePunch();
+            }
             GameObject m_Go = Instantiate(turret_bullet, tr_sht_points[i].transform.position, tr_sht_points[i].transform.rotation);
             m_Go.transform.localScale = new Vector3(msl_scale.x * (4*(gameObject.transform.localScale.x / 5)), msl_scale.y * (4*(gameObject.transform.localScale.y / 5)),
                 msl_scale.z * (4*(gameObject.transform.localScale.z / 5))
@@ -479,6 +492,23 @@ public class AutoTurret : MonoBehaviour
             Rigidbody turret_part = (alr != null) ? alr : g_l[i].gameObject.AddComponent<Rigidbody>();
             if(turret_part == null) continue;
 
+            MeshCollider msh_cldr = g_l[i].gameObject.GetComponent<MeshCollider>();
+            if(msh_cldr == null)
+            {
+                MeshFilter msh_fltr =  g_l[i].gameObject.GetComponent<MeshFilter>();
+                if(msh_fltr != null)
+                {
+                    msh_cldr = g_l[i].gameObject.AddComponent<MeshCollider>();
+                    Mesh msh_rndr = msh_fltr?.mesh;
+                    if(msh_rndr != null)
+                    {
+                        msh_cldr.sharedMesh = msh_rndr; 
+                        msh_cldr.convex = true;
+                        msh_cldr.enabled = true;
+                    }
+                };
+            }
+
             float x_ =  UnityEngine.Random.Range(-7f, 7f); float y_ =  UnityEngine.Random.Range(5f, 10f);
             float z_ =  UnityEngine.Random.Range(-4f, 4f);
             turret_part.AddForce(x_, y_, z_, ForceMode.Impulse);
@@ -493,6 +523,8 @@ public class AutoTurret : MonoBehaviour
             {
                 //LeanTween.alphaVertex(go_, 0.0f, exl_t + 0.3f).setEaseInSine();
             }
+            // dont scale to absolute zero [physics can't handle 0 scaled meshes(Rigidbody) ]
+            LeanTween.scale(go_, new Vector3(0.01f, 0.01f, 0.01f), 3f).setEaseInSine();
         }
 
 
@@ -545,7 +577,7 @@ public class AutoTurret : MonoBehaviour
         dmg += b_;
 
         float barrel_y = ( (tr_body[0] != null) ? 
-            (is_horizontal) ? tr_body[0].transform.rotation.eulerAngles.x : tr_body[0].transform.rotation.eulerAngles.y
+            (is_horizontal) ? tr_body[0].transform.rotation.eulerAngles.x : (tr_body[0].transform.rotation.eulerAngles.y + 180f)
                 : 
             tr_barrels[0].transform.rotation.eulerAngles.y
         );
@@ -563,10 +595,10 @@ public class AutoTurret : MonoBehaviour
         float x_x = UnityEngine.Random.Range(-0.7f, 0.7f);
 
         m_RectTransform.transform.localPosition = new Vector3 (
-            ((is_horizontal) ? (transform.rotation.eulerAngles.y > 170f) ? (1.5f): (-1.5f) : 1f) + x_x,
+            ((is_horizontal) ? (transform.rotation.eulerAngles.y > 170f) ? (1.5f): (-1.5f) : 0f) + x_x,
             ((is_horizontal) ? (transform.rotation.eulerAngles.y > 170f) ?
                 (1.35f): (1f) 
-            : 0f),
+            : 2.30f),
             -1f
         );
 
@@ -580,7 +612,7 @@ public class AutoTurret : MonoBehaviour
         );
         
         LeanTween.scale(dmg_textObj, dmg_textObj.transform.localScale * 1.5f, 1f).setEasePunch();
-        LeanTween.moveLocal(dmg_textObj, rdm_move, 0.7f).setEaseInSine();
+        LeanTween.moveLocal(dmg_textObj, rdm_move, 1.2f).setEaseInSine();
         //LeanTween.moveLocal(dmg_textObj, new Vector3(rdm_move.x, -1 * rdm_move.y, 0), 1.5f).setEaseInSine();
 
         StartCoroutine(dmg_textDestruction(dmg_textObj));
@@ -595,11 +627,38 @@ public class AutoTurret : MonoBehaviour
         }
 
 
+
+        OutlinePatched p = turret_part.GetComponent<OutlinePatched>();
+        if(p == null)
+        { 
+            p = turret_part.AddComponent<OutlinePatched>();
+            p.OutlineColor = Color.white;
+            p.OutlineMode = OutlinePatched.Mode.OutlineVisible;
+            StartCoroutine(outline_effect(p));
+        }
+
+    }
+
+    private IEnumerator outline_effect(OutlinePatched outline_instance)
+    {
+        const float effect_time = 0.5f;
+        const float outlineTick = 6f / 30;
+        // outline_instance.OutlineWidth = 0f;
+        // for(int i = 0; i < 30; i ++)
+        // {
+        //     outline_instance.OutlineWidth += outlineTick;
+        //     yield return new WaitForSeconds(effect_time / 30);
+        // }
+        // outline_instance.OutlineWidth = 0f;
+
+        outline_instance.OutlineWidth = 5f;
+        yield return new WaitForSeconds(0.4f);
+        Destroy(outline_instance);
     }
 
     private IEnumerator dmg_textDestruction(GameObject text_obj)
     {
-        yield return new WaitForSeconds(0.75f);
+        yield return new WaitForSeconds(0.5f);
         LeanTween.scale(text_obj, new Vector3(0, 0, 0), 0.5f).setEaseInSine();
         yield return new WaitForSeconds(0.5f);
         Destroy(text_obj);

@@ -15,6 +15,7 @@ public class A_T_Projectile : MonoBehaviour
     [HideInInspector] public Vector3 weapon_precision;
     [HideInInspector] public float weapon_dmg;
     [HideInInspector] public Transform player_;
+    [HideInInspector] public bool target_isLeft;
     private ParticleSystem blt_expl;
 
     [Header ("Player_")]
@@ -175,15 +176,16 @@ public class A_T_Projectile : MonoBehaviour
         {
             if(!exploded)
             {
-                if( (plyr_target.position.z - transform.position.z) < 3f){ plyr_passed = true;}
+                if( (plyr_target.position.z - transform.position.z) < -2f){ plyr_passed = true;}
 
-                bool is_left =  ((plyr_target.rotation.eulerAngles.y > 180 ) ? true : false);  
+                bool is_left =  ((plyr_target.rotation.eulerAngles.y >= 170 ) ? true : false);  
+                is_left = target_isLeft;
 
                 Vector3 dir = (plyr_passed == true) ? 
                     (l_dir) : 
                     (plyr_target.position +
-                            (horitzontal_target ? new Vector3(is_left ? 2.0f : -2.0f, 2.5f, 0f) :
-                             new Vector3(0f, 4f, 0f) )
+                            (horitzontal_target ? new Vector3(is_left ? 2.0f : -3f, 2.5f, 0f) :
+                             new Vector3(0f, 2.25f, 0f) )
                          - transform.position 
                     ) + (weapon_precision);
 
@@ -217,6 +219,7 @@ public class A_T_Projectile : MonoBehaviour
     {
         if(blt_type == turret_Type.WeaponBullet)
         {
+            GameObject member_gmObj_replaced = other.gameObject; // force initialization beacuse it's a GameObj
             string member_hit = other.gameObject.tag;
             Transform parent_ = other.gameObject.transform.parent;
 
@@ -229,6 +232,7 @@ public class A_T_Projectile : MonoBehaviour
                         if(member_hit == "Untagged" && parent_.gameObject.tag != "Untagged")
                         {
                             member_hit = parent_.gameObject.tag;
+                            member_gmObj_replaced = parent_.gameObject;
                         }
 
 
@@ -237,7 +241,11 @@ public class A_T_Projectile : MonoBehaviour
                         if( (parent_.gameObject.tag == "TURRET" || parent_.gameObject.tag == "ENEMY") && !exploded)
                         {
                             AutoTurret turret = parent_.GetComponent<AutoTurret>();
-                            turret.turret_damage(member_hit, weapon_dmg, other.gameObject, player_);
+                            turret.turret_damage(
+                                member_hit,
+                                weapon_dmg, other.gameObject.tag != "Untagged" ?  other.gameObject : member_gmObj_replaced,
+                                player_
+                            );
                             enemy_hit();
                             parent_ = null;
                             break;
@@ -262,23 +270,30 @@ public class A_T_Projectile : MonoBehaviour
         }
     }
 
-
+    // TURRETS AMMO EXPLODE
     private void bullet_explode()
     {
         // Destroy(gameObject);
         exploded = true;
         expl_offset = ( transform.position - plyr_target.transform.position );
 
-
         for (int i = 0; i < bullet_msh.Length; i ++) bullet_msh[i].enabled = false;
         for (int j = 0; j < bullet_lr.Length; j ++) bullet_lr[j].enabled = false;
         for (int k = 0; k < bullet_cldrs.Length; k ++) bullet_cldrs[k].enabled = false;
 
-        if(bullet_explosions_.Length > 0)
+        if(blt_type == turret_Type.Normal || blt_type == turret_Type.Double)
         {
-            for (int l = 0; l < bullet_explosions_.Length; l ++)
-                bullet_explosions_[l].Play();
+            bullet_explosions_[0].Stop();
+            bullet_explosions_[1].Play();
+        }else
+        {
+            if(bullet_explosions_.Length > 0)
+            {
+                for (int l = 0; l < bullet_explosions_.Length; l ++)
+                    bullet_explosions_[l].Play();
+            }
         }
+
    
         // if (explosion_) explosion_.Play();
 
@@ -286,20 +301,20 @@ public class A_T_Projectile : MonoBehaviour
     }
 
 
-
+    // PLAYER WEAPON HIT
     private void enemy_hit()
     {
 
         expl_offset = ( transform.position - plyr_target.transform.position );
         exploded = true;
         Invoke("destry", 0.75f);
-        // if(blt_expl != null) blt_expl.Play();
+        if(blt_expl != null) blt_expl.Play();
         // if(bullet_explosions_.Length > 0)
         // {
         //     for (int l = 0; l < bullet_explosions_.Length; l ++)
         //         bullet_explosions_[l].Play();
         // }
-   
+        bool is_left =  ((plyr_target.rotation.eulerAngles.y >= 170 ) ? true : false);  
     }
 
     private void destry(){ Destroy(gameObject); }

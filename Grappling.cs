@@ -71,8 +71,10 @@ public class Grappling : MonoBehaviour
         
         if(grpl_TimeValue > 0) grpl_TimeValue -= Time.deltaTime;
 
+    }
 
-
+    private void  FixedUpdate()
+    {
         // Detect Grapple Ballz
         Collider[] hitColliders = Physics.OverlapSphere(plyr_pos.position, 20f);
         if(hitColliders.Length > 0)
@@ -87,8 +89,6 @@ public class Grappling : MonoBehaviour
                 }
             }
         }
-
-
     }
 
 

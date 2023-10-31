@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using UnityEngine;
 using PathCreation.Utility;
 using System;
+using System.Reflection;
 
 public class PlayerCollisions : MonoBehaviour
 {
@@ -33,7 +34,15 @@ public class PlayerCollisions : MonoBehaviour
     private GameObject sphereStored_aimed_turret;
     private GameObject sphere_aimed_turret;
     private int turretInSight = 0;
-    [HideInInspector] public int player_attackRange = 0;
+
+    [Header ("Player Weapon")]
+    private Weapon p_weapon;
+    private int player_attackRange;
+    private int player_ammo = 0;
+    [HideInInspector] public int set_AttackRange {
+        get {return player_attackRange;}
+        set { if(value is (int) ){player_attackRange = value; }}
+    }
 
     [Header ("Currently Auto-Aimed Enemy [Default]")]
     private Collider m_Collider;
@@ -50,12 +59,17 @@ public class PlayerCollisions : MonoBehaviour
     [Header ("Player Movement Script")]
     private PlayerMovement p_movement;
 
+    [Header ("Camera Movement Script")]
+    private CameraMovement c_movement;
+
     private void Start()
     {
         m_Collider = gameObject.GetComponent<Collider>();
         StartCoroutine(delay_trgrs(strt_delay));
 
-        p_movement = FindObjectOfType<PlayerMovement>();
+        p_movement =  FindObjectOfType<PlayerMovement>();
+        c_movement = FindObjectOfType<CameraMovement>();
+        p_weapon = FindObjectOfType<Weapon>();
     }
   
  
@@ -173,116 +187,119 @@ public class PlayerCollisions : MonoBehaviour
 
     private void FixedUpdate()
     {
-
-
-        // player shots auto-aim
-        if(slcted_clsion == "boxCastAutoAim")
+        // attribute attack range
+        if(p_weapon != null)
         {
-            enemy_inSight = 0;
-
-            RaycastHit[] top = Physics.BoxCastAll(m_Collider.bounds.center, transform.localScale, transform.forward, transform.rotation, 200f);
-            RaycastHit[] bottom = Physics.BoxCastAll(m_Collider.bounds.center, transform.localScale + new Vector3(0, -1, 0), transform.forward, transform.rotation, 200f);
-            m_Hits  = new RaycastHit[top.Length + bottom.Length];
-            top.CopyTo(m_Hits, 0);
-            bottom.CopyTo(m_Hits, top.Length);
-
-            for(int i = 0; i < m_Hits.Length; i ++)
-            {
-                // Debug.Log( (m_Hits[i].collider.name)  + " / " + m_Hits[i].collider.tag);
-
-                if ( (m_Hits[i].collider.tag == "TURRET") )
-                {
-                    //Output the name of the enemy you hits
-                    Debug.Log("Hit : " + m_Hits[i].collider.name);
-
-                    aimed_enemy = m_Hits[i].transform.gameObject;
-                    if(storedAimed_enemy != aimed_enemy)
-                    {
-                        storedAimed_enemy = aimed_enemy;
-                        p_movement.animateCollision("newEnemyAim", new Vector3(0, 0, 0), storedAimed_enemy);
-                    }
-
-                    enemy_inSight++;
-
-                    break;
-                }
-            }
-
-            if(enemy_inSight == 0 && (aimed_enemy != null) )
-                p_movement.animateCollision("emptyEnemyAim", new Vector3(0, 0, 0));
-                aimed_enemy = null;
-   
+             player_attackRange = p_weapon.get_attRange;
+             player_ammo = p_weapon.get_ammo;
         }
 
-
-
-
-
-
-
-        // Sphere around player auto-aim turrets
-        if(slcted_clsion == "boxAutoAim")
+        if(player_ammo > 0)
         {
-            float minDistance = float.MaxValue;
-    
-            // Detect Turrets & Enemies
-            // Collider[] hitColliders = Physics.OverlapSphere(gameObject.transform.position, 50f);
+            // player shots auto-aim
+            if(slcted_clsion == "boxCastAutoAim")
+            {
+                enemy_inSight = 0;
 
-            DisplayBox(transform.position,  
-                new Vector3(3.7f, 10f, player_attackRange), 
-                wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
-            );
+                RaycastHit[] top = Physics.BoxCastAll(m_Collider.bounds.center, transform.localScale, transform.forward, transform.rotation, 200f);
+                RaycastHit[] bottom = Physics.BoxCastAll(m_Collider.bounds.center, transform.localScale + new Vector3(0, -1, 0), transform.forward, transform.rotation, 200f);
+                m_Hits  = new RaycastHit[top.Length + bottom.Length];
+                top.CopyTo(m_Hits, 0);
+                bottom.CopyTo(m_Hits, top.Length);
 
-            Collider[] hitColliders = Physics.OverlapBox(transform.position,
-                new Vector3(3.7f, 10f, player_attackRange),
-                wallRun_aimBox ? Quaternion.Euler(0, transform.rotation.y, z_wallRun_aimRotation) : transform.rotation
-            );
+                for(int i = 0; i < m_Hits.Length; i ++)
+                {
 
-            if(hitColliders.Length > 0)
-            {   
-                turretInSight = 0;
-                for (int i = 0; i < hitColliders.Length; i ++)
-                {   
-                    if(hitColliders[i].tag == "TURRET" || hitColliders[i].tag == "ENEMY")
+                    if ( (m_Hits[i].collider.tag == "TURRET") )
                     {
-                        Vector3 possiblePosition = hitColliders[i].transform.position;
-                    
-                        float currDistance = Vector3.Distance(transform.position, possiblePosition);
-                        float zDist = possiblePosition.z - transform.position.z;
+                        //Output the name of the enemy you hits
+                        Debug.Log("Hit : " + m_Hits[i].collider.name);
 
-                        if(zDist < 1f) continue;
-
-                        // If the distance is smaller than the one before...
-                        if ( (currDistance < minDistance) )
+                        aimed_enemy = m_Hits[i].transform.gameObject;
+                        if(storedAimed_enemy != aimed_enemy)
                         {
-                            sphere_aimed_turret = hitColliders[i].transform.gameObject;
-                            minDistance = currDistance;
+                            storedAimed_enemy = aimed_enemy;
+                            p_movement.animateCollision("newEnemyAim", new Vector3(0, 0, 0), storedAimed_enemy);
                         }
 
-                        turretInSight++;
+                        enemy_inSight++;
+
+                        break;
                     }
                 }
 
-                if( (sphereStored_aimed_turret != sphere_aimed_turret) && (!firstEverDetectedEnemy || (sphere_aimed_turret != null) ) )
-                {
-                    p_movement.animateCollision("newEnemyAim", new Vector3(0, 0, 0), sphere_aimed_turret);
-                    sphereStored_aimed_turret = sphere_aimed_turret;
-                    firstEverDetectedEnemy = true;
-                }
-
-                if( turretInSight == 0  && (sphere_aimed_turret != null) )
-                {
+                if(enemy_inSight == 0 && (aimed_enemy != null) )
                     p_movement.animateCollision("emptyEnemyAim", new Vector3(0, 0, 0));
-                    sphere_aimed_turret = null;
-                    sphereStored_aimed_turret = null;
+                    aimed_enemy = null;
+    
+            }
+
+
+
+
+
+
+
+            // Player Box Auto-Aim
+            if(slcted_clsion == "boxAutoAim")
+            {
+                float minDistance = float.MaxValue;
+
+                
+                // DisplayBox(transform.position,  
+                //     new Vector3(4f, 12f, player_attackRange), 
+                //     wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
+                // );
+
+                Collider[] hitColliders = Physics.OverlapBox(transform.position,
+                    new Vector3(4f, 12f, player_attackRange),
+                    wallRun_aimBox ? Quaternion.Euler(0, transform.rotation.y, z_wallRun_aimRotation) : transform.rotation
+                );
+
+                if(hitColliders.Length > 0)
+                {   
+                    turretInSight = 0;
+                    for (int i = 0; i < hitColliders.Length; i ++)
+                    {   
+                        if(hitColliders[i].tag == "TURRET" || hitColliders[i].tag == "ENEMY")
+                        {
+                            Vector3 possiblePosition = hitColliders[i].transform.position;
+                        
+                            float currDistance = Vector3.Distance(transform.position, possiblePosition);
+                            float zDist = possiblePosition.z - transform.position.z;
+
+                            if(zDist < 1f) continue;
+
+                            // If the distance is smaller than the one before...
+                            if ( (currDistance < minDistance) )
+                            {
+                                sphere_aimed_turret = hitColliders[i].transform.gameObject;
+                                minDistance = currDistance;
+                            }
+
+                            turretInSight++;
+                        }
+                    }
+
+                    if( (sphereStored_aimed_turret != sphere_aimed_turret) && (!firstEverDetectedEnemy || (sphere_aimed_turret != null) ) )
+                    {
+                        p_movement.animateCollision("newEnemyAim", new Vector3(0, 0, 0), sphere_aimed_turret);
+                        sphereStored_aimed_turret = sphere_aimed_turret;
+                        firstEverDetectedEnemy = true;
+                    }
+
+                    if( turretInSight == 0  && (sphere_aimed_turret != null) )
+                    {
+                        p_movement.animateCollision("emptyEnemyAim", new Vector3(0, 0, 0));
+                        sphere_aimed_turret = null;
+                        sphereStored_aimed_turret = null;
+                    }
                 }
             }
         }
 
 
 
-
-   
     }
 
     //Draw the Box Overlap as a gizmo to show where it currently is testing. Click the Gizmos button to see this
@@ -319,7 +336,7 @@ public class PlayerCollisions : MonoBehaviour
     //                 // Grnd hit
     //                 if(other.collider.gameObject.tag == "ground")
     //                 {
-    //                     FindObjectOfType<PlayerMovement>().animateCollision("groundHit", _size);
+    //                     p_movement.animateCollision("groundHit", _size);
     //                     if(grnd_mat != null)
     //                     {
     //                         Collider p =  other.collider.gameObject.GetComponent<Collider>();
@@ -343,7 +360,7 @@ public class PlayerCollisions : MonoBehaviour
                     // Grnd hit
                     if(collision.gameObject.tag == "ground")
                     {
-                        FindObjectOfType<PlayerMovement>().animateCollision("groundHit", _size);
+                        p_movement.animateCollision("groundHit", _size);
                         if(grnd_mat != null)
                         {
                             Collider p =  collision.gameObject.GetComponent<Collider>();
@@ -351,31 +368,31 @@ public class PlayerCollisions : MonoBehaviour
                         }
                     }
                     // Obstcl hit
-                    if(collision.gameObject.tag == "obstacle") FindObjectOfType<PlayerMovement>().animateCollision("obstacleHit", _size, collision.gameObject);
+                    if(collision.gameObject.tag == "obstacle") p_movement.animateCollision("obstacleHit", _size, collision.gameObject);
 
                     // Launcher jmp
-                    if(collision.gameObject.tag == "launcher") FindObjectOfType<PlayerMovement>().animateCollision("launcherHit", _size);
+                    if(collision.gameObject.tag == "launcher") p_movement.animateCollision("launcherHit", _size);
 
                     // Tyro hit
-                    if(collision.gameObject.tag == "tyro") FindObjectOfType<PlayerMovement>().tyro_movement(collision.gameObject);
+                    if(collision.gameObject.tag == "tyro") p_movement.tyro_movement(collision.gameObject);
 
                     // Bumper jmp
                     if(collision.gameObject.tag == "bumper")
                     {
                         GameObject pr_gm = collision.gameObject.transform.parent.gameObject == null ? collision.gameObject.transform.parent.gameObject : collision.gameObject;
                         LeanTween.scale(pr_gm, pr_gm.transform.localScale * 1.2f, 0.4f).setEasePunch();
-                        FindObjectOfType<PlayerMovement>().animateCollision("bumperJump", _size);
+                        p_movement.animateCollision("bumperJump", _size);
                     }
 
                     // Tap Tap Jump
-                    if(collision.gameObject.tag == "tapTapJump") FindObjectOfType<PlayerMovement>().animateCollision("tapTapJump", _size, collision.gameObject);
+                    if(collision.gameObject.tag == "tapTapJump") p_movement.animateCollision("tapTapJump", _size, collision.gameObject);
                     
                     break;
 
                 case "frontwall":
 
                     // front wall gameover
-                    if(collision.gameObject.tag == "ground") FindObjectOfType<PlayerMovement>().animateCollision("frontWallHit", _size);
+                    if(collision.gameObject.tag == "ground") p_movement.animateCollision("frontWallHit", _size);
 
                     break;
 
@@ -388,9 +405,9 @@ public class PlayerCollisions : MonoBehaviour
                             lst_wall = (collision.gameObject.GetInstanceID());
                             Vector3 targetDir = collision.gameObject.transform.position - ply_transform.position;
                             float angle = Vector3.Angle(targetDir, transform.forward);
-                            FindObjectOfType<PlayerMovement>().animateCollision("wallRunHit", _size, collision.gameObject);
+                            p_movement.animateCollision("wallRunHit", _size, collision.gameObject);
                             FindObjectOfType<PlayerVectors>().slippery_trigr(false, collision.gameObject);
-                            FindObjectOfType<CameraMovement>().wal_rn_offset(false, collision.gameObject.transform);
+                            c_movement.wal_rn_offset(false, collision.gameObject.transform);
                         }
                     }
                     break; 
@@ -402,8 +419,8 @@ public class PlayerCollisions : MonoBehaviour
                         Vector3 scaleV3 = new Vector3(collision.gameObject.transform.localScale.x * 1.4f, collision.gameObject.transform.localScale.y, collision.gameObject.transform.localScale.z * 1.4f);
                         LeanTween.scale(collision.gameObject, scaleV3, 0.85f).setEasePunch();
 
-                        FindObjectOfType<PlayerMovement>().animateCollision("sliderHit", _size);
-                        FindObjectOfType<CameraMovement>().sld_offset(false);
+                        p_movement.animateCollision("sliderHit", _size);
+                        c_movement.sld_offset(false);
                     }  
                     break;
 
@@ -413,11 +430,12 @@ public class PlayerCollisions : MonoBehaviour
                     switch(collision.gameObject.tag)
                     {
                         case "coin":
-                            FindObjectOfType<PlayerMovement>().animateCollision("sliderHit", _size);
+                            p_movement.animateCollision("sliderHit", _size);
                             break;
                         case "gun":
                             collision.gameObject.SetActive(false);
-                            FindObjectOfType<PlayerMovement>().animateCollision("gun", _size);
+                            p_movement.animateCollision("gun", _size);
+                            FindObjectOfType<Weapon>().GunLevelUp();
                             break;
                     }
                     break;
@@ -436,10 +454,10 @@ public class PlayerCollisions : MonoBehaviour
             {
                 case "ground":
                     // Ground leave
-                    if(collision.gameObject.tag == "ground") FindObjectOfType<PlayerMovement>().animateCollision("groundLeave", _size);
+                    if(collision.gameObject.tag == "ground") p_movement.animateCollision("groundLeave", _size);
                     
                     // Obstacl leave
-                    if(collision.gameObject.tag == "obstacle") FindObjectOfType<PlayerMovement>().animateCollision("obstacleLeave", _size, collision.gameObject);
+                    if(collision.gameObject.tag == "obstacle") p_movement.animateCollision("obstacleLeave", _size, collision.gameObject);
                     
                     break;
 
@@ -447,9 +465,10 @@ public class PlayerCollisions : MonoBehaviour
                     // Wall run exit
                     if(collision.gameObject.tag == "ground")
                     {
-                        FindObjectOfType<PlayerMovement>().animateCollision("wallRunExit", _size);
+                        Invoke("clearLastWall", 0.25f);
+                        p_movement.animateCollision("wallRunExit", _size);
                         FindObjectOfType<PlayerVectors>().slippery_trigr(true, collision.gameObject);
-                        FindObjectOfType<CameraMovement>().wal_rn_offset(true, collision.gameObject.transform);
+                        c_movement.wal_rn_offset(true, collision.gameObject.transform);
                     }
                     break; 
 
@@ -459,9 +478,9 @@ public class PlayerCollisions : MonoBehaviour
                     {
                         LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.08f, 1f).setEasePunch();
                         
-                        FindObjectOfType<PlayerMovement>().animateCollision("groundLeave", _size);
-                        FindObjectOfType<PlayerMovement>().animateCollision("sliderLeave", _size);
-                        FindObjectOfType<CameraMovement>().sld_offset(true);
+                        p_movement.animateCollision("groundLeave", _size);
+                        p_movement.animateCollision("sliderLeave", _size);
+                        c_movement.sld_offset(true);
                     }  
                     break;
 
@@ -470,6 +489,8 @@ public class PlayerCollisions : MonoBehaviour
             }
         }
     }
+
+    private void clearLastWall() { lst_wall  = 0; }
 
     private IEnumerator delay_trgrs(float dl)
     {
