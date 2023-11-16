@@ -15,11 +15,12 @@ public class Weapon : MonoBehaviour
     private bool ammo_fixed  = true;
 
     [Header ("Weapon Statistics")]
-    private const int damage = 25;
+    private const int damage = 27;
     private const int precision_ = 20;
     private const float fireRate = 0.4f;
-    private const int criticalChance = 20;
+    private const int criticalChance = 7; //   7/100
     private const int range_ = 30;
+    private const int magSize = 12;
 
     [Header ("Weapon Precision")]
 
@@ -27,11 +28,9 @@ public class Weapon : MonoBehaviour
     private PlayerMovement pm;
     private PlayerCollisions pm_cls;
 
-    [Header ("Weapon FireRate")]
-    private int attackRange_ = 0;
     public int get_attRange {
         set {return; }
-        get{ return attackRange_;}
+        get{ return range_;}
     }
 
     [Header ("Weapon FireRate")]
@@ -46,14 +45,16 @@ public class Weapon : MonoBehaviour
     // [Header ("Weapon Level")]
     public enum GunLevel
     {
-        ONE,
-        TWO,
-        THREE,
-        FOUR,
-        FIVE,
-        SIX
+        COMMON,
+        RARE,
+        SUPER_RARE,
+        EPIC,
+        LEGENDARY,
+        MYTHIC,
+        ETERNAL
     };
     [SerializeField]
+
     GunLevel gun_level = new GunLevel();
     public GunLevel set_GunLevel{
         get {return 0;}
@@ -96,10 +97,32 @@ public class Weapon : MonoBehaviour
         get{return weaponsResourcesPrefab_buffer;}
     }
 
+    [Header ("Weapon 3D-UI Slot")]
+    private GameObject wpn_prefab;
+
+
+    [Header ("Game-UI")]
+    private GameUI g_ui;
+
+
+    // [Header ("Weapon-Type")]
+    private enum GunType
+    {
+        PISTOL,
+        SHOTGUN,
+        SMG,
+        RIFLE,
+        SNIPER,
+        MYTHIC,
+    };
+
+
+
     // Awake is called even if the script is disabled
     private void Awake()
     {
         m_r = gameObject.GetComponentsInChildren<Transform>();
+        g_ui = FindObjectOfType<GameUI>();
 
         // init all guns (Assets/Resources/CollectibleGuns/0)
         // load gun prefabs
@@ -110,6 +133,7 @@ public class Weapon : MonoBehaviour
             weaponsResourcesPrefab_buffer[i] = (t) as GameObject;
             i++;
         }
+        wpn_prefab = weaponsResourcesPrefab_buffer[0];
     }
 
 
@@ -120,7 +144,7 @@ public class Weapon : MonoBehaviour
         pm = FindObjectOfType<PlayerMovement>();
 
         pm_cls = FindObjectOfType<PlayerCollisions>();
-        pm_cls.set_AttackRange = attackRange_;
+        pm_cls.set_AttackRange = range_;
 
         ps_shots = gameObject.GetComponentsInChildren<ParticleSystem>();
 
@@ -156,6 +180,16 @@ public class Weapon : MonoBehaviour
     }
 
 
+    // private method to get enum position number
+    private int GetEnumPosition<T>(T src) where T : struct
+    {
+        if (!typeof(T).IsEnum) throw new ArgumentException(String.Format("Argument {0} is not an Enum", typeof(T).FullName));
+
+        T[] Arr = (T[])Enum.GetValues(src.GetType());
+        int j = Array.IndexOf<T>(Arr, src);
+        return j;            
+    }
+
 
     // private method to get next LevelEnum Value
     private T Next<T>(T src) where T : struct
@@ -169,16 +203,14 @@ public class Weapon : MonoBehaviour
 
     public void GunLevelUp()
     {
-        attackRange_ = range_;
 
         pm_cls = FindObjectOfType<PlayerCollisions>();
-        pm_cls.set_AttackRange = attackRange_;
+        pm_cls.set_AttackRange = range_;
+
         gun_level =  Next(gun_level);
-        // Collectible[] cltbl_ = FindObjectsOfType<Collectible>();
-        // foreach (Collectible cl_ in cltbl_)
-        // {
-        //     if(cl_.)
-        // }
+
+        wpn_prefab = weaponsResourcesPrefab_buffer[GetEnumPosition(gun_level)];
+        g_ui.Gun_levelUp(GetEnumPosition(gun_level));
     }
 
 
@@ -193,14 +225,18 @@ public class Weapon : MonoBehaviour
         pm.set_recoil = 0f;
         StartCoroutine(shoot_recoil());
 
-        ammo--;
+        // ammo--;
 
         GameObject new_bullet =  Instantiate(weapon_bullets[0], fire_point[point_indx].position, fire_point[point_indx].rotation);
         A_T_Projectile proj_scrpt = new_bullet.GetComponent<A_T_Projectile>();
+        
+        float cr = UnityEngine.Random.Range(0, 100);
+        bool is_criticalHit = cr <= criticalChance ? true : false;
 
         AutoTurret AT_ = target_transform.gameObject.GetComponent<AutoTurret>();
         if(AT_ != null) proj_scrpt.target_isLeft = AT_.is_left;
 
+        proj_scrpt.is_crticial = is_criticalHit;
         proj_scrpt.plyr_target = target_transform;
         proj_scrpt.horitzontal_target = horizontal_enm;
         proj_scrpt.weapon_dmg = damage;
@@ -258,7 +294,7 @@ public class Weapon : MonoBehaviour
     // public reload method
     public void reload()
     {
-        ammo = 2;
+        ammo = magSize;
     }
 
     // turn off meshes, partsystms, etc..
@@ -269,19 +305,23 @@ public class Weapon : MonoBehaviour
         if(pocket_weapon == null)
         {
             pocket_slot[0].SetActive(false);
-            for(int k = 0; k < m_r.Length; k++)
+            for(int k = 0; k < m_r.Length; k++){
+                if(m_r[k] == gameObject.transform) continue;
                 m_r[k].gameObject.SetActive(false);
+            }
         }
         else if ((bool?)pocket_weapon == true)
         {
-            for(int j = 0; j < m_r.Length; j++)
+            for(int j = 0; j < m_r.Length; j++){
+                if(m_r[j] == gameObject.transform) continue;
                 m_r[j].gameObject.SetActive(false);
-
+            }
             pocket_slot[0].SetActive(true);
         }
         else if ((bool?)pocket_weapon == false)
         {
             for(int i = 0; i < m_r.Length; i++){
+                if(m_r[i] == gameObject.transform) continue;
                 m_r[i].gameObject.SetActive(true);
             }
             pocket_slot[0].SetActive(false);

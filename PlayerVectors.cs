@@ -60,8 +60,7 @@ public class PlayerVectors : MonoBehaviour
     // And rotate player
     public void slippery_trigr(bool is_exit, GameObject init_gmbj)
     {
-        if(init_gmbj == last_gm) return;
-        else last_gm = init_gmbj;
+ 
         
 
         // Htbox I/O
@@ -89,6 +88,9 @@ public class PlayerVectors : MonoBehaviour
             }
 
         }
+
+        if(init_gmbj == last_gm) return;
+        else last_gm = init_gmbj;
 
         // Disable previous slippery arr
         if(acutal_grnds[0] != null)

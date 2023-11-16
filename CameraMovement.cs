@@ -8,7 +8,7 @@ using System.Linq;
 public class CameraMovement : MonoBehaviour
 {
     [Header ("Camera Smooth Auto-Aim divisor")]
-    private const float divisor = 70f;
+    private const float divisor = 75f;
 
     [Header ("Camera Main Rotation Ratio")]
     private const float x_ratio = -0.0590f;
@@ -94,6 +94,7 @@ public class CameraMovement : MonoBehaviour
 
     [Header ("Player Actions Informations")]
     private bool tyro_on = false;
+    private bool slideRail_on = false;
     private bool grappl_on = false;
     private bool sliding_on = false;
     private bool rotate_back = false;
@@ -302,11 +303,13 @@ public class CameraMovement : MonoBehaviour
             float euler_x_fixed = aiming_rotation.eulerAngles.x > 180f ?  (aiming_rotation.eulerAngles.x - 360f) : (aiming_rotation.eulerAngles.x);
             
             // Dampen towards the target rotation
+            bool aim_off =  (aimed_target == null || tyro_on  || slideRail_on) ? true : false;
+
             Quaternion desired_rt  = new Quaternion(xRot + supl_xRot + rot_dc["wallR_rot_x_offst"] 
-                  + ((aimed_target == null )? 0 : (euler_x_fixed * xy_ratio) / (divisor / 3))
+                  + ((aim_off)? 0 : (euler_x_fixed * xy_ratio) / (divisor * 0.35f))
                 ,
                  (x_offst / 110.0f) + rot_dc["wallR_rot_y_offst"] 
-                  + ((aimed_target == null )? 0 : (euler_y_fixed * xy_ratio) / divisor)
+                  + ((aim_off)? 0 : (euler_y_fixed * xy_ratio) / divisor)
                 , 
                 (x_offst / 1000.0f) + rot_dc["wallR_rot_z_offst"],
                  1
@@ -322,7 +325,7 @@ public class CameraMovement : MonoBehaviour
                 ( grappl_on ? 
                   0.0710f 
                 :
-                  (tyro_on) ? 0.130f : 0.055f
+                  (tyro_on) ? 0.130f : 0.060f
                 )
             ); 
 
@@ -364,7 +367,7 @@ public class CameraMovement : MonoBehaviour
 
 
     // Wall run
-    public void wal_rn_offset(bool is_ext, Transform gm_)
+    public void wal_rn_offset(bool is_ext, Transform gm_, float y_bonuss = 0.0f)
     {
         if(is_ext)
         {
@@ -382,12 +385,13 @@ public class CameraMovement : MonoBehaviour
 
             float sns =  player.position.x - gm_.position.x;
 
+            Debug.Log(y_bonuss);
             //FovTrans(start_fov, 0.5f);
             new_fov = 93f;
             pos_dc["wallR_y_offst"] = -0.75f;
 
             // SPACE UP || CLOSE UP Z OFFSET
-            pos_dc["wallR_z_offst"] = (sns < 0) ? 0.1f :  0.85f;
+            pos_dc["wallR_z_offst"] = (sns < 0) ? 0.4f :  0.85f;
 
             // ROTATE TOP
             rot_dc["wallR_rot_x_offst"] = -0.1f;
@@ -398,13 +402,14 @@ public class CameraMovement : MonoBehaviour
             {
                 // right wall hit
                 pos_dc["wallR_x_offst"] = 1.4f; 
-                rot_dc["wallR_rot_y_offst"] = -0.390f; 
+                rot_dc["wallR_rot_y_offst"] = -0.390f + (-1 * (y_bonuss / 200));
 
             }else
             {
                 // left wall hit
-                pos_dc["wallR_x_offst"] = 2.70f;
-                rot_dc["wallR_rot_y_offst"] = -0.325f;
+                pos_dc["wallR_x_offst"] = 2.70f + (y_bonuss / 10);
+                rot_dc["wallR_rot_y_offst"] = -0.325f + 1 * (y_bonuss / 100); 
+               
             }
         }
     }
@@ -593,7 +598,6 @@ public class CameraMovement : MonoBehaviour
     {
         reset_smoothDmpfnc();  
 
-        Debug.Log("kill cam anim");
         iterator_ = 3;
         List<float> v_flt; List<string> s_arr;
         

@@ -34,7 +34,19 @@ public class Collectible : MonoBehaviour {
     private int elapsedFrames = 0;
     private int elapsedFrames2 = 0;
 
-    [Header ("Collectible Weapon")]
+    // [Header ("Collectible Type")]
+   private enum CollectibleType
+    {
+        Coin,
+        Ammo,
+        Weapon,
+        Health,
+        Armor,
+        Companion,
+    };
+    [SerializeField] 
+    CollectibleType collectible_type = new CollectibleType();
+
     [SerializeField] private bool is_weapon;
     
     [Header ("Weapon Objects")]
@@ -51,17 +63,10 @@ public class Collectible : MonoBehaviour {
     private Transform chld_nOne;
 
     
-    private int weapon_levelValue = 0;
-
     [Header ("Weapon Resources")]
     private GameObject[] weaponsPrefabs;
 
 
-    private void Awake ()
-    {
-
-    }
-    
 	private void Start ()
     {
         // init start scale 
@@ -71,8 +76,8 @@ public class Collectible : MonoBehaviour {
             StartCoroutine(infiniteScale());
         }
         
-        if(is_weapon)
-        {
+        // if(is_weapon)
+        // {
             // weapon_scrpt = FindObjectOfType<Weapon>();
             // weaponsPrefabs = weapon_scrpt.get_weaponsResourcesPrefab_buffer;
             
@@ -92,7 +97,7 @@ public class Collectible : MonoBehaviour {
             // chld_nOne = transform.GetChild(1);
 
             // UpgradeGunCollectible();
-        }
+        // }
 	}
 	
 
@@ -168,7 +173,7 @@ public class Collectible : MonoBehaviour {
 
     private void FixedUpdate()
     {
-        if(is_weapon && weapon_scrpt == null)
+        if((collectible_type == CollectibleType.Weapon) && weapon_scrpt == null)
         {
             weapon_scrpt = FindObjectOfType<Weapon>();
             if(weapon_scrpt == null) return;
@@ -193,7 +198,7 @@ public class Collectible : MonoBehaviour {
         }
 
 
-        if(is_weapon && weapon_scrpt != null)
+        if((collectible_type == CollectibleType.Weapon)  && weapon_scrpt != null)
         {
             if(last_weapon_EnumValue != null)
             {
@@ -226,7 +231,7 @@ public class Collectible : MonoBehaviour {
     {
         
         int gun_lvl = GetEnumPosition(weapon_scrpt.get_GunLvl);
-        weapon_levelValue = gun_lvl;
+        if(gun_lvl == 6) return;
 
         //destroy lastPrefabs
         if( (transform.GetChild(1)).GetChild(0).gameObject != null)

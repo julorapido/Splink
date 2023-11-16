@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Linq;
 
 public class Buildings : MonoBehaviour
 {
@@ -63,9 +64,11 @@ public class Buildings : MonoBehaviour
             for(int i = 0; i < ln_; i ++)
             {
                 if(x_pos > fnc_gn_w){break;}
+
                 int rdm_ = UnityEngine.Random.Range(0, ln_);/// RAND bat indx
                 GameObject sl = buildngs_prefb[rdm_];
                 Vector2 bld_sze = new Vector2(0, 0); // Type of => Vect2 [width(x-axis), profondeur(z-axis)]
+                
                 float bld_wdth = 0.0f; // Actual Width of BLDG
                 bool prnt_passed = false; bool is_prnt_cldr = false;
                 int indx_scale = 0;
@@ -188,6 +191,8 @@ public class Buildings : MonoBehaviour
                 if(buffer_sect.transform.childCount >= 2)
                 {
                     combine_Meshes(buffer_sect, buffer_sect.transform.childCount);
+                    // generate_SubTerrain(buffer_sect);
+                    generateBounds(buffer_sect);
                 }
 
                 x_pos += sl_size.x;
@@ -200,7 +205,6 @@ public class Buildings : MonoBehaviour
         }
 
 
-        generate_SubTerrain();
     }
 
 
@@ -697,26 +701,86 @@ public class Buildings : MonoBehaviour
 
 
 
-
-
-
-
-    private void generate_SubTerrain()
+    private void generate_SubTerrain(GameObject whole_sect)
     {
-        GameObject[] allBuildngs_ = GameObject.FindGameObjectsWithTag("ground");
-        //Debug.Log(allBuildngs_.Length);
+        GameObject[] allBuildngs_ = GameObject.FindGameObjectsWithTag("ground");
+
+        // fetch bldg sizes
         for(int i = 0; i < allBuildngs_.Length; i ++)
         {
-            if(!allBuildngs_[i].activeSelf) continue; // since all buildings were baked/combined
+            if(!allBuildngs_[i].activeSelf || 
+                !allBuildngs_[i].transform.IsChildOf(whole_sect.transform)
+            ) continue; // since all buildings were baked/combined
 
             Mesh bldg_mesh = allBuildngs_[i].GetComponent<MeshFilter>().sharedMesh;
             Collider[] bldg_colldrs = allBuildngs_[i].GetComponents<Collider>();
             
-            
+            float[] x_ = ((bldg_colldrs as IEnumerable<Collider>).Select(
+                x => x.bounds.size.x * allBuildngs_[i].transform.localScale.x)
+            ).ToArray();
+            float[] z_ = ((bldg_colldrs as IEnumerable<Collider>).Select(
+                z => z.bounds.size.z * allBuildngs_[i].transform.localScale.z)
+            ).ToArray();
+
+            Array.Sort(x_); Array.Sort(z_);
+
         }
     }
 
 
+    private void generateBounds(GameObject whole_sct)
+    {
+        GameObject[] allBuildngs_ = GameObject.FindGameObjectsWithTag("ground");
+
+        float[] l_ = new float[80]; int l_i = 0;
+        float[] r_ = new float[80]; int r_i = 0;
+
+        // fetch bldg sizes
+        for(int i = 0; i < allBuildngs_.Length; i ++)
+        {
+            if(!allBuildngs_[i].activeSelf || 
+                !allBuildngs_[i].transform.IsChildOf(whole_sct.transform)
+            ) continue; // since all buildings were baked/combined
+
+            Mesh bldg_mesh = allBuildngs_[i].GetComponent<MeshFilter>().sharedMesh;
+            Collider[] bldg_colldrs = allBuildngs_[i].GetComponents<Collider>();
+            
+            if(bldg_colldrs.Length == 0) continue;
+
+            float[] x_ = ((bldg_colldrs as IEnumerable<Collider>).Select(
+                x => x.bounds.size.x * allBuildngs_[i].transform.localScale.x)
+            ).ToArray();
+            // float[] z_ = ((bldg_colldrs as IEnumerable<Collider>).Select(
+            //     z => z.bounds.size.z * allBuildngs_[i].transform.localScale.z)
+            // ).ToArray();
+
+            Array.Sort(x_); // Array.Sort(z_);
+
+            float c_size = ((allBuildngs_[i].transform.localScale.x * x_[x_.Length - 1 >= 0 ? x_.Length - 1 : 0]) / 2) / 10;
+            if(c_size < 0.1f) continue;
+
+            if(allBuildngs_[i].transform.localPosition.x > 1){
+                r_[r_i] = c_size + allBuildngs_[i].transform.position.x;
+                r_i++;
+            }else{
+                l_[l_i] = c_size - allBuildngs_[i].transform.position.x;
+                l_i++;
+            }
+        }
+        Array.Sort(l_); Array.Sort(r_);
+
+        GameObject sc_bounds = new GameObject();
+        sc_bounds.name = "section_bounds";
+        GameObject bounds = Instantiate(sc_bounds, new Vector3(0,0,0), Quaternion.identity, whole_sct.transform);
+
+        BoxCollider l = bounds.AddComponent<BoxCollider>();
+        BoxCollider r = bounds.AddComponent<BoxCollider>();
+
+        r.size = l.size = new Vector3(1, 50, 200);
+
+        l.center = new Vector3(l_[l_.Length - 1], 0, 0);
+        r.center = new Vector3(r_[r_.Length - 1], 0, 0);
+    }
 
 
 }

@@ -105,6 +105,8 @@ public class Grappling : MonoBehaviour
 
     private void DrawRope()
     {
+        if(lr == null) return;
+        
         if(!is_grpling_)
         {
             lr.positionCount = 0;

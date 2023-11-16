@@ -10,7 +10,7 @@ public class PlayerCollisions : MonoBehaviour
 {
 
     [Header ("Collisions Constants")]
-    public string[] colsions_values = new string[7]{"ground", "frontwall","sidewall", "slider", "missiles", "collectibles", "boxAutoAim"};
+    public string[] colsions_values = new string[7]{"ground", "frontwall","sidewall", "slider", "enemyProj", "collectibles", "boxAutoAim"};
 
     [Header ("SubCollisions Constants")]
     private string[] subcolsions_values = new string[5]{"obstacleHit", "launcherHit","tyro", "bumper", "tapTapJump"};
@@ -239,6 +239,7 @@ public class PlayerCollisions : MonoBehaviour
 
 
 
+            bool enemy_destroyed = false;
 
             // Player Box Auto-Aim
             if(slcted_clsion == "boxAutoAim")
@@ -246,13 +247,13 @@ public class PlayerCollisions : MonoBehaviour
                 float minDistance = float.MaxValue;
 
                 
-                // DisplayBox(transform.position,  
-                //     new Vector3(4f, 12f, player_attackRange), 
-                //     wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
-                // );
+                DisplayBox(transform.position,  
+                    new Vector3(4f, 10f, player_attackRange), 
+                    wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
+                );
 
                 Collider[] hitColliders = Physics.OverlapBox(transform.position,
-                    new Vector3(4f, 12f, player_attackRange),
+                    new Vector3(4f, 10f, player_attackRange),
                     wallRun_aimBox ? Quaternion.Euler(0, transform.rotation.y, z_wallRun_aimRotation) : transform.rotation
                 );
 
@@ -303,7 +304,7 @@ public class PlayerCollisions : MonoBehaviour
     }
 
     //Draw the Box Overlap as a gizmo to show where it currently is testing. Click the Gizmos button to see this
-    void OnDrawGizmos()
+    private void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
         //Check that it is being run in Play Mode, so it doesn't try to draw this in Editor mode
@@ -328,26 +329,6 @@ public class PlayerCollisions : MonoBehaviour
 //         }
 //     }
 
-    // private void OnCollisionEnter(Collision other)
-    // {
-    //     Vector3 _size = other.collider.bounds.size;
-    //     switch (slcted_clsion){
-    //             case "ground":
-    //                 // Grnd hit
-    //                 if(other.collider.gameObject.tag == "ground")
-    //                 {
-    //                     p_movement.animateCollision("groundHit", _size);
-    //                     if(grnd_mat != null)
-    //                     {
-    //                         Collider p =  other.collider.gameObject.GetComponent<Collider>();
-    //                         if(p){ p.sharedMaterial = grnd_mat;}
-    //                     }
-    //                 }
-    //                 break;
-    //             default:
-    //                 break;
-    //     }
-    // }
 
     private void OnTriggerEnter(Collider collision)
     {
@@ -407,7 +388,7 @@ public class PlayerCollisions : MonoBehaviour
                             float angle = Vector3.Angle(targetDir, transform.forward);
                             p_movement.animateCollision("wallRunHit", _size, collision.gameObject);
                             FindObjectOfType<PlayerVectors>().slippery_trigr(false, collision.gameObject);
-                            c_movement.wal_rn_offset(false, collision.gameObject.transform);
+                            // c_movement.wal_rn_offset(false, collision.gameObject.transform); moved to playermovement.cs
                         }
                     }
                     break; 
@@ -421,7 +402,13 @@ public class PlayerCollisions : MonoBehaviour
 
                         p_movement.animateCollision("sliderHit", _size);
                         c_movement.sld_offset(false);
-                    }  
+                    } 
+                    // Slide Rail
+                    if(collision.gameObject.tag == "slideRail")
+                    {
+                        p_movement.animateCollision("railSlide", _size, collision.gameObject);
+                        // c_movement.sld_offset(false);
+                    }   
                     break;
 
 
@@ -438,6 +425,9 @@ public class PlayerCollisions : MonoBehaviour
                             FindObjectOfType<Weapon>().GunLevelUp();
                             break;
                     }
+                    break;
+                case "enemyProj":
+
                     break;
                 default:
                     break;
@@ -481,7 +471,11 @@ public class PlayerCollisions : MonoBehaviour
                         p_movement.animateCollision("groundLeave", _size);
                         p_movement.animateCollision("sliderLeave", _size);
                         c_movement.sld_offset(true);
-                    }  
+                    } 
+                    if(collision.gameObject.tag == "slideRail")
+                    {
+                        p_movement.animateCollision("railSlideExit", _size);
+                    }   
                     break;
 
                 default:
