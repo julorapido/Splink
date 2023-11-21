@@ -63,6 +63,7 @@ public class AutoTurret : MonoBehaviour
     [Header ("Turret Projectile")]
     public GameObject turret_bullet;
 
+
     [Header ("Turret Orientation")]
     public bool is_horizontal;
     public bool is_left;
@@ -633,7 +634,7 @@ public class AutoTurret : MonoBehaviour
         switch(dmg_status)
         {
             case "tr_Shootp":
-                dmg = (int) (wpn_damage * 2.25f);
+                dmg = (int) (wpn_damage * 1.90f);
                 break;
             case "tr_Stand":
                 dmg = (int) (wpn_damage * 0.75f);
@@ -642,15 +643,15 @@ public class AutoTurret : MonoBehaviour
             case "tr_Body":
             case "tr_Barrel":
             case "tr_BarrelHz":
-                float a_ = UnityEngine.Random.Range(0.87f, 1.15f);
+                float a_ = UnityEngine.Random.Range(0.85f, 1.18f);
                 dmg = (int) (wpn_damage * a_);
                 break;
             case "tr_Plate":
                 dmg = (int) (wpn_damage * 0.6f);
                 break;
             case "tr_Radar":
-                int r_ = UnityEngine.Random.Range(0, 2);
-                dmg = r_ == 0 ? (int) (wpn_damage * 1.6f) : (int) (wpn_damage * 2f);
+                float d_ = UnityEngine.Random.Range(1.4f, 1.70f);
+                dmg = (int) (wpn_damage * d_);
                 break;
         }
         int b_ = UnityEngine.Random.Range(-7, 7);
@@ -710,6 +711,7 @@ public class AutoTurret : MonoBehaviour
         }else
         {
             turret_health = turret_health - dmg;
+            // turret_health = turret_health - 2;
         }
 
 

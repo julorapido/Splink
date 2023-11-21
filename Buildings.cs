@@ -181,7 +181,9 @@ public class Buildings : MonoBehaviour
                 if(x_pos > fnc_gn_w) break;
 
                 int rdm_ = UnityEngine.Random.Range(0, ln_);/// RAND Section indx 
-                GameObject sl = sections_prefb[rdm_];
+                int rdm_2 = UnityEngine.Random.Range(0, ln_);/// RAND Section indx 
+                int r_ = UnityEngine.Random.Range(1, 3);/// RAND Section indx 
+                GameObject sl = sections_prefb[r_ == 1 ? rdm_ : rdm_2];
 
 
                 // Get Box Cldr Size as whole Sect Size

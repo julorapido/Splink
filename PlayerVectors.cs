@@ -38,7 +38,7 @@ public class PlayerVectors : MonoBehaviour
         {
             foreach (var cl_ in hitColliders)
             {
-                if(cl_.gameObject.tag == "ground")
+                if(cl_.gameObject.tag == "ground" || cl_.gameObject.tag == "ramp")
                 {
                     Vector3 col_sz = cl_.bounds.size;
                     if(col_sz.x > 20f && col_sz.y > 7f)
@@ -73,19 +73,19 @@ public class PlayerVectors : MonoBehaviour
             // make plyr rotate 
             float y_rt = init_gmbj.transform.rotation.eulerAngles.y;
 
-            if(  (y_rt < -43.0f) ||  (y_rt > 43.0f) )
-            {
+            // if(  (y_rt < -43.0f) ||  (y_rt > 43.0f) )
+            // {
                 Quaternion n_ = Quaternion.identity;
                 n_.eulerAngles = new Vector3(0, y_rt < 0f ? -37.0f : 37.0f, 0);
-
+                // Debug.Log("regular");
                 plyr_trsnfm.rotation = n_;
-            }else
-            {
-                Quaternion p_  = Quaternion.identity;
-                p_.eulerAngles =  new Vector3(0, y_rt, 0);
-
-                plyr_trsnfm.rotation = p_;
-            }
+            // }else
+            // {
+                // Quaternion p_  = Quaternion.identity;
+                // p_.eulerAngles =  new Vector3(0, y_rt, 0);
+                // Debug.Log("goofy");
+                // plyr_trsnfm.rotation = p_;
+            // }
 
         }
 
@@ -104,7 +104,9 @@ public class PlayerVectors : MonoBehaviour
         }
  
         Collider pr_col_ = init_gmbj.transform.parent.gameObject.GetComponent<Collider>();
-        GameObject prnt_gmbj =  ((pr_col_ != null) && (pr_col_?.tag == "ground")) ? null : init_gmbj.transform.parent.gameObject;
+        GameObject prnt_gmbj =  (
+            (pr_col_ != null) &&  (pr_col_?.tag == "ground" || pr_col_?.tag == "ramp")
+        ) ? null : init_gmbj.transform.parent.gameObject;
         
         int i = 0;
         // maybe parent is ground obj
@@ -121,7 +123,7 @@ public class PlayerVectors : MonoBehaviour
                 if(chld_cldrs != null)
                 {
                     //if(chld_?.gameObject?.GetComponent<BoxCollider>()?.tag == "ground" || chld_?.gameObject?.GetComponent<MeshCollider>()?.tag == "ground"){
-                    if(chld_cldrs?.tag == "ground")
+                    if(chld_cldrs?.tag == "ground" || chld_cldrs?.tag == "ramp")
                     {
                         acutal_grnds[i] = chld_.gameObject;
                         i++;

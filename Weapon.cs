@@ -15,9 +15,9 @@ public class Weapon : MonoBehaviour
     private bool ammo_fixed  = true;
 
     [Header ("Weapon Statistics")]
-    private const int damage = 27;
-    private const int precision_ = 20;
-    private const float fireRate = 0.4f;
+    private const int damage = 25;
+    private const int precision_ = 32;
+    private const float fireRate = 0.45f;
     private const int criticalChance = 7; //   7/100
     private const int range_ = 30;
     private const int magSize = 12;
@@ -242,12 +242,17 @@ public class Weapon : MonoBehaviour
         proj_scrpt.weapon_dmg = damage;
         proj_scrpt.player_ = transform.root;
 
-        float x_ = UnityEngine.Random.Range(-1*(100 - precision_) / 2, (100 - precision_) / 2);
-        float y_ = UnityEngine.Random.Range(-1*(100 - precision_) / 4, (100 - precision_) / 4);
-        x_ /= 18.5f; y_ /= 18.5f;
+        float x_ = UnityEngine.Random.Range(-1f *(100f - (float)(precision_)) / 2f, (100f - (float)(precision_)) / 2f);
+        float y_ = UnityEngine.Random.Range(-1f *(100f - (float)(precision_)) / 3f, (100f - (float)(precision_)) / 3f);
 
-        if( Vector3.Distance(target_transform.position, transform.position) < 20f) x_ /= 25;
-        if( Vector3.Distance(target_transform.position, transform.position) < 7f) x_ /= 50;
+        x_ /= 13f; y_ /= 12f;
+
+        if( Vector3.Distance(target_transform.position, transform.position) < 16f){
+            x_ /= 20f;
+            y_ /= 15;
+        }
+        if( Vector3.Distance(target_transform.position, transform.position) < 7f) 
+            y_ /= 10;
         
 
         Vector3 randomized_aim = new Vector3(x_, y_, 0);

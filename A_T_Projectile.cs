@@ -35,6 +35,9 @@ public class A_T_Projectile : MonoBehaviour
     [SerializeField]
     public turret_Type blt_type;
 
+    [Header ("Rocket Near-Inprecision")]
+    private float near_inPrecision = 0.0f;
+    
     [Header ("Attached Objects")]
     private MeshRenderer[] bullet_msh;
     private LineRenderer[] bullet_lr;
@@ -97,6 +100,8 @@ public class A_T_Projectile : MonoBehaviour
         bullet_qtrn = Vector3.RotateTowards(transform.forward, (plyr_target.position - transform.position), Time.deltaTime * 100, 0.0f);
 
 
+        near_inPrecision = UnityEngine.Random.Range(0.5f, 4f);
+
     }
 
 
@@ -107,8 +112,12 @@ public class A_T_Projectile : MonoBehaviour
     {
         if(blt_type != turret_Type.WeaponBullet)
         {
+            float passedNear_inPrecision =  ( blt_type == turret_Type.Normal || blt_type == turret_Type.Double ?
+                near_inPrecision : 0f
+            );
+            
             float dst_ = (transform.position.z - plyr_target.position.z);
-            if( (is_behind ? (dst_ > 0) : (dst_ < 0) ) && !plyr_passed)
+            if( (is_behind ? (dst_ > passedNear_inPrecision) : (dst_ < passedNear_inPrecision) ) && !plyr_passed)
             {
                 plyr_passed = true; speed *= 1.3f;
                 Invoke("bullet_explode", 0.5f);

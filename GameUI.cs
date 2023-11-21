@@ -154,10 +154,10 @@ public class GameUI : MonoBehaviour
                     float dmg_done = enemy_health - aimed_turretScrpt.get_health;
                     enemy_health = aimed_turretScrpt.get_health;
                     float x_health = (((float)enemy_health / (float)aimed_turretScrpt.turret_maxHealth) * 100f);
-                    LeanTween.scale(enemy_information.transform.GetChild(1).GetChild(1).gameObject, new Vector3(x_health / 100, 1, 1), 0.3f).setEaseInOutCubic();
+                    LeanTween.scale(enemy_information.transform.GetChild(1).GetChild(1).gameObject, new Vector3(x_health / 100, 1, 1), 0.25f).setEaseInOutCubic();
                     LeanTween.scale(enemy_information.transform.GetChild(1).GetChild(2).gameObject, 
                         new Vector3(x_health / 100, 1, 1), 
-                        0.2f + (dmg_done / 12)
+                        0.2f + (dmg_done / 70)
                     ).setEaseInOutCubic();
                     // enemy_information.transform.GetChild(1).GetChild(1).localScale = new Vector3(x_health / 100, 1, 1);
                 }
@@ -247,6 +247,7 @@ public class GameUI : MonoBehaviour
             enemy_health = at_turret.get_health;
             float x_health = (((float)enemy_health / (float)aimed_turretScrpt.turret_maxHealth) * 100f);
             enemy_information.transform.GetChild(1).GetChild(1).localScale = new Vector3(x_health / 100, 1, 1);
+            enemy_information.transform.GetChild(1).GetChild(2).localScale = new Vector3(x_health / 100, 1, 1);
 
         }
     }

@@ -368,6 +368,12 @@ public class PlayerCollisions : MonoBehaviour
                     // Tap Tap Jump
                     if(collision.gameObject.tag == "tapTapJump") p_movement.animateCollision("tapTapJump", _size, collision.gameObject);
                     
+                    // FallBox
+                    if(collision.gameObject.tag == "fallBox")
+                    {
+                        p_movement.animateCollision("fallBoxHit", _size, collision.gameObject);
+                        c_movement.fall_Box();
+                    }  
                     break;
 
                 case "frontwall":
@@ -379,17 +385,17 @@ public class PlayerCollisions : MonoBehaviour
 
                 case "sidewall":
                     // Sidewall hit
-                    if(collision.gameObject.tag == "ground")
+                    if(collision.gameObject.tag == "ground" || collision.gameObject.tag == "ramp" )
                     {
-                        if(lst_wall != collision.gameObject.GetInstanceID())
-                        {
+                        // if(lst_wall != collision.gameObject.GetInstanceID())
+                        // {
                             lst_wall = (collision.gameObject.GetInstanceID());
                             Vector3 targetDir = collision.gameObject.transform.position - ply_transform.position;
                             float angle = Vector3.Angle(targetDir, transform.forward);
                             p_movement.animateCollision("wallRunHit", _size, collision.gameObject);
                             FindObjectOfType<PlayerVectors>().slippery_trigr(false, collision.gameObject);
                             // c_movement.wal_rn_offset(false, collision.gameObject.transform); moved to playermovement.cs
-                        }
+                        // }
                     }
                     break; 
 
@@ -397,18 +403,30 @@ public class PlayerCollisions : MonoBehaviour
                     // Slider hit
                     if(collision.gameObject.tag == "slider")
                     {
-                        Vector3 scaleV3 = new Vector3(collision.gameObject.transform.localScale.x * 1.4f, collision.gameObject.transform.localScale.y, collision.gameObject.transform.localScale.z * 1.4f);
-                        LeanTween.scale(collision.gameObject, scaleV3, 0.85f).setEasePunch();
+                        LeanTween.moveLocal(collision.gameObject, 
+                            collision.gameObject.transform.localPosition + new Vector3(0f, -0.25f, 0f), 
+                        0.85f).setEaseInOutCubic();
 
                         p_movement.animateCollision("sliderHit", _size);
                         c_movement.sld_offset(false);
                     } 
+
                     // Slide Rail
                     if(collision.gameObject.tag == "slideRail")
                     {
                         p_movement.animateCollision("railSlide", _size, collision.gameObject);
                         // c_movement.sld_offset(false);
-                    }   
+                    }
+
+                    // Hang   
+                    if(collision.gameObject.tag == "hang") p_movement.animateCollision("hang", _size, collision.gameObject);
+
+                    // Ramp   
+                    if(collision.gameObject.tag == "ramp")
+                    {
+                        p_movement.animateCollision("rampSlide", _size, collision.gameObject);
+                        c_movement.rmp_slid_offst(false, collision.gameObject.transform);
+                    }
                     break;
 
 
@@ -444,38 +462,44 @@ public class PlayerCollisions : MonoBehaviour
             {
                 case "ground":
                     // Ground leave
-                    if(collision.gameObject.tag == "ground") p_movement.animateCollision("groundLeave", _size);
+                    if(collision.gameObject.tag == "ground" || collision.gameObject.tag == "fallBox")
+                        p_movement.animateCollision("groundLeave", _size);
                     
                     // Obstacl leave
-                    if(collision.gameObject.tag == "obstacle") p_movement.animateCollision("obstacleLeave", _size, collision.gameObject);
+                    if(collision.gameObject.tag == "obstacle")
+                        p_movement.animateCollision("obstacleLeave", _size, collision.gameObject);
                     
                     break;
 
                 case "sidewall":
                     // Wall run exit
-                    if(collision.gameObject.tag == "ground")
-                    {
-                        Invoke("clearLastWall", 0.25f);
+                    if(collision.gameObject.tag == "ground" || collision.gameObject.tag == "ramp")
                         p_movement.animateCollision("wallRunExit", _size);
                         FindObjectOfType<PlayerVectors>().slippery_trigr(true, collision.gameObject);
                         c_movement.wal_rn_offset(true, collision.gameObject.transform);
-                    }
+            
                     break; 
 
                 case "slider":
-                    // Slider leave
+                    // slider leave
                     if(collision.gameObject.tag == "slider")
                     {
-                        LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.08f, 1f).setEasePunch();
-                        
+                        LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.08f, 1f).setEasePunch(); 
                         p_movement.animateCollision("groundLeave", _size);
                         p_movement.animateCollision("sliderLeave", _size);
                         c_movement.sld_offset(true);
-                    } 
-                    if(collision.gameObject.tag == "slideRail")
-                    {
+                    }
+
+                    // rail slide leave
+                    if(collision.gameObject.tag == "slideRail"){
                         p_movement.animateCollision("railSlideExit", _size);
-                    }   
+                    }
+
+                    // ramp leave   
+                    if(collision.gameObject.tag == "ramp"){
+                        p_movement.animateCollision("rampSlideExit", _size, collision.gameObject);
+                        c_movement.rmp_slid_offst(true, collision.gameObject.transform);
+                    }
                     break;
 
                 default:
