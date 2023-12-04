@@ -204,6 +204,9 @@ public class OutlinePatched : MonoBehaviour {
       var index = bakeKeys.IndexOf(meshFilter.sharedMesh);
       var smoothNormals = (index >= 0) ? bakeValues[index].data : SmoothNormals(meshFilter.sharedMesh);
 
+      if(! meshFilter.sharedMesh.isReadable) continue;
+
+
       // Store smooth normals in UV3
       meshFilter.sharedMesh.SetUVs(3, smoothNormals);
 
@@ -232,6 +235,9 @@ public class OutlinePatched : MonoBehaviour {
   }
 
   List<Vector3> SmoothNormals(Mesh mesh) {
+
+    var r =  new List<Vector3>();
+    if(!mesh.isReadable) return r;
 
     // Group vertices by location
     var groups = mesh.vertices.Select((vertex, index) => new KeyValuePair<Vector3, int>(vertex, index)).GroupBy(pair => pair.Key);

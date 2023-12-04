@@ -6,8 +6,52 @@ using PathCreation.Utility;
 using System;
 using System.Reflection;
 
+using UnityEditor;
+
+[CustomEditor(typeof(PlayerCollisions)), CanEditMultipleObjects]
+public class PlayerCollisionsEditor : Editor 
+{
+    SerializedProperty isMainCollision_bool;
+    SerializedProperty m_part_arrays;
+
+    private void OnEnable()
+    {
+        isMainCollision_bool = serializedObject.FindProperty("isMainCollision");
+        // m_part_arrays = serializedObject.FindProperty("player_particls");
+    }
+
+    public override void OnInspectorGUI()
+    {
+        // keep default inspector
+        DrawDefaultInspector();
+        
+        // logic
+        if (isMainCollision_bool.boolValue)
+        {
+            EditorGUILayout.HelpBox("Main Collision Particles Array", MessageType.Info);
+            // EditorGUILayout.PropertyField(m_part_arrays, GUIContent.none);
+        }
+
+        // serializedObject.ApplyModifiedProperties();
+    }
+}
+
+
+
 public class PlayerCollisions : MonoBehaviour
 {
+    // [DrawIf("someFloat", 1f, ComparisonType.GreaterOrEqual)]
+    [SerializeField] private bool isMainCollision;
+    [Serializable] public class Particl_List { 
+        public ParticleSystem[] jump; 
+        public ParticleSystem[] doubleJump; 
+        public ParticleSystem[] slide; 
+        public ParticleSystem[] kill; 
+        public ParticleSystem[] coin; 
+        public ParticleSystem[] health; 
+        public ParticleSystem[] armor; 
+    } 
+    [SerializeField] private Particl_List[] player_particls; 
 
     [Header ("Collisions Constants")]
     public string[] colsions_values = new string[7]{"ground", "frontwall","sidewall", "slider", "enemyProj", "collectibles", "boxAutoAim"};
@@ -22,7 +66,6 @@ public class PlayerCollisions : MonoBehaviour
     [HideInInspector] public PhysicMaterial grnd_mat;
 
     [Header ("Start Delay")]
-    [SerializeField]  private Transform ply_transform;
     private float strt_delay = 0.5f;
     private bool can_trgr = false;
     private Vector3 currentVelocity;
@@ -35,6 +78,7 @@ public class PlayerCollisions : MonoBehaviour
     private GameObject sphere_aimed_turret;
     private int turretInSight = 0;
 
+
     [Header ("Player Weapon")]
     private Weapon p_weapon;
     private int player_attackRange;
@@ -43,6 +87,7 @@ public class PlayerCollisions : MonoBehaviour
         get {return player_attackRange;}
         set { if(value is (int) ){player_attackRange = value; }}
     }
+
 
     [Header ("Currently Auto-Aimed Enemy [Default]")]
     private Collider m_Collider;
@@ -62,6 +107,9 @@ public class PlayerCollisions : MonoBehaviour
     [Header ("Camera Movement Script")]
     private CameraMovement c_movement;
 
+    [Header ("Main PlayerCollisions")]
+    private PlayerCollisions psCollisions_movement;
+
     private void Start()
     {
         m_Collider = gameObject.GetComponent<Collider>();
@@ -70,6 +118,10 @@ public class PlayerCollisions : MonoBehaviour
         p_movement =  FindObjectOfType<PlayerMovement>();
         c_movement = FindObjectOfType<CameraMovement>();
         p_weapon = FindObjectOfType<Weapon>();
+
+
+        PlayerCollisions ar =  GameObject.FindGameObjectsWithTag("mainHitbox")[0].GetComponent<PlayerCollisions>();
+        psCollisions_movement = ar;
     }
   
  
@@ -196,8 +248,10 @@ public class PlayerCollisions : MonoBehaviour
 
         if(player_ammo > 0)
         {
+
+
             // player shots auto-aim
-            if(slcted_clsion == "boxCastAutoAim")
+            if(slcted_clsion == "boxCastAutoAim" && (true == false))
             {
                 enemy_inSight = 0;
 
@@ -238,19 +292,17 @@ public class PlayerCollisions : MonoBehaviour
 
 
 
-
-            bool enemy_destroyed = false;
-
             // Player Box Auto-Aim
+            bool enemy_destroyed = false;
             if(slcted_clsion == "boxAutoAim")
             {
                 float minDistance = float.MaxValue;
 
                 
-                DisplayBox(transform.position,  
-                    new Vector3(4f, 10f, player_attackRange), 
-                    wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
-                );
+                // DisplayBox(transform.position,  
+                //     new Vector3(4f, 10f, player_attackRange), 
+                //     wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
+                // );
 
                 Collider[] hitColliders = Physics.OverlapBox(transform.position,
                     new Vector3(4f, 10f, player_attackRange),
@@ -282,8 +334,9 @@ public class PlayerCollisions : MonoBehaviour
                         }
                     }
 
-                    if( (sphereStored_aimed_turret != sphere_aimed_turret) && (!firstEverDetectedEnemy || (sphere_aimed_turret != null) ) )
-                    {
+                    if( (sphereStored_aimed_turret != sphere_aimed_turret) && 
+                        (!firstEverDetectedEnemy || (sphere_aimed_turret != null) ) 
+                    ){
                         p_movement.animateCollision("newEnemyAim", new Vector3(0, 0, 0), sphere_aimed_turret);
                         sphereStored_aimed_turret = sphere_aimed_turret;
                         firstEverDetectedEnemy = true;
@@ -296,38 +349,13 @@ public class PlayerCollisions : MonoBehaviour
                         sphereStored_aimed_turret = null;
                     }
                 }
+
             }
         }
 
 
-
     }
 
-    //Draw the Box Overlap as a gizmo to show where it currently is testing. Click the Gizmos button to see this
-    private void OnDrawGizmos()
-    {
-        Gizmos.color = Color.red;
-        //Check that it is being run in Play Mode, so it doesn't try to draw this in Editor mode
-            //Draw a cube where the OverlapBox is (positioned where your GameObject is as well as a size)
-        // Gizmos.DrawWireCube(transform.position,  new Vector3(2 * 2, 6 * 2, 100 * 2) );
-    }
-
-//    private void OnDrawGizmos()
-//     {
-//         Gizmos.color = Color.red;
-
-//         //Check if there has been a hit yet
-//         if (aimed_enemy != null)
-//         {
-//             for(int j = 0; j < m_Hits.Length; j ++)
-//             {
-//                 //Draw a Ray forward from GameObject toward the hit
-//                 Gizmos.DrawRay(transform.position, transform.forward * m_Hits[j].distance);
-//                 //Draw a cube that extends to where the hit exists
-//                 Gizmos.DrawWireCube(transform.position + transform.forward * m_Hits[j].distance, transform.localScale);
-//             }
-//         }
-//     }
 
 
     private void OnTriggerEnter(Collider collision)
@@ -335,7 +363,8 @@ public class PlayerCollisions : MonoBehaviour
         if(slcted_clsion.Length > 0 && can_trgr)
         {
             Vector3 _size = collision.bounds.size;
-            switch (slcted_clsion){
+            switch (slcted_clsion)
+            {
                 case "ground":
 
                     // Grnd hit
@@ -348,21 +377,29 @@ public class PlayerCollisions : MonoBehaviour
                             if(p){ p.sharedMaterial = grnd_mat;}
                         }
                     }
+
                     // Obstcl hit
-                    if(collision.gameObject.tag == "obstacle") p_movement.animateCollision("obstacleHit", _size, collision.gameObject);
+                    if(collision.gameObject.tag == "obstacle")
+                    {
+                        p_movement.animateCollision("obstacleHit", _size, collision.gameObject);
+                    }
 
                     // Launcher jmp
-                    if(collision.gameObject.tag == "launcher") p_movement.animateCollision("launcherHit", _size);
+                    if(collision.gameObject.tag == "launcher")
+                    {
+                        p_movement.animateCollision("launcherHit", _size);
+                    }
 
                     // Tyro hit
-                    if(collision.gameObject.tag == "tyro") p_movement.tyro_movement(collision.gameObject);
+                    if(collision.gameObject.tag == "tyro")
+                    {
+                        p_movement.tyro_movement(collision.gameObject);
+                    }
 
                     // Bumper jmp
                     if(collision.gameObject.tag == "bumper")
                     {
-                        GameObject pr_gm = collision.gameObject.transform.parent.gameObject == null ? collision.gameObject.transform.parent.gameObject : collision.gameObject;
-                        LeanTween.scale(pr_gm, pr_gm.transform.localScale * 1.2f, 0.4f).setEasePunch();
-                        p_movement.animateCollision("bumperJump", _size);
+                        p_movement.animateCollision("bumper", _size, collision.gameObject);
                     }
 
                     // Tap Tap Jump
@@ -379,7 +416,18 @@ public class PlayerCollisions : MonoBehaviour
                 case "frontwall":
 
                     // front wall gameover
-                    if(collision.gameObject.tag == "ground") p_movement.animateCollision("frontWallHit", _size);
+                    if(collision.gameObject.tag == "ground")
+                    {
+                        p_movement.animateCollision("frontWallHit", _size, collision.gameObject);
+                    }
+
+
+                    // ladder hit
+                    if(collision.gameObject.tag == "ladder")
+                    {
+                        p_movement.animateCollision("ladderHit", _size, collision.gameObject);
+                    }
+
 
                     break;
 
@@ -390,12 +438,15 @@ public class PlayerCollisions : MonoBehaviour
                         // if(lst_wall != collision.gameObject.GetInstanceID())
                         // {
                             lst_wall = (collision.gameObject.GetInstanceID());
-                            Vector3 targetDir = collision.gameObject.transform.position - ply_transform.position;
-                            float angle = Vector3.Angle(targetDir, transform.forward);
                             p_movement.animateCollision("wallRunHit", _size, collision.gameObject);
                             FindObjectOfType<PlayerVectors>().slippery_trigr(false, collision.gameObject);
-                            // c_movement.wal_rn_offset(false, collision.gameObject.transform); moved to playermovement.cs
                         // }
+                    }
+
+                    // side Hang hit
+                    if(collision.gameObject.tag == "sideHang")
+                    {
+                        p_movement.animateCollision("sideHangHit", _size, collision.gameObject);
                     }
                     break; 
 
@@ -409,17 +460,22 @@ public class PlayerCollisions : MonoBehaviour
 
                         p_movement.animateCollision("sliderHit", _size);
                         c_movement.sld_offset(false);
+
+                        psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].slide);
                     } 
 
                     // Slide Rail
                     if(collision.gameObject.tag == "slideRail")
                     {
                         p_movement.animateCollision("railSlide", _size, collision.gameObject);
-                        // c_movement.sld_offset(false);
+                        // c_movement.railSlide_offset(false); moved to pm.cs
                     }
 
                     // Hang   
-                    if(collision.gameObject.tag == "hang") p_movement.animateCollision("hang", _size, collision.gameObject);
+                    if(collision.gameObject.tag == "hang")
+                    {
+                        p_movement.animateCollision("hang", _size, collision.gameObject);
+                    }
 
                     // Ramp   
                     if(collision.gameObject.tag == "ramp")
@@ -435,10 +491,14 @@ public class PlayerCollisions : MonoBehaviour
                     switch(collision.gameObject.tag)
                     {
                         case "coin":
-                            p_movement.animateCollision("sliderHit", _size);
+                            psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].coin);
+
                             break;
+
                         case "gun":
+                            // player_paricleArray(player_particls[0].coin);
                             collision.gameObject.SetActive(false);
+
                             p_movement.animateCollision("gun", _size);
                             FindObjectOfType<Weapon>().GunLevelUp();
                             break;
@@ -463,42 +523,63 @@ public class PlayerCollisions : MonoBehaviour
                 case "ground":
                     // Ground leave
                     if(collision.gameObject.tag == "ground" || collision.gameObject.tag == "fallBox")
+                    {
                         p_movement.animateCollision("groundLeave", _size);
-                    
+                    }
+
                     // Obstacl leave
                     if(collision.gameObject.tag == "obstacle")
+                    {
                         p_movement.animateCollision("obstacleLeave", _size, collision.gameObject);
+                    }
                     
                     break;
 
                 case "sidewall":
                     // Wall run exit
                     if(collision.gameObject.tag == "ground" || collision.gameObject.tag == "ramp")
+                    {
                         p_movement.animateCollision("wallRunExit", _size);
                         FindObjectOfType<PlayerVectors>().slippery_trigr(true, collision.gameObject);
                         c_movement.wal_rn_offset(true, collision.gameObject.transform);
-            
+                    }
                     break; 
 
                 case "slider":
                     // slider leave
                     if(collision.gameObject.tag == "slider")
                     {
-                        LeanTween.scale(collision.gameObject, collision.gameObject.transform.localScale * 1.08f, 1f).setEasePunch(); 
+                        LeanTween.moveLocal(collision.gameObject, 
+                            collision.gameObject.transform.localPosition + new Vector3(0f, 0.25f, 0f), 
+                        0.85f).setEaseInOutCubic();
+                        
                         p_movement.animateCollision("groundLeave", _size);
                         p_movement.animateCollision("sliderLeave", _size);
                         c_movement.sld_offset(true);
+
+                        psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].slide, false, "", true);
                     }
 
                     // rail slide leave
-                    if(collision.gameObject.tag == "slideRail"){
+                    if(collision.gameObject.tag == "slideRail")
+                    {
                         p_movement.animateCollision("railSlideExit", _size);
+                        // c_movement.railSlide_offset(true); moved to pm.cs
                     }
 
                     // ramp leave   
-                    if(collision.gameObject.tag == "ramp"){
+                    if(collision.gameObject.tag == "ramp")
+                    {
                         p_movement.animateCollision("rampSlideExit", _size, collision.gameObject);
                         c_movement.rmp_slid_offst(true, collision.gameObject.transform);
+                    }
+                    break;
+
+                case "frontwall":
+                    // ladder hit
+                    if(collision.gameObject.tag == "ladder")
+                    {
+                        p_movement.animateCollision("ladderLeave", _size, collision.gameObject);
                     }
                     break;
 
@@ -516,5 +597,34 @@ public class PlayerCollisions : MonoBehaviour
         can_trgr = true;
     }
 
+
+    public void player_paricleArray( ParticleSystem[]? ps = null, bool fromPlyrMovement_Invoke = false, 
+        string invoke_paremeter = "", bool is_leave = false)
+    {
+
+        if(fromPlyrMovement_Invoke)
+        {
+            switch(invoke_paremeter)
+            {
+                case "dblJump":
+                    ps = player_particls[0].doubleJump;
+                    break;
+                case "jump":
+                    ps = player_particls[0].jump;
+                    break;
+                case "animKill":
+                    ps = player_particls[0].kill;
+                    break;
+            }
+        }
+
+        for(int i = 0; i < ps.Length; i ++)
+        {
+            ParticleSystem p = ps[i];
+
+            if(is_leave) p.Stop();
+            else p.Play();
+        }
+    }
 
 }

@@ -64,31 +64,35 @@ public class Grappling : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown("r")) StartGrapple();
+        // if (Input.GetKeyDown("r")) StartGrapple();
 
-        if ( (Input.GetKeyUp("r") ||  grpl_TimeValue < 0.01f) && is_grpling_) StopGrapple();
+        // if ( (Input.GetKeyUp("r") ||  grpl_TimeValue < 0.01f) && is_grpling_) StopGrapple();
             
         
-        if(grpl_TimeValue > 0) grpl_TimeValue -= Time.deltaTime;
+        // if(grpl_TimeValue > 0) grpl_TimeValue -= Time.deltaTime;
 
     }
 
     private void  FixedUpdate()
     {
         // Detect Grapple Ballz
-        Collider[] hitColliders = Physics.OverlapSphere(plyr_pos.position, 20f);
-        if(hitColliders.Length > 0)
+        if(true == false)
         {
-            foreach (var hitCollider in hitColliders)
+            Collider[] hitColliders = Physics.OverlapSphere(plyr_pos.position, 20f);
+            if(hitColliders.Length > 0)
             {
-                if(hitCollider.gameObject.tag == "grapple_ball")
+                foreach (var hitCollider in hitColliders)
                 {
-                    //Debug.Log("grappl ball in sight");
-                    // GRAPPLE JUMP
-                    // Invoke(nameof(ExecuteGrapple), grpl_dely_time);
+                    if(hitCollider.gameObject.tag == "grapple_ball")
+                    {
+                        //Debug.Log("grappl ball in sight");
+                        // GRAPPLE JUMP
+                        // Invoke(nameof(ExecuteGrapple), grpl_dely_time);
+                    }
                 }
             }
         }
+
     }
 
 

@@ -55,12 +55,12 @@ public class Buildings : MonoBehaviour
     private void Gen_Bldngs(int z_len)
     {
         int ln_ = buildngs_prefb.Length;
-        // Z MAP
+        // Z 
         for(int p = 0; p < z_len; p++)
         {
             x_pos = 0.0f;
             space_t_fill = 0.0f;
-            // X MAP
+            // X 
             for(int i = 0; i < ln_; i ++)
             {
                 if(x_pos > fnc_gn_w){break;}
@@ -227,11 +227,13 @@ public class Buildings : MonoBehaviour
 
         for (int j = 0; j < chld_len; j ++)
         {
+            if(section_parent.transform.GetChild(j).tag == "combinePass") continue;
+            
             // filterRef reset (-_-)
             filter_Reference = null; filter_Ref_chldPos = -1;
 
             GameObject chld_ = section_parent.transform.GetChild(j).gameObject;
-            Material[] chld_mats = new Material[6];
+            Material[] chld_mats = new Material[8]; // 8 mat buffer
             bool mt_fetched = false;
             int sumbeshesCount = 0;
 
@@ -741,10 +743,11 @@ public class Buildings : MonoBehaviour
         for(int i = 0; i < allBuildngs_.Length; i ++)
         {
             if(!allBuildngs_[i].activeSelf || 
-                !allBuildngs_[i].transform.IsChildOf(whole_sct.transform)
+                !allBuildngs_[i].transform.IsChildOf(whole_sct.transform) || 
+                ( allBuildngs_[i].GetComponent<MeshFilter>() == null )
             ) continue; // since all buildings were baked/combined
 
-            Mesh bldg_mesh = allBuildngs_[i].GetComponent<MeshFilter>().sharedMesh;
+            Mesh bldg_mesh = allBuildngs_[i].GetComponent<MeshFilter>()?.sharedMesh;
             Collider[] bldg_colldrs = allBuildngs_[i].GetComponents<Collider>();
             
             if(bldg_colldrs.Length == 0) continue;

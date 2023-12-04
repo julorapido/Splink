@@ -25,7 +25,8 @@ public class GameUI : MonoBehaviour
     [Header ("Player")]
     private Transform plyr_transform;
     private Rigidbody plyr_rgBody;
-
+    private PlayerMovement p_movement;
+    
     [Header ("TopRight Gun")]
     [SerializeField] private GameObject gun_ui;
     [SerializeField] private TextMeshPro ammo_txt;
@@ -42,15 +43,28 @@ public class GameUI : MonoBehaviour
     [SerializeField] private GameObject enemy_information;
     private Transform aimed_enemy;
     private AutoTurret aimed_turretScrpt;
-    private int enemy_health;
+    private int enemy_health, enemy_shield, enemy_armor;
 
     [Header ("Score")]
     [SerializeField] private TextMeshProUGUI score_txt;
     private bool countScore_ = false;
+    private bool countBonus_ = false;
     private uint lastZ = 0;
     private uint score = 0;
     private decimal v_score = 0;
+    private int temp_bonus = 0;
+    [HideInInspector] public bool set_countBonus_
+    {
+        get { return false; }
+        set{ if(value.GetType() == typeof(bool)) countBonus_ = value;}
+    }
+    
+    [Header ("Combo Score")]
+    [SerializeField] private GameObject combo_obj;
+    private int combo_v;
+    private LTDescr combo_lt;
 
+    private void countScore(){ countScore_ = true; }
 
     // Start is called before the first frame update
     private void Start()
@@ -58,6 +72,7 @@ public class GameUI : MonoBehaviour
         weapon_scrpt = FindObjectOfType<Weapon>();
 
         PlayerMovement pm = FindObjectOfType<PlayerMovement>();
+        p_movement = pm;
         plyr_transform = pm.transform;
         plyr_rgBody  = pm.transform.GetComponent<Rigidbody>();
 
@@ -87,8 +102,7 @@ public class GameUI : MonoBehaviour
         newEnemy_UI(true);
         Invoke("countScore", 0.25f);
     }
-    private void countScore()
-    { countScore_ = true; }
+
 
 
     // FixedUpdate for responsive gun rotations
@@ -113,8 +127,7 @@ public class GameUI : MonoBehaviour
                         (-1 * (plyr_transform.rotation.eulerAngles.y - 360f) ):
                         -1 * plyr_transform.rotation.eulerAngles.y
                     ) * 0.35f,
-                // (plyr_transform.rotation.eulerAngles.y > 270f ? plyr_transform.rotation.eulerAngles.y : plyr_transform.rotation.eulerAngles.y - 360f) / 10,
-                    0
+                    0f
                 ), 0.2f);
 
                 // parents_3d[i].transform.localPosition = Vector3.Lerp( parents_3d[i].transform.localPosition, new Vector3(
@@ -141,12 +154,13 @@ public class GameUI : MonoBehaviour
         score_txt.text = score.ToString();
 
 
+
         // aimed enemy
         if(aimed_turretScrpt != null)
         {
             if(enemy_health != aimed_turretScrpt.get_health)
             {
-                if(aimed_turretScrpt.get_health == 0)
+                if(aimed_turretScrpt.get_health == 0) // 0 health => turn off ui
                 {
                     newEnemy_UI(true);
                 }else
@@ -154,8 +168,8 @@ public class GameUI : MonoBehaviour
                     float dmg_done = enemy_health - aimed_turretScrpt.get_health;
                     enemy_health = aimed_turretScrpt.get_health;
                     float x_health = (((float)enemy_health / (float)aimed_turretScrpt.turret_maxHealth) * 100f);
-                    LeanTween.scale(enemy_information.transform.GetChild(1).GetChild(1).gameObject, new Vector3(x_health / 100, 1, 1), 0.25f).setEaseInOutCubic();
-                    LeanTween.scale(enemy_information.transform.GetChild(1).GetChild(2).gameObject, 
+                    LeanTween.scale(enemy_information.transform.GetChild(0).GetChild(1).gameObject, new Vector3(x_health / 100, 1, 1), 0.25f).setEaseInOutCubic();
+                    LeanTween.scale(enemy_information.transform.GetChild(0).GetChild(2).gameObject, 
                         new Vector3(x_health / 100, 1, 1), 
                         0.2f + (dmg_done / 70)
                     ).setEaseInOutCubic();
@@ -163,6 +177,15 @@ public class GameUI : MonoBehaviour
                 }
 
             }
+        }
+
+
+
+        // combo
+        if(combo_v != p_movement.get_Combo)
+        {
+            combo_v = p_movement.get_Combo;
+            combo_hit();
         }
     }
 
@@ -172,19 +195,29 @@ public class GameUI : MonoBehaviour
     public void Gun_levelUp(int level)
     {
         if(gun_ui.transform.GetChild(gun_ui.transform.childCount - 1).GetChild(0).gameObject != null)
-            Destroy((gun_ui.transform.GetChild(gun_ui.transform.childCount - 1)).GetChild(0).gameObject);
-        
-        GameObject ui_gunz = Instantiate(gun_fetchedPrefabs[level - 1], saved_prefabPos_, saved_prefabRotation_, gun_ui.transform.GetChild(gun_ui.transform.childCount - 1));
+        {
+            Destroy(
+                (gun_ui.transform.GetChild(gun_ui.transform.childCount - 1)).GetChild(0).gameObject
+            );
+        }
+
+        GameObject ui_gunz = Instantiate (
+            gun_fetchedPrefabs[level - 1],
+            saved_prefabPos_, 
+            saved_prefabRotation_, 
+            gun_ui.transform.GetChild(gun_ui.transform.childCount - 1)
+        );
         ui_gunz.SetActive(false);
 
         Transform[] ui_t = ui_gunz.GetComponentsInChildren<Transform>();
         for(int j = 0; j < ui_t.Length; j ++)
-        { ui_t[j].gameObject.layer = 5;}  // => UI LAYER
+        { 
+            ui_t[j].gameObject.layer = 5;  // => UI LAYER
+        } 
 
         ui_gunz.transform.localScale = saved_prefabScale_;
         ui_gunz.SetActive(true);
 
-        // LeanTween.rotateY(ui_gunz, -10f, 1.5f).setEasePunch();
 
         if(level == 1)
         {
@@ -199,16 +232,23 @@ public class GameUI : MonoBehaviour
 
             for(int i = 0; i < rects_.Length; i++)
             {
-                if(rects_[i].gameObject == gun_ui.transform.GetChild(0).gameObject) continue;
+                if(rects_[i].gameObject == gun_ui.transform.GetChild(0).gameObject)
+                    continue;
                 MeshRenderer mr  = rects_[i].gameObject.GetComponent<MeshRenderer>();
 
                 if( (i % 2) != 0)
-                {  mr.sharedMaterial = Gun_Materials[level < 2 ? level - 1 : (2 * (level -1 ))]; } 
-                else { mr.sharedMaterial = Gun_Materials[level < 2 ? level : (2 * (level -1 )) + 1];}
+                {  
+                    mr.sharedMaterial = Gun_Materials[level < 2 ? level - 1 : (2 * (level -1 ))];
+                } 
+                else { 
+                    mr.sharedMaterial = Gun_Materials[level < 2 ? level : (2 * (level -1 )) + 1];
+                }
             }
         }
 
     }
+
+
 
     // public enemy
     public void newEnemy_UI(bool is_empty, Transform enemy_ = null)
@@ -218,9 +258,11 @@ public class GameUI : MonoBehaviour
             // Invoke("enemyUi_off", 0.6f);
             aimed_turretScrpt = null;
             enemy_information.SetActive(false);
+
         }else
         {
-            if(enemy_ == null) return;
+            if(enemy_ == null)
+                return;
 
             if(aimed_enemy != null && aimed_enemy != enemy_ )
             {
@@ -241,19 +283,51 @@ public class GameUI : MonoBehaviour
             enemy_information.SetActive(true);
             AutoTurret at_turret = (enemy_ as Transform).GetComponent<AutoTurret>();
             aimed_turretScrpt = at_turret;
-            enemy_information.transform.GetChild(2).GetComponent<TMPro.TextMeshProUGUI>().text = at_turret.turret_name;
-            enemy_information.transform.GetChild(3).GetComponent<TMPro.TextMeshProUGUI>().text = at_turret.turret_level.ToString();
+            enemy_information.transform.GetChild(3).GetComponent<TMPro.TextMeshProUGUI>().text = at_turret.turret_name;
+            enemy_information.transform.GetChild(4).GetComponent<TMPro.TextMeshProUGUI>().text = at_turret.turret_level.ToString();
 
             enemy_health = at_turret.get_health;
             float x_health = (((float)enemy_health / (float)aimed_turretScrpt.turret_maxHealth) * 100f);
-            enemy_information.transform.GetChild(1).GetChild(1).localScale = new Vector3(x_health / 100, 1, 1);
-            enemy_information.transform.GetChild(1).GetChild(2).localScale = new Vector3(x_health / 100, 1, 1);
+            enemy_information.transform.GetChild(0).GetChild(1).localScale = new Vector3(x_health / 100, 1, 1);
+            enemy_information.transform.GetChild(0).GetChild(2).localScale = new Vector3(x_health / 100, 1, 1);
 
         }
     }
     private void enemyUi_off()
     {
         if(aimed_enemy != null) enemy_information.SetActive(false);
+    }
+
+
+    // combo method
+    private void combo_hit()
+    {
+        if(combo_v > 1)
+        {
+            if(LeanTween.isTweening(combo_obj.transform.GetChild(0).gameObject)) 
+                combo_lt.cancel(combo_obj.transform.GetChild(0).gameObject);
+
+            if(combo_v == 2)
+            {
+                LeanTween.moveLocal(
+                    combo_obj, 
+                    new Vector3(combo_obj.transform.localPosition.x, combo_obj.transform.localPosition.y + 100, 1f),
+                20f).setEaseInSine();
+            }
+
+            combo_obj.SetActive(true);
+
+            LTDescr combo_ltScale = LeanTween.scale(
+                combo_obj.transform.GetChild(0).gameObject,
+                combo_obj.transform.GetChild(0).localScale * 1.6f,
+            1f ).setEasePunch();
+
+            combo_lt = combo_ltScale; 
+
+            combo_obj.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = combo_v.ToString(); 
+
+        }else
+        { combo_obj.SetActive(false); }
     }
 
 }

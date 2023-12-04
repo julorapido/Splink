@@ -29,7 +29,9 @@ public class A_T_Projectile : MonoBehaviour
         Heavy,
         Sniper,
         Gattling,
-
+        Military,
+        Blast,
+        Robot,
         WeaponBullet
     };
     [SerializeField]
@@ -102,6 +104,11 @@ public class A_T_Projectile : MonoBehaviour
 
         near_inPrecision = UnityEngine.Random.Range(0.5f, 4f);
 
+        if(blt_type == turret_Type.Robot)
+        {
+            speed =  UnityEngine.Random.Range(14f, 22f);
+        }
+
     }
 
 
@@ -120,7 +127,7 @@ public class A_T_Projectile : MonoBehaviour
             if( (is_behind ? (dst_ > passedNear_inPrecision) : (dst_ < passedNear_inPrecision) ) && !plyr_passed)
             {
                 plyr_passed = true; speed *= 1.3f;
-                Invoke("bullet_explode", 0.5f);
+                Invoke("bullet_explode", 0.35f);
             }
 
             if(!exploded)
@@ -154,12 +161,14 @@ public class A_T_Projectile : MonoBehaviour
                         case turret_Type.Heavy:
                         case turret_Type.Sniper:
                         case turret_Type.Gattling:
+                        case turret_Type.Blast:
+                        case turret_Type.Robot:
                             Vector3 shoot_dir = dir.normalized;
 
                             // transform.rotation = Quaternion.LookRotation(bullet_qtrn); // Quaternion.Euler(bullet_qtrn.x, bullet_qtrn.y, bullet_qtrn.z);
                             // transform.LookAt(plyr_target);
                             transform.rotation = Quaternion.LookRotation(bullet_qtrn);
-                            bullet_rb.AddForce(shoot_dir, ForceMode.VelocityChange);
+                            bullet_rb.AddForce( (speed / 15) * shoot_dir, ForceMode.VelocityChange);
 
                             break;
                         case turret_Type.Catapult:
@@ -236,7 +245,8 @@ public class A_T_Projectile : MonoBehaviour
 
             if( turret_parts.Contains(member_hit) )
             {
-                while(parent_ != null)
+                // while(parent_ != null)
+                for(int i = 0; i < 50; i ++)
                 {
                     if(parent_.parent != null)
                     {

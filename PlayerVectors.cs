@@ -33,27 +33,27 @@ public class PlayerVectors : MonoBehaviour
     private void FixedUpdate()
     {
         // Detect Side Bldgs
-        Collider[] hitColliders = Physics.OverlapSphere(gameObject.transform.position, 30f);
-        if(hitColliders.Length > 0)
-        {
-            foreach (var cl_ in hitColliders)
-            {
-                if(cl_.gameObject.tag == "ground" || cl_.gameObject.tag == "ramp")
-                {
-                    Vector3 col_sz = cl_.bounds.size;
-                    if(col_sz.x > 20f && col_sz.y > 7f)
-                    {
-                        if(cl_?.gameObject != null)
-                        {
-                            g_v[i] = cl_?.gameObject;
-                            i++;
-                        }
-                    }
-                }
-            }
-            //apply_vector();
-            i = 0;
-        }
+        // Collider[] hitColliders = Physics.OverlapSphere(gameObject.transform.position, 30f);
+        // if(hitColliders.Length > 0 && (false == true))
+        // {
+        //     foreach (var cl_ in hitColliders)
+        //     {
+        //         if(cl_.gameObject.tag == "ground" || cl_.gameObject.tag == "ramp")
+        //         {
+        //             Vector3 col_sz = cl_.bounds.size;
+        //             if(col_sz.x > 20f && col_sz.y > 7f)
+        //             {
+        //                 if(cl_?.gameObject != null)
+        //                 {
+        //                     g_v[i] = cl_?.gameObject;
+        //                     i++;
+        //                 }
+        //             }
+        //         }
+        //     }
+        //     //apply_vector();
+        //     i = 0;
+        // }
     }
 
     // Update and Replace slippery
@@ -103,7 +103,8 @@ public class PlayerVectors : MonoBehaviour
             }
         }
  
-        Collider pr_col_ = init_gmbj.transform.parent.gameObject.GetComponent<Collider>();
+        if(init_gmbj == null) return;
+        Collider pr_col_ = init_gmbj.transform.parent?.gameObject?.GetComponent<Collider>();
         GameObject prnt_gmbj =  (
             (pr_col_ != null) &&  (pr_col_?.tag == "ground" || pr_col_?.tag == "ramp")
         ) ? null : init_gmbj.transform.parent.gameObject;
