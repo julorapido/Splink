@@ -126,7 +126,7 @@ public class GameUI : MonoBehaviour
                     (plyr_transform.rotation.eulerAngles.y > 180f ? 
                         (-1 * (plyr_transform.rotation.eulerAngles.y - 360f) ):
                         -1 * plyr_transform.rotation.eulerAngles.y
-                    ) * 0.35f,
+                    ) * 0.2f,
                     0f
                 ), 0.2f);
 
@@ -194,6 +194,9 @@ public class GameUI : MonoBehaviour
     // public Gun Lvl up method
     public void Gun_levelUp(int level)
     {
+        if(level == 2) 
+            saved_prefabPos_ = (gun_ui.transform.GetChild(gun_ui.transform.childCount - 1)).GetChild(0).position;
+
         if(gun_ui.transform.GetChild(gun_ui.transform.childCount - 1).GetChild(0).gameObject != null)
         {
             Destroy(
@@ -224,6 +227,8 @@ public class GameUI : MonoBehaviour
             LeanTween.moveLocal(gun_ui, new Vector3(0, 0, gun_ui.transform.position.z), 0.7f).setEaseInOutCubic();
             LeanTween.scale(gun_ui, gun_ui.transform.localScale * 1.4f, 1.4f).setEasePunch();
             LeanTween.rotateZ(gun_ui, 20f, 1.8f).setEasePunch();
+
+             
         }else
         {
             LeanTween.scale(gun_ui, gun_ui.transform.localScale * 1.35f, 1.2f).setEasePunch();
@@ -271,11 +276,11 @@ public class GameUI : MonoBehaviour
                 enemy_information.transform.localPosition = new Vector3(p.x * 50, p.y * 30, 0);
                 enemy_information.transform.localScale = new Vector3(enemy_information.transform.localScale.x / 10, enemy_information.transform.localScale.y / 10, 1);
 
-                LeanTween.moveLocal(enemy_information, new Vector3(0, 0, 0), 0.7f).setEaseInOutCubic();
+                LeanTween.moveLocal(enemy_information, new Vector3(0, -300, 0), 0.7f).setEaseInOutCubic();
                 LeanTween.scale(enemy_information, new Vector3(1, 1, 1), 1f).setEaseInOutCubic();
             }else
             {
-                enemy_information.transform.localPosition = new Vector3(0, 0, 0);
+                enemy_information.transform.localPosition = new Vector3(0, -300, 0);
             }
 
             aimed_enemy = enemy_;
@@ -311,8 +316,8 @@ public class GameUI : MonoBehaviour
             {
                 LeanTween.moveLocal(
                     combo_obj, 
-                    new Vector3(combo_obj.transform.localPosition.x, combo_obj.transform.localPosition.y + 100, 1f),
-                20f).setEaseInSine();
+                    new Vector3(combo_obj.transform.localPosition.x, combo_obj.transform.localPosition.y + 20, 1f),
+                30f).setEaseInSine();
             }
 
             combo_obj.SetActive(true);
@@ -330,4 +335,9 @@ public class GameUI : MonoBehaviour
         { combo_obj.SetActive(false); }
     }
 
+    // public kill method
+    public void kill_ui()
+    {
+        
+    }
 }

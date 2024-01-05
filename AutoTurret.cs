@@ -92,11 +92,15 @@ public class AutoTurret : MonoBehaviour
     [Header ("Stored Player Transform")]
     private Transform PLAYER_;
 
+    [Header ("GameUI")]
+    private GameUI g_ui;
+
     private void Start()
     {
         plyr_gm = GameObject.FindGameObjectsWithTag("Player")[0];
         PLAYER_ = plyr_gm.transform;
         plyr_pm = FindObjectOfType<PlayerMovement>();
+        g_ui = FindObjectOfType<GameUI>();
 
         if(is_left != true) is_left = false;
 
@@ -569,17 +573,27 @@ public class AutoTurret : MonoBehaviour
 
     private void target_check()
     {
-        Collider[] colls = Physics.OverlapSphere(transform.position, rng_);
+        // OvSphere => OvSphereNonAlloc
+        const int maxColliders = 50;
+        Collider[] hitColliders = new Collider[maxColliders];
+        int numColliders = Physics.OverlapSphereNonAlloc(transform.position, rng_, hitColliders);
+
+        // Collider[] colls = Physics.OverlapSphere(transform.position, rng_);
+
         //float distAway = Mathf.Infinity;
         bool s = false;
-        for (int i = 0; i < colls.Length; i++)
+        for (int i = 0; i < maxColliders; i++)
         {
-            if (colls[i].tag == "player_hitbx")
+            if(hitColliders[i] != null)
             {
-                plyr_gm = colls[i].gameObject;
-                plyr_n_sight = true; s = true;
-                break;
-            }
+                if (hitColliders[i].tag == "player_hitbx")
+                {
+                    plyr_gm = hitColliders[i].gameObject;
+                    plyr_n_sight = true; s = true;
+                    break;
+                }
+            }else{ break; }
+
         }
         if (!s){plyr_n_sight = false;}
     }
@@ -599,6 +613,7 @@ public class AutoTurret : MonoBehaviour
             if(go_.GetComponent<ParticleSystem>() != null || go_ == null
              || go_.name.Contains("T.A.R.G.E.T") || 
              go_.name.Contains("TurretDmgg") || go_.name.Contains("Turret_Texts")
+             || (g_l[i] == transform)
             ){ continue; }
 
             if(g_l[i].parent != gameObject.transform) 
@@ -679,6 +694,8 @@ public class AutoTurret : MonoBehaviour
                 break;
             case "TURRET":
             case "tr_Body":
+                dmg = (int) (wpn_damage * 1f);
+                break;
             case "tr_Barrel":
             case "tr_BarrelHz":
                 float a_ = UnityEngine.Random.Range(0.85f, 1.18f);
@@ -719,13 +736,17 @@ public class AutoTurret : MonoBehaviour
 
         bool plyr_belowTrt =  (transform.position.y - player_.position.y) > 6.5f ? true : false;
 
-        m_RectTransform.transform.localPosition = new Vector3 (
-            ((is_horizontal) ? (transform.rotation.eulerAngles.y > 150f) ? (1.5f): (-1.5f) : 0f) + x_x,
-            ((is_horizontal) ? (transform.rotation.eulerAngles.y > 150f) ?
-                (plyr_belowTrt ? -1.35f : 1.35f): (plyr_belowTrt ? -1f : 1f) 
-            : (plyr_belowTrt) ? -2.30f : 2.30f),
-            -1f
-        );
+        if(m_RectTransform != null)
+        {
+            m_RectTransform.transform.localPosition = new Vector3 (
+                ((is_horizontal) ? (transform.rotation.eulerAngles.y > 150f) ? (1.5f): (-1.5f) : 0f) + x_x,
+                ((is_horizontal) ? (transform.rotation.eulerAngles.y > 150f) ?
+                    (plyr_belowTrt ? -1.35f : 1.35f): (plyr_belowTrt ? -1f : 1f) 
+                : (plyr_belowTrt) ? -2.30f : 2.30f),
+                -1f
+            ); 
+        }
+
 
         dmg_text.text = dmg.ToString();
         float r_x = UnityEngine.Random.Range(-1.8f, 1.8f);
@@ -749,10 +770,12 @@ public class AutoTurret : MonoBehaviour
         {
             turret_explode();
             turret_health = 0;
+            g_ui.kill_ui();
+
         }else
         {
             turret_health = turret_health - dmg;
-            // turret_health = turret_health - 2;
+            turret_health = turret_health - 2;
         }
 
 

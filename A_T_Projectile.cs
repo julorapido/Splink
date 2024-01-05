@@ -301,7 +301,14 @@ public class A_T_Projectile : MonoBehaviour
         exploded = true;
         expl_offset = ( transform.position - plyr_target.transform.position );
 
-        for (int i = 0; i < bullet_msh.Length; i ++) bullet_msh[i].enabled = false;
+        if(bullet_msh.Length > 0)
+        {
+            for (int i = 0; i < bullet_msh.Length; i ++)
+            {
+                bullet_msh[i].enabled = false;
+            }
+        }
+      
         for (int j = 0; j < bullet_lr.Length; j ++) bullet_lr[j].enabled = false;
         for (int k = 0; k < bullet_cldrs.Length; k ++) bullet_cldrs[k].enabled = false;
 

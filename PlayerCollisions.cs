@@ -483,6 +483,18 @@ public class PlayerCollisions : MonoBehaviour
                         p_movement.animateCollision("rampSlide", _size, collision.gameObject);
                         c_movement.rmp_slid_offst(false, collision.gameObject.transform);
                     }
+
+                    // Under
+                    if(collision.gameObject.tag == "under")
+                    {
+                        p_movement.animateCollision("under", _size, collision.gameObject);
+                        
+                    }
+                    // Bareer
+                    if(collision.gameObject.tag == "bareer")
+                    {
+                        p_movement.animateCollision("bareer", _size, collision.gameObject);       
+                    }
                     break;
 
 
@@ -492,7 +504,13 @@ public class PlayerCollisions : MonoBehaviour
                     {
                         case "coin":
                             psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].coin);
-
+                            ParticleSystem ps = collision.gameObject.GetComponentInChildren<ParticleSystem>();
+                            MeshRenderer[] mr_ = collision.gameObject.GetComponentsInChildren<MeshRenderer>();
+                            for(int i = 0; i < mr_.Length; i++)
+                                mr_[i].enabled = false;
+                                
+                            Debug.Log(ps);
+                            ps.Play();
                             break;
 
                         case "gun":

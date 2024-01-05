@@ -11,6 +11,8 @@ public class RCXD : MonoBehaviour
     [SerializeField]
     robot_Type t_type = new robot_Type();
 
+
+
     // Start is called before the first frame update
     private void Start()
     {
@@ -19,3 +21,4 @@ public class RCXD : MonoBehaviour
 
   
 }
+    

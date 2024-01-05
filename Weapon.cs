@@ -15,9 +15,9 @@ public class Weapon : MonoBehaviour
     private bool ammo_fixed  = true;
 
     [Header ("Weapon Statistics")]
-    private const int damage = 24;
+    private const int damage = 40;
     private const int precision_ = 50;
-    private const float fireRate = 0.15f;
+    private const float fireRate = 0.4f;
     private const int criticalChance = 7; // /100
     private const int range_ = 30;
     private const int magSize = 12;
@@ -41,6 +41,7 @@ public class Weapon : MonoBehaviour
     private const float recoil_strength = 6.25f;
     private const float recoil_speed = 40.0f;
     private float em_recoil = 0.0f;
+    private bool recoil_side = false;
 
 
     // [Header ("Weapon Level")]
@@ -105,6 +106,8 @@ public class Weapon : MonoBehaviour
     [Header ("Game-UI")]
     private GameUI g_ui;
 
+    [Header ("CameraMovement")]
+    private CameraMovement cm_movement;
 
     // [Header ("Weapon-Type")]
     private enum GunType
@@ -123,7 +126,9 @@ public class Weapon : MonoBehaviour
     private void Awake()
     {
         m_r = gameObject.GetComponentsInChildren<Transform>();
+
         g_ui = FindObjectOfType<GameUI>();
+        cm_movement = FindObjectOfType<CameraMovement>();
 
         // init all guns (Assets/Resources/CollectibleGuns/0)
         // load gun prefabs
@@ -227,6 +232,8 @@ public class Weapon : MonoBehaviour
         StartCoroutine(shoot_recoil());
 
         // ammo--;
+        cm_movement.shoot_recoil(recoil_side);
+        recoil_side = !recoil_side;
 
         GameObject new_bullet =  Instantiate(weapon_bullets[0], fire_point[point_indx].position, fire_point[point_indx].rotation);
         A_T_Projectile proj_scrpt = new_bullet.GetComponent<A_T_Projectile>();
@@ -250,7 +257,7 @@ public class Weapon : MonoBehaviour
 
         if( Vector3.Distance(target_transform.position, transform.position) < 16f){
             x_ /= 20f;
-            y_ /= 15;
+            y_ /= 30;
         }
         if( Vector3.Distance(target_transform.position, transform.position) < 7f) 
             y_ /= 10;
