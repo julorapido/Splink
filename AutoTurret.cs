@@ -574,7 +574,7 @@ public class AutoTurret : MonoBehaviour
     private void target_check()
     {
         // OvSphere => OvSphereNonAlloc
-        const int maxColliders = 50;
+        const int maxColliders = 75;
         Collider[] hitColliders = new Collider[maxColliders];
         int numColliders = Physics.OverlapSphereNonAlloc(transform.position, rng_, hitColliders);
 
@@ -771,7 +771,7 @@ public class AutoTurret : MonoBehaviour
             turret_explode();
             turret_health = 0;
             g_ui.kill_ui();
-
+            g_ui.gain_money(120);
         }else
         {
             turret_health = turret_health - dmg;

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using System;
 using TMPro;
 
@@ -16,6 +17,50 @@ public class GameUI : MonoBehaviour
         set{ if(value > max_health) player_health = max_health; else value = max_health;}
     }
 
+    [Header ("Weapon")]
+    [SerializeField] private GameObject weapon_ui_obj;
+    private Weapon weapon_script;
+    private TextMeshPro[] weapon_ammoTxts;
+
+    [Header ("Restart")]
+    private Vector3[] saved_ui_initalPos = new Vector3[10];
+    private Transform[] saved_restartUi_transforms = new Transform[35];
+    private Vector3[] saved_restartUi_scales = new Vector3[35];
+    private bool restart_uiNeeds_fade = false;
+
+
+    [Header ("Money")]
+    [SerializeField] private GameObject money_ui;
+    private bool m_textGlow_sns = false, is_glowing = false;
+    private TextMeshProUGUI money_txt;
+    private GameObject[] money_bfr = new GameObject[20]; // 20 sized gm bfr
+    private int player_money = 0;
+    private int money_i = 0, money_v = 0;
+    private const float money_delay = 0.0075f;
+    private float money_timer = 0f;
+
+
+    [Header ("Speed")]
+    [SerializeField] private TextMeshProUGUI speed_txt;  
+
+
+    [Header ("Timer")]
+    [SerializeField] private TextMeshProUGUI timer_txt;  
+    private float timer_ = 0f;
+
+    [Header ("Score")]
+    [SerializeField] private TextMeshProUGUI score_txt;
+    private bool countScore_ = false, countBonus_ = false;
+    private uint lastZ = 0, score = 0;
+    private decimal v_score = 0;
+    private int temp_bonus = 0;
+    [HideInInspector] public bool set_countBonus_
+    {
+        get { return false; }
+        set{ if(value.GetType() == typeof(bool)) countBonus_ = value;}
+    }
+
+
     [Header ("UI Objects")]
     private Transform[] parents_3d;
 
@@ -26,7 +71,9 @@ public class GameUI : MonoBehaviour
     private Transform plyr_transform;
     private Rigidbody plyr_rgBody;
     private PlayerMovement p_movement;
-    
+    private float p_speedValue = 0f;
+
+
     [Header ("TopRight Gun")]
     [SerializeField] private GameObject gun_ui;
     [SerializeField] private TextMeshPro ammo_txt;
@@ -45,28 +92,19 @@ public class GameUI : MonoBehaviour
     private AutoTurret aimed_turretScrpt;
     private int enemy_health, enemy_shield, enemy_armor;
 
-    [Header ("Score")]
-    [SerializeField] private TextMeshProUGUI score_txt;
-    private bool countScore_ = false;
-    private bool countBonus_ = false;
-    private uint lastZ = 0;
-    private uint score = 0;
-    private decimal v_score = 0;
-    private int temp_bonus = 0;
-    [HideInInspector] public bool set_countBonus_
-    {
-        get { return false; }
-        set{ if(value.GetType() == typeof(bool)) countBonus_ = value;}
-    }
+  
     
-    [Header ("Combo Score")]
+
+    [Header ("Combo")]
+    [SerializeField] private Sprite[] combo_masks;
     [SerializeField] private GameObject combo_obj;
-    private int combo_v;
+    private string combo_text = "Good";
+    private int combo_v = 0, combo_goal = 3;
     private LTDescr combo_lt;
 
-    private void countScore(){ countScore_ = true; }
 
-    // Start is called before the first frame update
+
+    // Start
     private void Start()
     {
         weapon_scrpt = FindObjectOfType<Weapon>();
@@ -101,18 +139,110 @@ public class GameUI : MonoBehaviour
         
         newEnemy_UI(true);
         Invoke("countScore", 0.25f);
+
+
+        money_txt = money_ui.transform.GetChild(1).GetComponent<TextMeshProUGUI>();
+
+        // restart ui registration
+        for(int s = 0; s < gameObject.transform.childCount; s ++){
+            if(s > 2) break;
+            saved_ui_initalPos[s] = gameObject.transform.GetChild(s).localPosition;
+        }
+        
+        saved_restartUi_transforms = transform.GetChild(5).GetComponentsInChildren<Transform>();
+        saved_restartUi_scales =  Array.ConvertAll(saved_restartUi_transforms, t => t.localScale);
+
+
+        weapon_script = FindObjectOfType<Weapon>();
+
+        weapon_ammoTxts = new TextMeshPro[2]{
+            weapon_ui_obj.transform.GetChild(1).GetChild(2).GetComponent<TextMeshPro>(), // stack
+            weapon_ui_obj.transform.GetChild(1).GetChild(1).GetComponent<TextMeshPro>(), // magz
+        };
+        Debug.Log(weapon_ui_obj.transform.GetChild(1).GetChild(2));
     }
+    private void countScore(){ countScore_ = true; }
 
 
 
-    // FixedUpdate for responsive gun rotations
+    // Update
+    private void Update()
+    {
+        timer_ += Time.deltaTime;
+
+        // values attribution
+        timer_txt.text = timer_.ToString();
+        score_txt.text = score.ToString();
+        speed_txt.text = ((uint) plyr_rgBody.velocity.z).ToString();
+        money_txt.text = player_money.ToString();
+        weapon_ammoTxts[0].text = weapon_script.get_ammo.ToString();
+        weapon_ammoTxts[1].text = weapon_script.get_ammoInMag.ToString();
+
+
+
+        // money
+        if(player_money < money_v){
+            if(money_timer >= money_delay){
+                money_timer = 0f;
+                player_money++;
+            }
+        }
+        money_timer += Time.deltaTime;
+
+
+
+        // restart fadeIn
+        int x = 0, c = 0;
+        if(restart_uiNeeds_fade){
+            for(int i = 0; i < saved_restartUi_transforms.Length; i ++ ){
+                if(saved_restartUi_transforms[i] == null) break;
+
+                Image img_ = saved_restartUi_transforms[i].GetComponent<Image>();
+                if(img_ != null){
+                    var tempColor = img_.color;
+                    if(tempColor.a < 1f){
+                        tempColor.a += (0.7f) * Time.deltaTime;
+                        img_.color = tempColor;
+                    }else{ c++; }
+                }else{
+                    TextMeshProUGUI txt_ = saved_restartUi_transforms[i].GetComponent<TextMeshProUGUI>();
+                    if(txt_ == null) continue;
+
+                    var t_Color = txt_.color;
+                    if(t_Color.a < 1f){
+                        t_Color.a += (0.7f) * Time.deltaTime;
+                        txt_.color = t_Color;
+                    }else{ c++; }
+                }
+                x++;
+            }
+            // fade end
+            if(c == x) {
+                restart_uiNeeds_fade = false;
+                
+                for(int n = 0; n < x; n ++){
+                   LeanTween.scale(saved_restartUi_transforms[n].gameObject, saved_restartUi_scales[n], 0.2f).setEaseInSine();
+                }
+            }
+        }
+
+
+    }   
+
+
+
+    // FixedUpdate 
     private void FixedUpdate()
     {
+
+        // ammo
         if( ammo_txt.text.ToString() != weapon_scrpt.get_ammo.ToString())
         {
             ammo_txt.text = weapon_scrpt.get_ammo.ToString();
         }
 
+
+        // ui movement
         if(plyr_rgBody != null && plyr_transform != null)
         {
             for(int i = 0; i < parents_3d.Length; i++)
@@ -122,36 +252,36 @@ public class GameUI : MonoBehaviour
                 ) continue;
 
                 parents_3d[i].transform.rotation = Quaternion.Slerp( parents_3d[i].transform.rotation, Quaternion.Euler(
-                    plyr_rgBody.velocity.y * 0.25f,
+                    plyr_rgBody.velocity.y * 0.10f,
                     (plyr_transform.rotation.eulerAngles.y > 180f ? 
                         (-1 * (plyr_transform.rotation.eulerAngles.y - 360f) ):
                         -1 * plyr_transform.rotation.eulerAngles.y
-                    ) * 0.2f,
+                    ) * 0.06f,
                     0f
                 ), 0.2f);
 
-                // parents_3d[i].transform.localPosition = Vector3.Lerp( parents_3d[i].transform.localPosition, new Vector3(
-                //     parents_3d[i].transform.localPosition.x + (plyr_rgBody.velocity.x* 0.25f),
-                //     parents_3d[i].transform.localPosition.y + (plyr_rgBody.velocity.y* 0.25f),
-                //     0
-                // ), 0.2f);
-            }
-
-            
+                parents_3d[i].transform.localPosition = Vector3.Lerp( parents_3d[i].transform.localPosition, new Vector3(
+                    parents_3d[i].transform.localPosition.x + (plyr_rgBody.velocity.x* 0.1f),
+                    parents_3d[i].transform.localPosition.y, // + (plyr_rgBody.velocity.y* 0.06f),
+                    0
+                ), 0.2f);
+            }  
         }
 
- 
+
+
      
         // score
         if(v_score == 0 && countScore_)
-        { v_score = (uint) plyr_transform.position.z; }
+        {
+            v_score = (uint) plyr_transform.position.z;
+        }
 
-        if( ( ((decimal) plyr_transform.position.z - v_score) > ((decimal) 0.10f) ) && (v_score > 0) )
+        if( (((decimal) plyr_transform.position.z - v_score) > ((decimal) 0.10f))  &&  (v_score > 0))
         { 
-            v_score+= (decimal) 0.1f;
+            v_score += (decimal) 0.1f;
             score += (( v_score % 2) == 0 ? (uint)4 : (uint)3);
         }
-        score_txt.text = score.ToString();
 
 
 
@@ -181,13 +311,12 @@ public class GameUI : MonoBehaviour
 
 
 
-        // combo
-        if(combo_v != p_movement.get_Combo)
-        {
-            combo_v = p_movement.get_Combo;
-            combo_hit();
-        }
+
+        // health
+
+        
     }
+
 
 
 
@@ -304,40 +433,237 @@ public class GameUI : MonoBehaviour
     }
 
 
+
+
     // combo method
-    private void combo_hit()
+    public void combo_hit(bool combo_end)
     {
-        if(combo_v > 1)
-        {
-            if(LeanTween.isTweening(combo_obj.transform.GetChild(0).gameObject)) 
-                combo_lt.cancel(combo_obj.transform.GetChild(0).gameObject);
+        if(combo_end){
+            
+        }else{
+            combo_v ++;
 
-            if(combo_v == 2)
-            {
-                LeanTween.moveLocal(
-                    combo_obj, 
-                    new Vector3(combo_obj.transform.localPosition.x, combo_obj.transform.localPosition.y + 20, 1f),
-                30f).setEaseInSine();
+            if(combo_v >= 1){
+                combo_obj.SetActive(true);
+                
+                GameObject combo_bar = combo_obj.transform.GetChild(0).GetChild(0).gameObject;
+
+                // yellow
+                LeanTween.scale(combo_bar.transform.GetChild(1).gameObject, new Vector3( ((float)combo_v / (float)combo_goal), 1, 1), 0.75f).setEaseInSine();
+                // white
+                LeanTween.scale(combo_bar.transform.GetChild(0).gameObject, new Vector3( ((float)combo_v / (float)combo_goal), 1, 1), 0.3f).setEaseInSine();
+
+                GameObject tris = combo_obj.transform.GetChild(2).gameObject;
+
+                // x2
+                combo_obj.transform.GetChild(3).GetComponent<TextMeshProUGUI>().text = "X" + combo_v.ToString();
+
+                for(int s = 0; s < 2; s ++){
+                    // l tris
+                    LeanTween.moveLocal(tris.transform.GetChild(0).GetChild(s).gameObject, 
+                        tris.transform.GetChild(1).GetChild(s).localPosition + new Vector3(-20f, 0f, 0f), 1.4f).setEasePunch();
+                    // r tris
+                    LeanTween.moveLocal(tris.transform.GetChild(1).GetChild(s).gameObject, 
+                        tris.transform.GetChild(1).GetChild(s).localPosition + new Vector3(20f, 0f, 0f), 1.4f).setEasePunch();
+
+                    LeanTween.scale(tris.transform.GetChild(1).GetChild(s).gameObject, tris.transform.GetChild(1).GetChild(s).localScale * 2f, 1.4f).setEasePunch();
+                    LeanTween.scale(tris.transform.GetChild(0).GetChild(s).gameObject, tris.transform.GetChild(1).GetChild(s).localScale * 2f, 1.4f).setEasePunch();
+                }
+
+                if(combo_v == combo_goal){ // PERFECT !
+                    GameObject combo_txt_obj = combo_obj.transform.GetChild(1).gameObject;
+                    GameObject combo_x1 = combo_obj.transform.GetChild(3).gameObject;
+
+                    // reset shine pos
+                    combo_x1.transform.GetChild(0).localPosition =  combo_txt_obj.transform.GetChild(0).localPosition = new Vector3(-250, 0, 0);
+
+                    combo_txt_obj.transform.localScale = Vector3.zero;
+                    Vector3 cmbo_pos = combo_txt_obj.transform.localPosition;
+                    combo_txt_obj.transform.localPosition = cmbo_pos + new Vector3(0, -40f, 0);
+
+                    TextMeshProUGUI combo_txt = combo_obj.transform.GetChild(1).GetComponent<TextMeshProUGUI>();
+                    combo_txt.text = "PERFECT !";
+                
+                    // scale and rotate combo_txt
+                    LeanTween.moveLocal(combo_txt_obj, cmbo_pos, 1f).setEaseInSine();
+                    LeanTween.scale(combo_txt_obj, new Vector3(1, 1, 1), 1f).setEaseInSine();
+                    LeanTween.rotate(combo_txt_obj, new Vector3(15, 0, 0), 1f).setEasePunch();
+
+                    // combo_txt shine
+                    LeanTween.moveLocal(combo_txt_obj.transform.GetChild(0).gameObject, 
+                        combo_txt_obj.transform.GetChild(0).transform.localPosition + new Vector3(500, 0, 0),
+                    1.5f).setEaseInSine();
+
+    
+                    // x2 shine
+                    LeanTween.moveLocal(combo_x1.transform.GetChild(0).gameObject, 
+                        combo_x1.transform.GetChild(0).transform.localPosition + new Vector3(700, 0, 0),
+                    1.5f).setEaseInSine();
+                    
+
+                    //
+                    GameObject p_100 = combo_obj.transform.GetChild(4).gameObject; 
+
+
+                    StartCoroutine(combo_next());
+                }   
             }
-
-            combo_obj.SetActive(true);
-
-            LTDescr combo_ltScale = LeanTween.scale(
-                combo_obj.transform.GetChild(0).gameObject,
-                combo_obj.transform.GetChild(0).localScale * 1.6f,
-            1f ).setEasePunch();
-
-            combo_lt = combo_ltScale; 
-
-            combo_obj.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = combo_v.ToString(); 
-
-        }else
-        { combo_obj.SetActive(false); }
+        }
     }
+    private IEnumerator combo_next(){
+        yield return new WaitForSeconds(1.5f);
+        GameObject combo_bar = combo_obj.transform.GetChild(0).GetChild(0).gameObject;
+        GameObject combo_txt_obj = combo_obj.transform.GetChild(1).gameObject;
+
+        // scale down
+        // yellow
+        LeanTween.scale(combo_bar.transform.GetChild(1).gameObject, new Vector3(0f, 1f, 1f), 0.45f).setEaseInSine();
+        // white 
+        LeanTween.scale(combo_bar.transform.GetChild(0).gameObject, new Vector3(0f, 1f, 1f), 0.30f).setEaseInSine();
+
+        LeanTween.scale(combo_txt_obj, new Vector3(0, 0, 0), 0.4f).setEaseInSine();
+
+        // new combo goal
+        int randm_flt_vrt =  UnityEngine.Random.Range(0, 3);
+
+        combo_goal += (randm_flt_vrt + 1);
+    }
+
+
+
+    // public gain money
+    public void gain_money(int money_vv)
+    {
+        if(money_vv > 0){
+            money_i++;
+
+            GameObject m = Instantiate(
+                money_ui.transform.GetChild(2).gameObject,
+                money_ui.transform.GetChild(1).localPosition,
+                Quaternion.identity, money_ui.transform
+            );
+
+            TextMeshProUGUI m_t = m.GetComponent<TextMeshProUGUI>();
+            m_t.text = "+ " + money_vv.ToString() + "$";
+            m_t.color = new Color32(255, 255, 0, 255);
+            m.transform.localPosition = money_ui.transform.GetChild(1).localPosition + new Vector3(0f, (-42f) * money_i, 0f);
+
+            LeanTween.moveLocal(m, money_ui.transform.GetChild(1).localPosition + new Vector3(0f, -28f, 0f), 1f).setEaseInSine();
+            LeanTween.scale(m, m.transform.localScale * 0.85f, 1.2f).setEasePunch();
+            LeanTween.rotate(m, new Vector3(0, 0, 3f), 2.4f).setEasePunch();
+            
+            LeanTween.cancel(money_ui.transform.GetChild(1).gameObject);
+            LeanTween.scale(money_ui.transform.GetChild(1).gameObject, m.transform.localScale * 1.13f, 2f).setEasePunch();
+
+            StartCoroutine(off_m(m));
+            StartCoroutine(text_glow_eff());
+
+            money_v += money_vv;
+        }
+    }
+    private IEnumerator off_m(GameObject m_obj){
+        yield return new WaitForSeconds(0.8f);
+        m_obj.SetActive(false);
+        Destroy(m_obj);
+        money_i--;
+    }
+    private IEnumerator text_glow_eff(){
+        if(is_glowing) yield break;
+
+        is_glowing = true;
+
+        LeanTween.moveLocal(
+            money_ui.transform.GetChild(1).GetChild(0).gameObject, 
+            new Vector3( m_textGlow_sns ? -60 : 60, 0, 0),
+        0.8f).setEaseInSine();
+
+        yield return new WaitForSeconds(0.8f);
+        
+        is_glowing = false;
+        m_textGlow_sns = !(m_textGlow_sns);
+    }
+
+    
 
     // public kill method
     public void kill_ui()
     {
-        
+
     }
+
+
+
+
+    // public gameOv method
+    public void gameOver_ui()
+    {
+
+        for(int z = 0; z < 9; z ++){
+            if(z < 3){
+                LeanTween.moveLocal(
+                    gameObject.transform.GetChild(z).gameObject, 
+                    new Vector3(
+                        gameObject.transform.GetChild(z).localPosition.x +  (z != 2 ? (z == 1 ? -350f : 350f) : 0),
+                        gameObject.transform.GetChild(z).localPosition.y + (z == 2 ? 500 : 0),
+                        0
+                ), 0.6f).setEaseInSine();
+            }else{
+                if(z == 5){
+                    GameObject gm =  gameObject.transform.GetChild(z).gameObject;
+                    gm.transform.localPosition = Vector3.zero;
+
+                    Transform[] gm_chlds = gm.GetComponentsInChildren<Transform>();
+
+                    for(int y = 0; y <  gm_chlds.Length; y ++){
+                        gm_chlds[y].localPosition =   gm_chlds[y].localPosition + new Vector3(0f, -50f, 0f);
+                        Vector3 scl = gm_chlds[y].localScale;
+                        gm_chlds[y].localScale =  scl * 0.87f;
+
+                        LeanTween.moveLocal(gm_chlds[y].gameObject, gm_chlds[y].localPosition + new Vector3(0, 50f, 0), 1.9f ).setEaseInSine();
+                        LeanTween.scale(gm_chlds[y].gameObject, scl * 0.9f, 1.3f).setEasePunch();
+
+                        Image ui_img = gm_chlds[y].GetComponent<Image>();
+                        if(ui_img != null){
+                            var tempColor = ui_img.color;
+                            tempColor.a = 0f;
+                            ui_img.color = tempColor;
+                        }else{
+                            TextMeshProUGUI ui_txt =  gm_chlds[y].GetComponent<TextMeshProUGUI>();
+                            if(ui_txt == null) continue;
+                            var tempColor = ui_txt.color;
+                            tempColor.a = 0f;
+                            ui_txt.color = tempColor;
+                        }
+
+
+                    }
+                }else{
+                    // RectTransform rect_t = gameObject.transform.GetChild(z).GetComponent<RectTransform>();
+                    // if(rect_t != null){
+                    //     Debug.Log(rect_t.anchoredPosition);
+
+                    // }
+                }
+            }
+
+            if(z > 7){
+                LeanTween.moveLocal(
+                    gameObject.transform.GetChild(z).gameObject,
+                    new Vector3( gameObject.transform.GetChild(z).localPosition.x, gameObject.transform.GetChild(z).localPosition.y - 500, 0),
+                0.6f).setEaseInSine();
+            }
+        }
+ 
+        restart_uiNeeds_fade = true;
+
+    }
+
+    public void ui_weaponShoot(){
+
+    }
+
+    public void ui_reload(float reload_time){
+
+    }
+
 }

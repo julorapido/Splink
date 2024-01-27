@@ -7,38 +7,39 @@ using System;
 public class Weapon : MonoBehaviour
 {
     [Header ("Weapon Ammo")]
-    private int ammo = 0;
-    public int get_ammo {
-        set {return; }
-        get{ return ammo;}
+    private int ammo = 0, ammo_inMagazine = 0;
+    [HideInInspector] public int get_ammo {
+        set {return; } get{ return ammo;}
+    }
+    [HideInInspector] public int get_ammoInMag {
+        set {return; } get{ return ammo_inMagazine;}
     }
     private bool ammo_fixed  = true;
 
-    [Header ("Weapon Statistics")]
-    private const int damage = 40;
+    [Header ("Weapon Stats")]
+    private const int damage = 10;
     private const int precision_ = 50;
     private const float fireRate = 0.4f;
     private const int criticalChance = 7; // /100
-    private const int range_ = 30;
+    private const int range_ = 60;
     private const int magSize = 12;
     private const float reloadTime = 2f;
 
-    [Header ("Weapon Precision")]
 
     [Header ("Player Movement/Collision Script")]
     private PlayerMovement pm;
     private PlayerCollisions pm_cls;
-
     public int get_attRange {
         set {return; }
         get{ return range_;}
     }
 
-    [Header ("Weapon FireRate")]
+
+    [Header ("Can Weapon Shoot")]
     private bool canShoot = true;
 
     [Header ("Weapon Recoil")]
-    private const float recoil_strength = 6.25f;
+    private const float recoil_strength = 5.25f;
     private const float recoil_speed = 40.0f;
     private float em_recoil = 0.0f;
     private bool recoil_side = false;
@@ -56,7 +57,6 @@ public class Weapon : MonoBehaviour
         ETERNAL
     };
     [SerializeField]
-
     GunLevel gun_level = new GunLevel();
     public GunLevel set_GunLevel{
         get {return 0;}
@@ -65,6 +65,8 @@ public class Weapon : MonoBehaviour
     public GunLevel get_GunLvl{
         get {return gun_level;} set { return;}
     }
+
+    
 
     [Header ("Weapon Shot PartSystems")]
     private  ParticleSystem[] ps_shots;
@@ -109,23 +111,27 @@ public class Weapon : MonoBehaviour
     [Header ("CameraMovement")]
     private CameraMovement cm_movement;
 
+    [Header ("Hitmarker")]
+    private GameObject hitmarker_;
+
     // [Header ("Weapon-Type")]
-    private enum GunType
+    private enum WeaponType
     {
         PISTOL,
+        LIGHTGUN,
         SHOTGUN,
         SMG,
         RIFLE,
-        SNIPER,
-        MYTHIC,
+        SNIPER
     };
-
+    WeaponType weapon_type = new WeaponType();
 
 
     // Awake is called even if the script is disabled
     private void Awake()
     {
         m_r = gameObject.GetComponentsInChildren<Transform>();
+        pm = FindObjectOfType<PlayerMovement>();
 
         g_ui = FindObjectOfType<GameUI>();
         cm_movement = FindObjectOfType<CameraMovement>();
@@ -140,14 +146,25 @@ public class Weapon : MonoBehaviour
             i++;
         }
         wpn_prefab = weaponsResourcesPrefab_buffer[0];
+
+        // set weapon type
+        weapon_type = WeaponType.PISTOL;
+        // WeaponType[] two_handeds = new WeaponType[2]{WeaponType.PISTOL, WeaponType.SMG};
+
+        if( weapon_type == WeaponType.PISTOL ||   weapon_type == WeaponType.SMG ){
+            pm.set_weaponHandedMode = true;
+        }else {  pm.set_weaponHandedMode = false; }
+
+        pm.set_weaponReloadTime = reloadTime;
+
+        // init weapon stats
+
     }
 
 
 
     private void Start()
     {
-    
-        pm = FindObjectOfType<PlayerMovement>();
 
         pm_cls = FindObjectOfType<PlayerCollisions>();
         pm_cls.set_AttackRange = range_;
@@ -155,6 +172,8 @@ public class Weapon : MonoBehaviour
         ps_shots = gameObject.GetComponentsInChildren<ParticleSystem>();
 
         equip_Weapon(null);
+
+        hitmarker_ = transform.parent.GetChild(1).gameObject;
     }
 
 
@@ -222,6 +241,7 @@ public class Weapon : MonoBehaviour
 
 
 
+
     public void Shoot(Transform target_transform, bool horizontal_enm)
     {
         if(!canShoot) return;
@@ -231,7 +251,8 @@ public class Weapon : MonoBehaviour
         pm.set_recoil = 0f;
         StartCoroutine(shoot_recoil());
 
-        // ammo--;
+        ammo--;
+
         cm_movement.shoot_recoil(recoil_side);
         recoil_side = !recoil_side;
 
@@ -272,7 +293,17 @@ public class Weapon : MonoBehaviour
         ).setEasePunch();
  
         for(int i = 0; i < ps_shots.Length; i ++) ps_shots[i].Play();
+
+
+        // reload
+        if(ammo == 0)
+        {
+            reload();
+        }
+
     }
+
+
 
     private IEnumerator shoot_recoil()
     {
@@ -296,7 +327,6 @@ public class Weapon : MonoBehaviour
             yield return new WaitForSeconds(  (recoil_time/2) / 30); // 0.15f
         }
     }
-
     private IEnumerator delay_shoot()
     {
         canShoot = false;
@@ -304,16 +334,16 @@ public class Weapon : MonoBehaviour
         canShoot = true;
     }
 
-    // public reload method
-    public void reload()
-    {
-        ammo = magSize;
-    }
+
+
 
     // turn off meshes, partsystms, etc..
     public void equip_Weapon(bool? pocket_weapon)
     {   
-
+        // +3 mag && full actual mag
+        ammo_inMagazine += 3 * (magSize);
+        ammo = (magSize);
+        
         // nullable bool for Start 
         if(pocket_weapon == null)
         {
@@ -339,6 +369,28 @@ public class Weapon : MonoBehaviour
             }
             pocket_slot[0].SetActive(false);
             ammo_fixed = true;
+        }
+    }
+
+
+
+    // public reload method
+    public void reload()
+    {
+        ammo = ((ammo_inMagazine < magSize) ?  ammo_inMagazine :  magSize);
+        ammo_inMagazine = ((ammo_inMagazine < magSize) ?  0 :  (ammo_inMagazine - magSize));
+
+        pm.player_reload();
+        g_ui.ui_reload(reloadTime);
+    }
+
+
+
+    public void hitmarker(){
+
+        for(int i = 0; i < hitmarker_.transform.childCount; i ++){
+            LeanTween.moveLocal(hitmarker_.transform.GetChild(i).gameObject, hitmarker_.transform.GetChild(i).localPosition + new Vector3(0f, 0f, 0.1f), 1.4f).setEasePunch();
+            LeanTween.scale(hitmarker_.transform.GetChild(i).gameObject, hitmarker_.transform.GetChild(i).localScale * 1.4f, 1.4f).setEasePunch();
         }
     }
 }

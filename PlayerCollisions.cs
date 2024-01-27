@@ -101,11 +101,14 @@ public class PlayerCollisions : MonoBehaviour
     [HideInInspector] public bool wallRun_aimBox = false;
     [HideInInspector] public float z_wallRun_aimRotation = 0.0f;
 
-    [Header ("Player Movement Script")]
+    [Header ("PlayerMovement/")]
     private PlayerMovement p_movement;
 
-    [Header ("Camera Movement Script")]
+    [Header ("CameraMovement/")]
     private CameraMovement c_movement;
+
+    [Header ("GameUi/")]
+    private GameUI game_ui;
 
     [Header ("Main PlayerCollisions")]
     private PlayerCollisions psCollisions_movement;
@@ -118,7 +121,7 @@ public class PlayerCollisions : MonoBehaviour
         p_movement =  FindObjectOfType<PlayerMovement>();
         c_movement = FindObjectOfType<CameraMovement>();
         p_weapon = FindObjectOfType<Weapon>();
-
+        game_ui = FindObjectOfType<GameUI>();
 
         PlayerCollisions ar =  GameObject.FindGameObjectsWithTag("mainHitbox")[0].GetComponent<PlayerCollisions>();
         psCollisions_movement = ar;
@@ -387,7 +390,7 @@ public class PlayerCollisions : MonoBehaviour
                     // Launcher jmp
                     if(collision.gameObject.tag == "launcher")
                     {
-                        p_movement.animateCollision("launcherHit", _size);
+                        p_movement.animateCollision("launcherHit", _size, collision.gameObject);
                     }
 
                     // Tyro hit
@@ -411,6 +414,12 @@ public class PlayerCollisions : MonoBehaviour
                         p_movement.animateCollision("fallBoxHit", _size, collision.gameObject);
                         c_movement.fall_Box();
                     }  
+
+                    // void
+                    if(collision.gameObject.tag == "void"){
+                        
+                    }
+                    
                     break;
 
                 case "frontwall":
@@ -504,12 +513,13 @@ public class PlayerCollisions : MonoBehaviour
                     {
                         case "coin":
                             psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].coin);
+
                             ParticleSystem ps = collision.gameObject.GetComponentInChildren<ParticleSystem>();
                             MeshRenderer[] mr_ = collision.gameObject.GetComponentsInChildren<MeshRenderer>();
                             for(int i = 0; i < mr_.Length; i++)
                                 mr_[i].enabled = false;
                                 
-                            Debug.Log(ps);
+                            game_ui.gain_money(4);
                             ps.Play();
                             break;
 
@@ -551,6 +561,11 @@ public class PlayerCollisions : MonoBehaviour
                         p_movement.animateCollision("obstacleLeave", _size, collision.gameObject);
                     }
                     
+
+                    // Tap Tap Jump
+                    if(collision.gameObject.tag == "tapTapJump")
+                        p_movement.animateCollision("tapTapJumpExit", _size, collision.gameObject);
+
                     break;
 
                 case "sidewall":

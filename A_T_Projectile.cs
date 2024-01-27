@@ -18,6 +18,7 @@ public class A_T_Projectile : MonoBehaviour
     [HideInInspector] public bool target_isLeft;
     [HideInInspector] public bool is_crticial;
     private ParticleSystem blt_expl;
+    private Weapon blt_wpnScript;
 
     [Header ("Player_")]
     [HideInInspector] public Transform plyr_target;
@@ -93,6 +94,8 @@ public class A_T_Projectile : MonoBehaviour
 
 
             LeanTween.scale(gameObject, transform.localScale * 0.5f, 1f).setEaseInCubic();
+
+          
         }
 
         ParticleSystem[] ps_0 = gameObject.GetComponentsInChildren<ParticleSystem>();
@@ -108,6 +111,12 @@ public class A_T_Projectile : MonoBehaviour
         {
             speed =  UnityEngine.Random.Range(14f, 22f);
         }
+
+        if(blt_type == turret_Type.WeaponBullet){
+            Weapon w = FindObjectOfType<Weapon>();
+            blt_wpnScript = w;
+        }
+
 
     }
 
@@ -271,6 +280,7 @@ public class A_T_Projectile : MonoBehaviour
                                 is_crticial
                             );
                             enemy_hit();
+                            blt_wpnScript.hitmarker();
                             parent_ = null;
                             break;
                         }

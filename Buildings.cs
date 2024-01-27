@@ -194,7 +194,7 @@ public class Buildings : MonoBehaviour
                 {
                     combine_Meshes(buffer_sect, buffer_sect.transform.childCount);
                     // generate_SubTerrain(buffer_sect);
-                    generateBounds(buffer_sect);
+                    // generateBounds(buffer_sect);
                 }
 
                 x_pos += sl_size.x;

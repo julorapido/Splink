@@ -5,8 +5,9 @@ using UnityEngine;
 public class RCXD : MonoBehaviour
 {
     private enum robot_Type{
-        Classic,
-        ZE
+        Ground_Robot,
+        Fly_Robot,
+        
     };
     [SerializeField]
     robot_Type t_type = new robot_Type();

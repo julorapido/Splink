@@ -214,8 +214,8 @@ public class CameraMovement : MonoBehaviour
         Quaternion aiming_rotation = aimed_target != null ? Quaternion.LookRotation(player_target_relativePos) : Quaternion.identity; 
         float euler_y_fixed = aiming_rotation.eulerAngles.y > 180 ?  (aiming_rotation.eulerAngles.y - 360f) : (aiming_rotation.eulerAngles.y);
         float euler_x_fixed = aiming_rotation.eulerAngles.x > 180f ?  (aiming_rotation.eulerAngles.x - 360f) : (aiming_rotation.eulerAngles.x);
-        aim_y = Mathf.Lerp(aim_y, euler_y_fixed, 0.3f);
-        aim_x = Mathf.Lerp(aim_x, euler_x_fixed, 0.3f);
+        aim_y = Mathf.Lerp(aim_y, euler_y_fixed, 0.8f);
+        aim_x = Mathf.Lerp(aim_x, euler_x_fixed, 0.8f);
             
 
         // bob effect
@@ -418,8 +418,9 @@ public class CameraMovement : MonoBehaviour
                             (tyro_on ? new Vector3(0f, 0.5f, 0.5f) : new Vector3(0f,0f,0f)) 
                         + 
                         new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"])
-                        + new Vector3(0f, ( (player_velocity.y < -1) ? (player_velocity.y/14) : 0f), 0f)
-                        + new Vector3( (float)(x_y[0] * coef),(float) Math.Abs(x_y[1] * coef), 0f)
+                        + new Vector3(0f, ( (player_velocity.y < -1) ? (player_velocity.y/14) : 0f), 0f) // y compensation
+                        + new Vector3( (float)(x_y[0] * coef),(float) Math.Abs(x_y[1] * coef), 0f) // bob
+                        + new Vector3(0, 0, (player_rb.velocity.z > 8 ) ? (player_rb.velocity.z - 8) * 0.05f : 0f ) // z speed compensation
                     ),
                     ref currentVelocity,
                     ( grappl_on ? 
@@ -454,6 +455,7 @@ public class CameraMovement : MonoBehaviour
                 
             }
         }else{
+            // game over cam
             transform.LookAt(player);
         }
 
@@ -463,7 +465,7 @@ public class CameraMovement : MonoBehaviour
 
 
 
-
+    // game OVR
     public void cam_GamerOver_()
     {
         Invoke("gm_over_call", 1.5f);
@@ -471,6 +473,9 @@ public class CameraMovement : MonoBehaviour
     } private void gm_over_call(){ game_Over_ = true;}
 
 
+  
+  
+  
     private void reset_smoothDmpfnc()
     {
         smoothTime_prc = 0.0f;
@@ -488,6 +493,7 @@ public class CameraMovement : MonoBehaviour
         }
         iterator_ = 0;
     }
+
 
 
 
@@ -758,6 +764,33 @@ public class CameraMovement : MonoBehaviour
 
 
 
+   // Fall Down
+    public void fall_Down(bool is_ext)
+    {
+        if(is_ext)
+        {
+            //FovTrans(85f, 0.5f);
+            supl_xRot = 0.0f;
+            new_fov = start_fov;
+            pos_dc["wallR_y_offst"] = 0.0f; pos_dc["wallR_z_offst"] = 0.0f; rot_dc["wallR_rot_x_offst"] = 0.0f; rot_dc["wallR_rot_z_offst"] = 0.0f;
+            pos_dc["wallR_x_offst"] = 0.0f;
+       
+        }else
+        {
+            reset_smoothDmpfnc();
+            new_fov = 86f;
+            // SPACE + OFFSET
+            pos_dc["wallR_y_offst"] = 0.9f;
+            pos_dc["wallR_z_offst"] = 1.2f;
+
+            rot_dc["wallR_rot_x_offst"] = 0.20f;       
+
+        }
+    }
+
+
+
+
 
 
 
@@ -771,7 +804,7 @@ public class CameraMovement : MonoBehaviour
 
         iterator_ = 4;
         List<float> v_flt = new List<float>(new float[6] {
-            is_dblJmp ? -0.14f : -0.25f, is_dblJmp ? -0.7f : -1.5f, is_dblJmp ?  -0.12f : 0.12f, 
+            is_dblJmp ? -0.14f : -0.25f, is_dblJmp ? -0.9f : -1.7f, is_dblJmp ?  -0.12f : 0.12f, 
             0.0f, 0.0f, 0.0f
         } ); 
         List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "", "",""} ); 
@@ -947,12 +980,12 @@ public class CameraMovement : MonoBehaviour
         reset_smoothDmpfnc();  
 
         // +25% 
-        smoothTime_prc = 25f;
+        smoothTime_prc = 10f;
 
 
         // float x__ = -1 * (y_rotation / 35);
-        iterator_ = 3;
-        List<float> v_flt = new List<float>(new float[6] {0.200f, 1f,  0.120f, 0f, 
+        iterator_ = 4;
+        List<float> v_flt = new List<float>(new float[6] {0.130f, 0.7f,  0.120f, 0.65f, 
         0f, 0f } ); 
         List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "wallR_z_offst", 
         "wallR_x_offst",  "wallR_rot_y_offst"} ); 
@@ -969,13 +1002,59 @@ public class CameraMovement : MonoBehaviour
     // under
     public void under()
     {
-        reset_smoothDmpfnc();  
+        reset_smoothDmpfnc(); 
 
+        // +15% 
         smoothTime_prc = 15f;
 
+        iterator_ = 6;
+        List<float> v_flt = new List<float>(new float[6] {-0.70f, 0.6f,  0.120f, -0.2f, 0.30f, -0.10f} ); 
+        List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_z_offst", "wallR_rot_z_offst", "wallR_rot_x_offst", "wallR_x_offst",  "wallR_rot_y_offst"} ); 
+ 
+        values_ref = s_arr; values_flt = v_flt;
+        trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false }); 
+
+        trns_fnc = true; trns_back = false;
+    }
+
+    // taptap
+    public void tapTapJmp(bool tap_tapExit){
+        reset_smoothDmpfnc();  
+
+        // +10% || +30%
+        smoothTime_prc = tap_tapExit ? 10f : 30f;
+
+        // +5 fov  !!
+        new_fov = 80f;
+
         iterator_ = 4;
-        List<float> v_flt = new List<float>(new float[6] {-0.40f, 1f,  0.120f, 0.2f, 0f, 0f} ); 
+        List<float> v_flt = new List<float>(new float[6] {
+            tap_tapExit ? -1.5f : -0.9f, tap_tapExit ? 0f : 0.4f, 
+            tap_tapExit ? -0.13f : 0.100f, tap_tapExit ? -0.110f : 0.040f, 0f, 0f
+        } ); 
         List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_z_offst", "wallR_rot_z_offst", "wallR_rot_x_offst", "",  ""} ); 
+ 
+        values_ref = s_arr; values_flt = v_flt;
+        trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false }); 
+
+        trns_fnc = true; trns_back = false; 
+    }
+
+
+    // bareer
+    public void bareerJump(bool first_jumps)
+    {
+        reset_smoothDmpfnc();  
+
+        // -15% || +30%
+        smoothTime_prc = first_jumps ? -15f : 30f;
+
+        iterator_ = first_jumps ? 4 : 3;
+        List<float> v_flt = new List<float>(new float[6] {
+            first_jumps ? 0.90f : -1.30f, first_jumps ? 0.1f : -0.1f, 
+            first_jumps ? 0.120f : -0.160f, first_jumps ? 0.35f : 0f, 0f, 0f
+        } ); 
+        List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst", first_jumps ? "wallR_z_offst" : "",  "", ""} ); 
  
         values_ref = s_arr; values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false }); 
