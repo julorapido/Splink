@@ -17,7 +17,7 @@ public class Weapon : MonoBehaviour
     private bool ammo_fixed  = true;
 
     [Header ("Weapon Stats")]
-    private const int damage = 10;
+    private const int damage = 1;
     private const int precision_ = 50;
     private const float fireRate = 0.4f;
     private const int criticalChance = 7; // /100
@@ -118,13 +118,17 @@ public class Weapon : MonoBehaviour
     private enum WeaponType
     {
         PISTOL,
-        LIGHTGUN,
-        SHOTGUN,
         SMG,
         RIFLE,
+        SEMIAUTO,
+        HEAVY,
+        SHOTGUN,
+        LIGHTGUN,
         SNIPER
     };
     WeaponType weapon_type = new WeaponType();
+
+
 
 
     // Awake is called even if the script is disabled
@@ -151,9 +155,19 @@ public class Weapon : MonoBehaviour
         weapon_type = WeaponType.PISTOL;
         // WeaponType[] two_handeds = new WeaponType[2]{WeaponType.PISTOL, WeaponType.SMG};
 
-        if( weapon_type == WeaponType.PISTOL ||   weapon_type == WeaponType.SMG ){
+        if( weapon_type == WeaponType.PISTOL || weapon_type == WeaponType.SMG )
+        {
             pm.set_weaponHandedMode = true;
-        }else {  pm.set_weaponHandedMode = false; }
+            pm.set_weaponReloadType = 0;
+        }else
+        {  
+            pm.set_weaponHandedMode = false; 
+            if(weapon_type == WeaponType.SHOTGUN || weapon_type == WeaponType.HEAVY || weapon_type == WeaponType.SNIPER){
+                pm.set_weaponReloadType = 2;
+            }else{
+                pm.set_weaponReloadType = 1;
+            }
+        }
 
         pm.set_weaponReloadTime = reloadTime;
 

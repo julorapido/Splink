@@ -113,6 +113,23 @@ public class PlayerCollisions : MonoBehaviour
     [Header ("Main PlayerCollisions")]
     private PlayerCollisions psCollisions_movement;
 
+    [Header ("Character Joints")]
+    private Rigidbody[] character_connectedBodies;
+    private CharacterJoint[] pico_characterJoints;
+
+    // awake
+    private void Awake()
+    {
+        // disable ragdoll
+        if(slcted_clsion == "boxAutoAim")
+        {
+            set_playerRagdoll(false);
+        }
+    }
+
+
+
+    // Start
     private void Start()
     {
         m_Collider = gameObject.GetComponent<Collider>();
@@ -127,8 +144,9 @@ public class PlayerCollisions : MonoBehaviour
         psCollisions_movement = ar;
     }
   
+  
  
-
+    // aim box
     private void DisplayBox(Vector3 center, Vector3 HalfExtend, Quaternion rotation, float Duration = 0)
     {
         Vector3[] Vertices = new Vector3[8];
@@ -240,6 +258,8 @@ public class PlayerCollisions : MonoBehaviour
     }
 
 
+
+    // fixedUpdate
     private void FixedUpdate()
     {
         // attribute attack range
@@ -361,6 +381,7 @@ public class PlayerCollisions : MonoBehaviour
 
 
 
+
     private void OnTriggerEnter(Collider collision)
     {
         if(slcted_clsion.Length > 0 && can_trgr)
@@ -417,7 +438,8 @@ public class PlayerCollisions : MonoBehaviour
 
                     // void
                     if(collision.gameObject.tag == "void"){
-                        
+                        p_movement.animateCollision("void", _size, collision.gameObject);
+
                     }
                     
                     break;
@@ -533,7 +555,7 @@ public class PlayerCollisions : MonoBehaviour
                     }
                     break;
                 case "enemyProj":
-
+                    
                     break;
                 default:
                     break;
@@ -658,6 +680,52 @@ public class PlayerCollisions : MonoBehaviour
             if(is_leave) p.Stop();
             else p.Play();
         }
+    }
+
+
+    public void set_playerRagdoll(bool v_){
+        Transform pico_chan  = transform.parent.GetChild(transform.parent.childCount - 1);
+        
+        Rigidbody[] pico_rb = pico_chan.GetComponentsInChildren<Rigidbody>();
+        Collider[] pico_cldr = pico_chan.GetComponentsInChildren<Collider>();
+        CharacterJoint[] pico_cjoint = pico_chan.GetComponentsInChildren<CharacterJoint>();
+
+        for(int c = 0; c < pico_cldr.Length; c++){
+            pico_cldr[c].enabled = v_;
+        }   
+
+        for(int r = 0; r < pico_rb.Length; r ++){
+            pico_rb[r].isKinematic = v_;
+            pico_rb[r].useGravity = v_;
+            pico_rb[r].detectCollisions = v_;
+            pico_rb[r].freezeRotation = (!v_);
+        }
+
+        if(!(v_)){
+            character_connectedBodies = new Rigidbody[pico_cjoint.Length];
+            pico_characterJoints = pico_cjoint;
+        }
+
+        for(int cj = 0; cj < pico_cjoint.Length; cj ++){
+            
+            // pico_cjoint[cj].enableProjection = v_;
+            // pico_cjoint[cj].enablePreprocessing = v_;
+            // pico_cjoint[cj].enableCollision = v_;
+            
+            if(v_ == false){
+                // character_connectedBodies[cj] = pico_cjoint[cj].connectedBody;
+                // pico_cjoint[cj].connectedBody = null;
+                Destroy(pico_cjoint[cj]);
+            }
+            else{ 
+                // pico_cjoint[cj].connectedBody = character_connectedBodies[cj]; 
+                CharacterJoint c_j = pico_cjoint[cj].gameObject.AddComponent<CharacterJoint>();
+                c_j = pico_characterJoints[cj];
+            }
+
+
+        }
+        
     }
 
 }

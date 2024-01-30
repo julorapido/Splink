@@ -119,7 +119,7 @@ public class CameraMovement : MonoBehaviour
     }
     public void rst_aimedTarget()
     { aimed_target = null; }
-    private float aim_x, aim_y;
+    [SerializeField] private float aim_x, aim_y;
 
     private Camera c_;
 
@@ -210,25 +210,33 @@ public class CameraMovement : MonoBehaviour
 
 
         // aim effect
-        Vector3 player_target_relativePos = aimed_target != null ? aimed_target.position - player.position : Vector3.zero;
-        Quaternion aiming_rotation = aimed_target != null ? Quaternion.LookRotation(player_target_relativePos) : Quaternion.identity; 
+        Vector3 player_target_relativePos = (
+            (aimed_target != null) ? 
+            (aimed_target.position - player.position) : (Vector3.zero)
+        );
+        Quaternion aiming_rotation = (
+            (aimed_target != null) ? 
+            (Quaternion.LookRotation(player_target_relativePos)) : (Quaternion.identity)
+        ); 
         float euler_y_fixed = aiming_rotation.eulerAngles.y > 180 ?  (aiming_rotation.eulerAngles.y - 360f) : (aiming_rotation.eulerAngles.y);
         float euler_x_fixed = aiming_rotation.eulerAngles.x > 180f ?  (aiming_rotation.eulerAngles.x - 360f) : (aiming_rotation.eulerAngles.x);
-        aim_y = Mathf.Lerp(aim_y, euler_y_fixed, 0.8f);
-        aim_x = Mathf.Lerp(aim_x, euler_x_fixed, 0.8f);
+        aim_y = Mathf.Lerp(aim_y, euler_y_fixed, Time.deltaTime * 1.05f);
+        aim_x = Mathf.Lerp(aim_x, euler_x_fixed, Time.deltaTime * 1.05f);
             
 
-        // bob effect
-        // +π
-        bob_rad += bobEffect * Time.deltaTime;
-        // 2π reset
-        if( (coef > 1f && coef > 0f) || (coef < -1f && coef < 0f) )
+        if(true == false)
         {
-            bobEffect = -1 * bobEffect;
-            bob_rad += (5 * bobEffect) * Time.deltaTime;
+            // bob effect
+            // +π
+            bob_rad += bobEffect * Time.deltaTime;
+            // 2π reset
+            if( (coef > 1f && coef > 0f) || (coef < -1f && coef < 0f) )
+            {
+                bobEffect = -1 * bobEffect;
+                bob_rad += (5 * bobEffect) * Time.deltaTime;
+            }
+            coef = (( (Math.PI) / 180f) * (bob_rad));
         }
-        coef = (( (Math.PI) / 180f) * (bob_rad));
-
     }
 
 
@@ -1074,7 +1082,7 @@ public class CameraMovement : MonoBehaviour
     // public recoil method
     public void shoot_recoil(bool r_side)
     {
-        cam_recoil = r_side ? -0.012f : 0.012f;
+        cam_recoil = r_side ? -0.008f : 0.008f;
     }
 
     // private void array_pnt_Constructor(ref List<float> p,int index, ref float p){

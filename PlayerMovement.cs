@@ -1,3 +1,10 @@
+//
+//  PlayerMovement.cs
+//  PlayerMovement
+//
+//  Created by Jules Sainthorant on 01/08/2023.
+//  Copyright © 2023 Sainthorant Jules. All rights reserved.
+//
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -76,7 +83,8 @@ public class PlayerMovement : MonoBehaviour
     private bool plyr_bareerJumping_fHalf, plyr_bareerJumping = false, plyr_bumping = false, plyr_tapTapJumping = false;
     // #5 animkill & shooting
     private bool plyr_shooting = false, plyr_animKilling = false;
-
+    // #special reloading
+    private bool plyr_reloading = false;
 
     [Header ("Authorized Movements")]
     private bool jump_auth = true;
@@ -124,10 +132,12 @@ public class PlayerMovement : MonoBehaviour
 
     [Space(10)] 
 
+
     [Header ("Player Gun")]
     [HideInInspector] public int ammo = 0;
     private float weapon_reloadTime = 0f;
     private bool weapon_twoHanded = false;
+    private int weapon_reloadType = 0;
     [HideInInspector] public bool set_weaponHandedMode {
         set { if(value.GetType() == typeof(bool)) weapon_twoHanded = value; }  // set_weaponHandedMode
         get {return false; }
@@ -136,7 +146,13 @@ public class PlayerMovement : MonoBehaviour
         set { if(value.GetType() == typeof(float)) weapon_reloadTime = value; }  // set_weaponReloadTime
         get {return 0f; }
     }
+    [HideInInspector] public int set_weaponReloadType {
+        set { if(value.GetType() == typeof(int)) weapon_reloadTime = value; }  // set_weaponReloadType
+        get {return 0; }
+    }
     private Weapon player_weaponScrpt;
+
+
 
     [Space(10)]
 
@@ -151,17 +167,24 @@ public class PlayerMovement : MonoBehaviour
     };
 
 
-
-    [Header ("Player Rigs & Constraints")]
+    [Header ("Player Animator, Rigs & Constraints")]
+    [SerializeField] private Animator rig_animController;
+    [SerializeField] private UnityEditor.Animations.AnimatorController _anim_controller;
+    [SerializeField] private AvatarMask lower_body_mask;
     [SerializeField] private RigBuilder player_Rig;
     [SerializeField] private MultiAimConstraint[] player_aims;
-    [SerializeField] private Animator rig_animController;
     private float[] noAim_aimsWeigths = new float[4]{0.80f, 1.0f, 0.0f, 0.0f};
     private float[] autoAim_aimsWeigths = new float[4]{1.0f,  0.90f, 0f, 0.0f};
     [SerializeField] private Transform[] headAndNeck;
     private bool lastAimSettings_isArm;
     private string lastArmSetting_type;
     private bool wasLastAim_AutoAim = false;
+
+
+
+    [Header ("Lerp Saved Coroutines")]
+    private Coroutine[] arm_routines = new Coroutine[4]{null, null, null, null};
+    private Coroutine[] body_routines = new Coroutine[4]{null, null, null, null};
 
 
     [Header ("Authorized Shooting Animations")]
@@ -216,6 +239,7 @@ public class PlayerMovement : MonoBehaviour
     private GameObject game_cam;
 
 
+
     // Start method
     private void Start()
     {
@@ -224,10 +248,14 @@ public class PlayerMovement : MonoBehaviour
         player_weaponScrpt = FindObjectOfType<Weapon>();
         g_ui = FindObjectOfType<GameUI>();
         _anim = GetComponentInChildren<Animator>();
+
+        // UnityEditor.Animations.AnimatorController a_c = GetComponentInChildren< UnityEditor.Animations.AnimatorController>();
+        // Debug.Log(a_c);
+
         if (_anim == null) Debug.Log("nul animtor");
 
 
-        Collider[] colList = gameObject.transform.GetComponentsInChildren<Collider>();
+        Collider[] colList = gameObject.transform.GetChild(3).GetComponentsInChildren<Collider>();
         for (int i = 0; i < colList.Length; i ++)
         {
                 string[] coldr_type = colList[i].GetType().ToString().Split('.');
@@ -256,6 +284,8 @@ public class PlayerMovement : MonoBehaviour
         psCollisions_movement = ar;
 
         dragDistance = Screen.width * 4 / 100; //dragDistance is 5% width of the screen
+
+        
     }
 
 
@@ -265,134 +295,136 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
-
-        // get jump input
-        // movement auth && jump auth
-        if(movement_auth && jump_auth)
+        if(!gameOver_)
         {
-            if ( Input.GetKeyDown(KeyCode.Space) && (jumpCnt > 0) )
+            // get jump input
+            // movement auth && jump auth
+            if(movement_auth && jump_auth)
             {
-
-                // JUMP
-                if(jumpCnt == 2)
+                if ( Input.GetKeyDown(KeyCode.Space) && (jumpCnt > 0) )
                 {
-                    StopCoroutine(delay_jumpInput( 0f ) );  StartCoroutine(delay_jumpInput( 0.55f ) );
 
-                    StartCoroutine(Dly_bool_anm(0.52f, "Jump"));
-                    cm_movement.jmp(false);
-                    psCollisions_movement.player_paricleArray(null, true, "jump") ;
+                    // JUMP
+                    if(jumpCnt == 2)
+                    {
+                        StopCoroutine(delay_jumpInput( 0f ) );  StartCoroutine(delay_jumpInput( 0.55f ) );
+
+                        StartCoroutine(Dly_bool_anm(0.52f, "Jump"));
+                        cm_movement.jmp(false);
+                        psCollisions_movement.player_paricleArray(null, true, "jump") ;
+                    }
+
+                    // DOUBLE JUMP
+                    if(jumpCnt == 1)
+                    {
+                        int randFlip =  UnityEngine.Random.Range(1, 3);
+                        _anim.SetInteger("dblJmp", randFlip);
+                        _anim.SetBool("Flying", false);
+
+                        StopCoroutine(delay_jumpInput( 0f ) );  StartCoroutine(delay_jumpInput( 0.70f ) );
+
+                        StartCoroutine(Dly_bool_anm(0.65f, "DoubleJump"));
+                        cm_movement.jmp(true);
+                        psCollisions_movement.player_paricleArray(null, true, "dblJump"); 
+                    }
+
+                    // ForceMode.VelocityChange 
+                    plyr_rb.AddForce( new Vector3(0, (jumpCnt == 1 ? (jumpAmount * 1.30f) : 
+                        (plyr_flying ? jumpAmount : jumpAmount/1.5f )),
+                        0),
+                    ForceMode.VelocityChange);
+
+
+                    jumpCnt--;        
                 }
+            }
 
-                // DOUBLE JUMP
-                if(jumpCnt == 1)
+
+
+            // Tyro/SlideRail
+            if(plyr_tyro || plyr_railSliding)
+            {
+                last_tyro_trvld += (plyr_tyro ? tyro_speed : railSlide_speed) * Time.deltaTime;
+
+                Quaternion e = actual_path.path.GetRotationAtDistance(last_tyro_trvld + (plyr_railSliding ? 0f : 0.05f) );
+                float e_y = (e.eulerAngles.y > 270f) ? (e.eulerAngles.y - 360f) : e.eulerAngles.y;
+
+                if(tyro_handler_child != null)
                 {
-                    int randFlip =  UnityEngine.Random.Range(1, 3);
-                    _anim.SetInteger("dblJmp", randFlip);
-                    _anim.SetBool("Flying", false);
-
-                    StopCoroutine(delay_jumpInput( 0f ) );  StartCoroutine(delay_jumpInput( 0.70f ) );
-
-                    StartCoroutine(Dly_bool_anm(0.65f, "DoubleJump"));
-                    cm_movement.jmp(true);
-                    psCollisions_movement.player_paricleArray(null, true, "dblJump"); 
+                    tyro_handler_child.position = actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, 0.06f, 0);
+                    // tyro_handler_child.rotation = new Quaternion(tyro_handler_child.rotation.x, e.y, tyro_handler_child.rotation.z, tyro_handler_child.rotation.w);
+                    plyr_trsnfm.rotation = Quaternion.Euler(tyro_handler_child.rotation.eulerAngles.x, e_y, tyro_handler_child.rotation.eulerAngles.z);
                 }
+    
+                plyr_trsnfm.position = (plyr_tyro ? 
+                    actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, -2.1f, -0.1f)
+                        :
+                    actual_path.path.GetPointAtDistance(last_tyro_trvld)+ new Vector3(0, 0.6f, -0.1f)
+                ); 
+                plyr_trsnfm.rotation = Quaternion.Euler(plyr_trsnfm.rotation.eulerAngles.x, e_y, plyr_trsnfm.rotation.eulerAngles.z);
 
-                // ForceMode.VelocityChange 
-                plyr_rb.AddForce( new Vector3(0, (jumpCnt == 1 ? (jumpAmount * 1.30f) : 
-                    (plyr_flying ? jumpAmount : jumpAmount/1.5f )),
-                     0),
-                ForceMode.VelocityChange);
-
-
-                jumpCnt--;        
-            }
-        }
-
-
-
-        // Tyro/SlideRail
-        if(plyr_tyro || plyr_railSliding)
-        {
-            last_tyro_trvld += (plyr_tyro ? tyro_speed : railSlide_speed) * Time.deltaTime;
-
-            Quaternion e = actual_path.path.GetRotationAtDistance(last_tyro_trvld + (plyr_railSliding ? 0f : 0.05f) );
-            float e_y = (e.eulerAngles.y > 270f) ? (e.eulerAngles.y - 360f) : e.eulerAngles.y;
-
-            if(tyro_handler_child != null)
-            {
-                tyro_handler_child.position = actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, 0.06f, 0);
-                // tyro_handler_child.rotation = new Quaternion(tyro_handler_child.rotation.x, e.y, tyro_handler_child.rotation.z, tyro_handler_child.rotation.w);
-                plyr_trsnfm.rotation = Quaternion.Euler(tyro_handler_child.rotation.eulerAngles.x, e_y, tyro_handler_child.rotation.eulerAngles.z);
-            }
- 
-            plyr_trsnfm.position = (plyr_tyro ? 
-                actual_path.path.GetPointAtDistance(last_tyro_trvld) + new Vector3(0, -2.1f, -0.1f)
-                    :
-                actual_path.path.GetPointAtDistance(last_tyro_trvld)+ new Vector3(0, 0.6f, -0.1f)
-            ); 
-            plyr_trsnfm.rotation = Quaternion.Euler(plyr_trsnfm.rotation.eulerAngles.x, e_y, plyr_trsnfm.rotation.eulerAngles.z);
-
-            
-            // stop
-            float d_end = Vector3.Distance(plyr_trsnfm.position, end_tyroPos);
-            if(d_end < 3f)
-            {
                 
-                plyr_rb.AddForce( new Vector3(0, 20, 10), ForceMode.VelocityChange);
-                _anim.SetBool(plyr_tyro ? "tyro" : "slideRail", false);
+                // stop
+                float d_end = Vector3.Distance(plyr_trsnfm.position, end_tyroPos);
+                if(d_end < 3f)
+                {
+                    
+                    plyr_rb.AddForce( new Vector3(0, 20, 10), ForceMode.VelocityChange);
+                    _anim.SetBool(plyr_tyro ? "tyro" : "slideRail", false);
 
-                if(plyr_tyro) plyr_tyro = false;
+                    if(plyr_tyro) plyr_tyro = false;
+                    if(plyr_railSliding)
+                    {
+                        plyr_railSliding = false;
+                        cm_movement.railSlide_offset(true);
+                    }
+
+                    // turn back on all movements
+                    movement_auth = true;
+
+                    // turn back gravity
+                    plyr_rb.useGravity = true;
+
+                    cm_movement.tyro_offset(true);
+
+                    g_ui.set_countBonus_ = false;
+                }
+
                 if(plyr_railSliding)
-                {
-                    plyr_railSliding = false;
-                    cm_movement.railSlide_offset(true);
-                }
-
-                // turn back on all movements
-                movement_auth = true;
-
-                // turn back gravity
-                plyr_rb.useGravity = true;
-
-                cm_movement.tyro_offset(true);
-
-                g_ui.set_countBonus_ = false;
-            }
-
-            if(plyr_railSliding)
-            { if (pico_character.transform.localRotation.eulerAngles.y != 85f)
-                {
-                    pico_character.transform.localRotation = Quaternion.Euler(0f, 85f, 0f);
+                { if (pico_character.transform.localRotation.eulerAngles.y != 85f)
+                    {
+                        pico_character.transform.localRotation = Quaternion.Euler(0f, 85f, 0f);
+                    }
                 }
             }
+                
+
+            // momentum
+            if(momentum_ > 0)
+                momentum_ -= 0.5f * Time.deltaTime;
+            else
+                momentum_ = 0;
+
+
+            // action momentum
+            if(action_momentum > 2f && action_momentum > 0)
+                action_momentum -= 10f * Time.deltaTime;
+            else if(action_momentum < 2f && action_momentum < 0)
+                action_momentum += 10f * Time.deltaTime;
+            else
+                (action_momentum) = 0f;
+
+
+            // combo
+            if(combo_timer > 0f)
+            {combo_timer -= 5 * Time.deltaTime;}
+
+            else if (combo_timer < 0f)
+            { combo_timer = 0f; }
+
+            else
+            { combo_end(); }
         }
-        
-
-        // momentum
-        if(momentum_ > 0)
-            momentum_ -= 0.5f * Time.deltaTime;
-        else
-            momentum_ = 0;
-
-
-        // action momentum
-        if(action_momentum > 2f && action_momentum > 0)
-            action_momentum -= 10f * Time.deltaTime;
-        else if(action_momentum < 2f && action_momentum < 0)
-            action_momentum += 10f * Time.deltaTime;
-        else
-            (action_momentum) = 0f;
-
-
-        // combo
-        if(combo_timer > 0f)
-        {combo_timer -= 5 * Time.deltaTime;}
-
-        else if (combo_timer < 0f)
-        { combo_timer = 0f; }
-
-        else
-        { combo_end(); }
         
     }   
 
@@ -476,6 +508,9 @@ public class PlayerMovement : MonoBehaviour
         aimSettingCalled = true;
         wasLastAim_AutoAim = isAutoAim;
 
+        // aim transition settings [for LeanTween]
+        float aim_time = 0.65f;
+
         if(!isAutoAim)
         {
             // clear target on CamerMovement.cs
@@ -491,7 +526,11 @@ public class PlayerMovement : MonoBehaviour
                    arm_aims[m].data.maintainOffset = false;
 
                    arm_aims[m].data.constrainedObject = arm_transforms[m];
-                   arm_aims[m].weight = 0f;
+
+                   if(arm_routines[m] != null) StopCoroutine(arm_routines[m]);
+                    arm_routines[m] = StartCoroutine( lerpAimWeight(arm_aims[m], 0f, aim_time) );
+
+                   // arm_aims[m].weight = 0f;
 
                    // arm_aims[m].data.aimAxis = all_axisS[0];
                    // arm_aims[m].data.upAxis = all_axisS[0];
@@ -527,11 +566,22 @@ public class PlayerMovement : MonoBehaviour
             }
 
             player_aims[i].weight = 0f;
+            // player_aims[i].weight = isAutoAim ? autoAim_aimsWeigths[i] : noAim_aimsWeigths[i];
 
-            player_aims[i].weight = isAutoAim ? autoAim_aimsWeigths[i] : noAim_aimsWeigths[i];
+
+            if(body_routines[i] != null) StopCoroutine(body_routines[i]);
+            body_routines[i] = StartCoroutine(lerpAimWeight(player_aims[i], isAutoAim ? autoAim_aimsWeigths[i] : noAim_aimsWeigths[i], aim_time) );
+
+
+            // if(body_tweens[i] != null) LeanTween.cancel(gameObject, body_tweens[i].id);
+            // LTDescr lt = LeanTween.value( 
+            //     gameObject,
+            //     updateValueExampleCallback, 0f, isAutoAim ? autoAim_aimsWeigths[i] : noAim_aimsWeigths[i], 
+            //     0.5f
+            // ).setEaseInSine();
+
         }
         
-
         // if(plyr_rampSliding) StartCoroutine(CheckAllArmRigAxies());
 
         if(toogleArmRig)
@@ -561,7 +611,19 @@ public class PlayerMovement : MonoBehaviour
 
                 }
 
-                arm_aims[m].weight = 1.0f;
+                if(arm_routines[m] != null) StopCoroutine(arm_routines[m]);
+                arm_routines[m] = StartCoroutine( lerpAimWeight(arm_aims[m], 1.0f, aim_time) );
+
+                // arm_aims[m].weight = 1.0f;
+
+                // LTDescr lt = LeanTween.value(gameObject, 0f, 1f, aim_time).setOnUpdate(
+                //     (float val) => {
+                //         arm_aims[m].weight = val;
+                //     }
+                // );
+                // if(arm_tweens[m] != null) LeanTween.cancel(gameObject, arm_tweens[m].id);
+
+                
             }
 
              if(armRig_ClipInfo == "slide" || armRig_ClipInfo == "railSlide" || armRig_ClipInfo == "slideDown") player_aims[0].weight = 0f;
@@ -573,6 +635,22 @@ public class PlayerMovement : MonoBehaviour
         player_Rig.Build();
         //_anim.Rebind();
     }
+
+    IEnumerator lerpAimWeight(MultiAimConstraint aim_constraint,float lerp_To, float time)
+    {
+        float start = aim_constraint.weight;
+        float end = lerp_To;
+        float t = 0f;
+
+        while(t < 1f)
+        {
+            yield return null;
+            t += Time.deltaTime / time;
+            aim_constraint.weight = Mathf.Lerp(start, end, t);
+        }
+        aim_constraint.weight = end;
+    }
+
 
 
 
@@ -589,7 +667,7 @@ public class PlayerMovement : MonoBehaviour
 
 
             // Nothing-To-Aim 
-            if ( (aimed_enemy == null && ammo > 0) || ammo == 0)
+            if ( (aimed_enemy == null && ammo > 0) || ammo == 0 || (plyr_reloading) )
             {
                 if(lastAimed_enemy != null) setAimSettings(false);
 
@@ -625,7 +703,7 @@ public class PlayerMovement : MonoBehaviour
 
             // Auto-aim
             bool canShot = false;
-            if (aimed_enemy != null && ammo > 0)
+            if (aimed_enemy != null && ammo > 0 && (!plyr_reloading))
             {
                 string animClip_info = _anim.GetCurrentAnimatorClipInfo(0)[0].clip.name;
                 bool armRigMaybe = ((animClip_info == "slide") || (animClip_info == "flying") 
@@ -664,7 +742,9 @@ public class PlayerMovement : MonoBehaviour
             }
 
 
-            // Aim Shooting adjustments [Flying & Sliding & RampSliding]
+
+
+            // Aim Shooting [Flying & Sliding & RampSliding]
             if( (aimed_enemy != null) && (ammo > 0) && (plyr_flying || plyr_sliding || plyr_rampSliding)) 
             {
                 if(plyr_flying && !plyr_sliding && !plyr_rampSliding) // flying
@@ -686,7 +766,6 @@ public class PlayerMovement : MonoBehaviour
                     }else
                     {
                         float dst = Vector3.Distance(transform.position, aimed_enemy.position);
-
                         head_TARGET.position = new Vector3(
                             aimed_enemy.position.x  + (dst < 12 ? +2.5f : +7f), 
                             aimed_enemy.position.y + 1f,
@@ -698,20 +777,32 @@ public class PlayerMovement : MonoBehaviour
 
 
 
-                    // rotate model [flying]
+                    // rotate model for aim [flying]
                     if(!plyr_wallRninng && !plyr_railSliding && !plyr_hanging && !plyr_rampSliding && !plyr_bareerJumping)
                     {
                         Vector3 relativePos = aimed_enemy.position - transform.position;
                         Quaternion y_aim = Quaternion.LookRotation(relativePos);
                         float y_fl = ((y_aim.eulerAngles.y > 180f) ? (360f - y_aim.eulerAngles.y) : (y_aim.eulerAngles.y)) * 1.5f;
 
-                        pico_character.transform.localRotation = Quaternion.Euler(
+                        // pico_character.transform.localRotation = Quaternion.Euler(
+                        //     0f, 
+                        //     Math.Abs(y_fl) > 45f ? 
+                        //         (y_fl > 0 ? 45f : -45f) : y_fl,
+                        //     // + transform.rotation.eulerAngles.y / 6, 
+                        //     0f
+                        // );
+
+                    pico_character.transform.localRotation = Quaternion.Slerp(
+                        pico_character.transform.localRotation, Quaternion.Euler(
                             0f, 
                             Math.Abs(y_fl) > 45f ? 
                                 (y_fl > 0 ? 45f : -45f) : y_fl,
                             // + transform.rotation.eulerAngles.y / 6, 
                             0f
-                        );
+                        ), 
+                        0.15f
+                    );
+
                     }
 
                 }
@@ -719,8 +810,8 @@ public class PlayerMovement : MonoBehaviour
                 {   
                     head_TARGET.position = aimed_enemy.position + (plyr_rampSliding ? new Vector3(6f, -8f, 0f) : new Vector3(0, -2f, 0) );
                 }
-    
             }
+
 
 
             // Aim Shooting [Running]
@@ -741,8 +832,8 @@ public class PlayerMovement : MonoBehaviour
                     body_TARGET.position = running_v3Pos;
                     head_TARGET.position = running_v3Pos + new Vector3(4.35f, 0f, 0f);
                 }
-         
             }
+
 
 
             // Aim Not-Shooting [Running]
@@ -766,6 +857,7 @@ public class PlayerMovement : MonoBehaviour
             );
             
 
+         
             // rotate back [Quaternion Slerp]
             if(!plyr_tyro && !plyr_intro_tyro && !plyr_wallRninng && !plyr_railSliding && 
                 !plyr_hanging && !plyr_saveClimbing && !plyr_sideHanging && !plyr_bareerJumping)
@@ -781,6 +873,7 @@ public class PlayerMovement : MonoBehaviour
                     }
                 }
             }
+
 
             
 
@@ -917,7 +1010,10 @@ public class PlayerMovement : MonoBehaviour
                 // shoot
                 if ( (!plyr_obstclJmping && !plyr_jumping && !plyr_animKilling) 
                                     &&
-                    (ammo > 0) && (aimed_enemy != null) )
+                      (ammo > 0) && (aimed_enemy != null) 
+                                    &&
+                            !(plyr_reloading)
+                 )
                 {
                     StopCoroutine(shooting_());StartCoroutine(shooting_());
                     player_weaponScrpt.Shoot(aimed_enemy, aimed_enemy.GetComponent<AutoTurret>().is_horizontal);
@@ -1907,9 +2003,15 @@ public class PlayerMovement : MonoBehaviour
 
         // reload 
         if(anim_bool == "reload"){
-            _anim.SetLayerWeight(2, 0f);
-            
+            // reset upper layer weight
+            _anim.SetLayerWeight(1, 0f);
+
+            UnityEditor.Animations.AnimatorControllerLayer[] anim_layers = _anim_controller.layers;
             // remove lowerBoddy mask layer
+            // 0-index lower body layer
+            _anim_controller.layers[0].avatarMask = null;
+
+            plyr_reloading = false;
         }
 
         _anim.SetBool(anim_bool, false);
@@ -1918,7 +2020,7 @@ public class PlayerMovement : MonoBehaviour
     
     private void fix_Cldrs_pos(float y_off_pos, bool default_)
     {
-        Collider[] colList = gameObject.transform.GetComponentsInChildren<Collider>();
+        Collider[] colList = transform.GetChild(3).GetComponentsInChildren<Collider>();
         for (int i = 0; i < colList.Length; i ++)
         {
             if(y_off_pos < 0 && colList[i].isTrigger)
@@ -2191,6 +2293,7 @@ public class PlayerMovement : MonoBehaviour
 
 
 
+
     // GameOver
     private void game_Over(string mode)
     {
@@ -2208,7 +2311,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
         if (mode == "void"){
-            plyr_rb.AddForce( new Vector3(0, 100f, 20f), ForceMode.VelocityChange );
+            plyr_rb.AddForce( new Vector3(0, 30f, 20f), ForceMode.VelocityChange );
         }
 
 
@@ -2217,12 +2320,37 @@ public class PlayerMovement : MonoBehaviour
     }
 
 
+
+
     // reload
     public void player_reload()
     {
-        _anim.SetLayerWeight(2, 1f);
+        // stored reload anim frameCounts [running at 60 FPS] // 
+        //
+        // | frames    
+        // |-------- = anim_time
+        // |   60    
+        // | 
+        // |                 (   anim_time   )
+        // |converted time = (---------------) x (anim_time)
+        // |                 (  reloadSpeed  )   
+
+        int[] reload_animFrameCounts = new int[3]{215, 175, 400};
+        float anim_time = (float) reload_animFrameCounts[weapon_reloadType]  / (60f * (weapon_reloadTime)) ; // FOR 1s COEFF TIME
+
+        // float converted_time = anim_time / (anim_time / weapon_reloadTime );
+
+        _anim.SetLayerWeight(1, 1f);
+        plyr_reloading = true;
+
+        UnityEditor.Animations.AnimatorControllerLayer[] anim_layers = _anim_controller.layers;
+        // 0-index lower body layer
+        _anim_controller.layers[0].avatarMask = lower_body_mask;
+    
+        _anim.SetFloat("reload_Speed", anim_time); // 1s * reloadTime
+        _anim.SetInteger("reload_Type", weapon_reloadType);
+
         StartCoroutine(Dly_bool_anm(weapon_reloadTime, "reload"));
-        _anim.SetFloat("reloadSpeed", weapon_reloadTime);
     }
 
     // combo end

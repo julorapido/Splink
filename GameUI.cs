@@ -21,19 +21,36 @@ public class GameUI : MonoBehaviour
     [SerializeField] private GameObject weapon_ui_obj;
     private Weapon weapon_script;
     private TextMeshPro[] weapon_ammoTxts;
+    private GameObject weapon_reload;
+    private float reload_timerFloat = 0f;
 
     [Header ("Restart")]
     private Vector3[] saved_ui_initalPos = new Vector3[10];
     private Transform[] saved_restartUi_transforms = new Transform[35];
+    private static IDictionary<TextMeshProUGUI?, Image?>[] saved_menuChilds = new Dictionary<TextMeshProUGUI?, Image?>[35];
     private Vector3[] saved_restartUi_scales = new Vector3[35];
     private bool restart_uiNeeds_fade = false;
+    // public interface menu_child
+    // {
+    //     // Property signatures:
+    //     Transform trnsform { get; set; }
+    //     Image img { get; set; }
+    //     TextMeshProUGUI TXT { set; get; }
+    //     void F();  
+    // }
+    // public class m_Child : menu_child 
+    // {  
+    //     public Transform trnsform;
+    //     public void F() {}  
+    //     public static void Main() {}  
+    // }
 
 
     [Header ("Money")]
     [SerializeField] private GameObject money_ui;
+    private TextMeshProUGUI[] money_bfr = new TextMeshProUGUI[20]; // 20 sized gm bfr
     private bool m_textGlow_sns = false, is_glowing = false;
     private TextMeshProUGUI money_txt;
-    private GameObject[] money_bfr = new GameObject[20]; // 20 sized gm bfr
     private int player_money = 0;
     private int money_i = 0, money_v = 0;
     private const float money_delay = 0.0075f;
@@ -87,6 +104,7 @@ public class GameUI : MonoBehaviour
 
 
     [Header ("Enemy Ui")]
+    private bool can_aim = false;
     [SerializeField] private GameObject enemy_information;
     private Transform aimed_enemy;
     private AutoTurret aimed_turretScrpt;
@@ -114,13 +132,18 @@ public class GameUI : MonoBehaviour
         plyr_transform = pm.transform;
         plyr_rgBody  = pm.transform.GetComponent<Rigidbody>();
 
+
         gun_fetchedPrefabs = weapon_scrpt.get_weaponsResourcesPrefab_buffer;
+
 
         int l_prefb = gun_ui.transform.childCount - 1;
         saved_prefabPos_ = gun_ui.transform.GetChild(l_prefb).GetChild(0).transform.position;
         saved_prefabScale_ = gun_ui.transform.GetChild(l_prefb).GetChild(0).transform.localScale;
         saved_prefabRotation_ = gun_ui.transform.GetChild(l_prefb).GetChild(0).transform.localRotation;
 
+
+
+        // get 3d parents
         List<Transform> ts = new List<Transform>(10); // 10-size buffer
         int c = 0;
         for(int i = 0; i < 2; i++) // TOP-lft & TOP-rght
@@ -137,31 +160,55 @@ public class GameUI : MonoBehaviour
         // ts[c + 1] = enemy_information.transform;
         parents_3d = ts.ToArray();
         
-        newEnemy_UI(true);
-        Invoke("countScore", 0.25f);
 
 
+        // money txt
         money_txt = money_ui.transform.GetChild(1).GetComponent<TextMeshProUGUI>();
+
 
         // restart ui registration
         for(int s = 0; s < gameObject.transform.childCount; s ++){
             if(s > 2) break;
             saved_ui_initalPos[s] = gameObject.transform.GetChild(s).localPosition;
         }
-        
         saved_restartUi_transforms = transform.GetChild(5).GetComponentsInChildren<Transform>();
         saved_restartUi_scales =  Array.ConvertAll(saved_restartUi_transforms, t => t.localScale);
 
 
-        weapon_script = FindObjectOfType<Weapon>();
 
+
+        // weapon ammo txt
         weapon_ammoTxts = new TextMeshPro[2]{
             weapon_ui_obj.transform.GetChild(1).GetChild(2).GetComponent<TextMeshPro>(), // stack
             weapon_ui_obj.transform.GetChild(1).GetChild(1).GetComponent<TextMeshPro>(), // magz
         };
-        Debug.Log(weapon_ui_obj.transform.GetChild(1).GetChild(2));
+
+
+
+        // restart childs
+        for(int b = 0; b < transform.GetChild(5).childCount; b ++)
+        {
+            // TextMeshProUGUI a = transform.GetChild(5).GetChild(b).GetComponent<TextMeshProUGUI>();
+            // var b_ = new Dictionary<TextMeshProUGUI?, Image?> {
+            //     { 
+            //         transform.GetChild(5).GetChild(b).GetComponent<TextMeshProUGUI>(),
+            //         transform.GetChild(5).GetChild(b).GetComponent<Image>()
+            //     }
+            // };
+            // saved_menuChilds[b] = b_;
+        }
+
+        // weapon reload
+        weapon_reload = weapon_ui_obj.transform.parent.GetChild(1).gameObject;
+        weapon_reload.SetActive(false);
+
+
+        newEnemy_UI(true);
+        Invoke("countScore", 0.25f);
+        Invoke("canAim", 1.5f);
     }
     private void countScore(){ countScore_ = true; }
+    private void canAim(){ can_aim = true; }
 
 
 
@@ -170,13 +217,15 @@ public class GameUI : MonoBehaviour
     {
         timer_ += Time.deltaTime;
 
+
         // values attribution
         timer_txt.text = timer_.ToString();
         score_txt.text = score.ToString();
         speed_txt.text = ((uint) plyr_rgBody.velocity.z).ToString();
         money_txt.text = player_money.ToString();
-        weapon_ammoTxts[0].text = weapon_script.get_ammo.ToString();
-        weapon_ammoTxts[1].text = weapon_script.get_ammoInMag.ToString();
+        weapon_ammoTxts[1].text = weapon_scrpt.get_ammo.ToString() + " ";
+        weapon_ammoTxts[0].text = "| " + weapon_scrpt.get_ammoInMag.ToString();
+        //weapon_reload.transform.GetChild()
 
 
 
@@ -191,6 +240,7 @@ public class GameUI : MonoBehaviour
 
 
 
+
         // restart fadeIn
         int x = 0, c = 0;
         if(restart_uiNeeds_fade){
@@ -198,6 +248,7 @@ public class GameUI : MonoBehaviour
                 if(saved_restartUi_transforms[i] == null) break;
 
                 Image img_ = saved_restartUi_transforms[i].GetComponent<Image>();
+                // Image img_ = saved_menuChilds[i].Keys.GetEnumerator[0];
                 if(img_ != null){
                     var tempColor = img_.color;
                     if(tempColor.a < 1f){
@@ -206,6 +257,7 @@ public class GameUI : MonoBehaviour
                     }else{ c++; }
                 }else{
                     TextMeshProUGUI txt_ = saved_restartUi_transforms[i].GetComponent<TextMeshProUGUI>();
+                    // TextMeshProUGUI txt_ = saved_menuChilds[i].Values.GetEnumerator(0);
                     if(txt_ == null) continue;
 
                     var t_Color = txt_.color;
@@ -224,6 +276,25 @@ public class GameUI : MonoBehaviour
                    LeanTween.scale(saved_restartUi_transforms[n].gameObject, saved_restartUi_scales[n], 0.2f).setEaseInSine();
                 }
             }
+        }
+
+
+
+        // gain money fadeOut
+        for(int m = 0; m < money_i; m ++)
+        {
+            // var clr = (money_bfr[m].color);
+            // if(clr.a > 0f)
+            // {
+            //     clr.a -=  Time.deltaTime;
+            // }
+        }
+
+
+
+        // reload timer float
+        if(reload_timerFloat > 0){
+            reload_timerFloat -= Time.deltaTime;
         }
 
 
@@ -293,7 +364,8 @@ public class GameUI : MonoBehaviour
                 if(aimed_turretScrpt.get_health == 0) // 0 health => turn off ui
                 {
                     newEnemy_UI(true);
-                }else
+                }
+                else // health damage effect
                 {
                     float dmg_done = enemy_health - aimed_turretScrpt.get_health;
                     enemy_health = aimed_turretScrpt.get_health;
@@ -387,6 +459,7 @@ public class GameUI : MonoBehaviour
     // public enemy
     public void newEnemy_UI(bool is_empty, Transform enemy_ = null)
     {
+        
         if(is_empty)
         {
             // Invoke("enemyUi_off", 0.6f);
@@ -395,6 +468,7 @@ public class GameUI : MonoBehaviour
 
         }else
         {
+            if(!can_aim) return;
             if(enemy_ == null)
                 return;
 
@@ -422,8 +496,8 @@ public class GameUI : MonoBehaviour
 
             enemy_health = at_turret.get_health;
             float x_health = (((float)enemy_health / (float)aimed_turretScrpt.turret_maxHealth) * 100f);
-            enemy_information.transform.GetChild(0).GetChild(1).localScale = new Vector3(x_health / 100, 1, 1);
-            enemy_information.transform.GetChild(0).GetChild(2).localScale = new Vector3(x_health / 100, 1, 1);
+            enemy_information.transform.GetChild(0).GetChild(1).localScale = new Vector3( (float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);
+            enemy_information.transform.GetChild(0).GetChild(2).localScale = new Vector3((float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);
 
         }
     }
@@ -527,6 +601,10 @@ public class GameUI : MonoBehaviour
         int randm_flt_vrt =  UnityEngine.Random.Range(0, 3);
 
         combo_goal += (randm_flt_vrt + 1);
+
+
+        Image combo_msk = combo_obj.transform.GetChild(0).GetComponent<Image>();
+        combo_msk.sprite = combo_masks[randm_flt_vrt];
     }
 
 
@@ -543,27 +621,34 @@ public class GameUI : MonoBehaviour
                 Quaternion.identity, money_ui.transform
             );
 
+            m.SetActive(true);
+
             TextMeshProUGUI m_t = m.GetComponent<TextMeshProUGUI>();
             m_t.text = "+ " + money_vv.ToString() + "$";
             m_t.color = new Color32(255, 255, 0, 255);
-            m.transform.localPosition = money_ui.transform.GetChild(1).localPosition + new Vector3(0f, (-42f) * money_i, 0f);
+            m.transform.localPosition = money_ui.transform.GetChild(1).localPosition + new Vector3(0f, (-45f) * money_i, 0f);
+            m.transform.localScale = m.transform.localScale * 0.9f;
 
-            LeanTween.moveLocal(m, money_ui.transform.GetChild(1).localPosition + new Vector3(0f, -28f, 0f), 1f).setEaseInSine();
-            LeanTween.scale(m, m.transform.localScale * 0.85f, 1.2f).setEasePunch();
+            LeanTween.moveLocal(m, money_ui.transform.GetChild(1).localPosition + new Vector3(0f, 20f, 0f), 1.4f).setEaseInSine();
+            LeanTween.scale(m, m.transform.localScale * 1.6f, 1.7f).setEasePunch();
             LeanTween.rotate(m, new Vector3(0, 0, 3f), 2.4f).setEasePunch();
             
             LeanTween.cancel(money_ui.transform.GetChild(1).gameObject);
             LeanTween.scale(money_ui.transform.GetChild(1).gameObject, m.transform.localScale * 1.13f, 2f).setEasePunch();
 
-            StartCoroutine(off_m(m));
+            int c = money_i;
+            StartCoroutine(off_m(m, c));
             StartCoroutine(text_glow_eff());
 
             money_v += money_vv;
         }
     }
-    private IEnumerator off_m(GameObject m_obj){
-        yield return new WaitForSeconds(0.8f);
-        m_obj.SetActive(false);
+    private IEnumerator off_m(GameObject m_obj, int index_at_time)
+    {
+        //fadeout
+        LeanTween.alpha(m_obj.transform.GetComponent<RectTransform>(), 0f, 1.2f).setEaseInSine();
+
+        yield return new WaitForSeconds(1f);
         Destroy(m_obj);
         money_i--;
     }
@@ -575,9 +660,9 @@ public class GameUI : MonoBehaviour
         LeanTween.moveLocal(
             money_ui.transform.GetChild(1).GetChild(0).gameObject, 
             new Vector3( m_textGlow_sns ? -60 : 60, 0, 0),
-        0.8f).setEaseInSine();
+        1f).setEaseInSine();
 
-        yield return new WaitForSeconds(0.8f);
+        yield return new WaitForSeconds(1f);
         
         is_glowing = false;
         m_textGlow_sns = !(m_textGlow_sns);
@@ -663,7 +748,11 @@ public class GameUI : MonoBehaviour
     }
 
     public void ui_reload(float reload_time){
+        weapon_reload.SetActive(true);
+        Invoke("off_wReload", reload_time);
 
     }
+    private void off_wReload(){weapon_reload.SetActive(false);}
+
 
 }

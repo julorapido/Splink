@@ -712,8 +712,10 @@ public class AutoTurret : MonoBehaviour
                 dmg = (int) (wpn_damage);
                 break;
         }
-        int b_ = UnityEngine.Random.Range(-7, 7);
-        dmg += b_;
+        int c_ = UnityEngine.Random.Range(1, 3);
+        int b_ = UnityEngine.Random.Range(-4, 4);
+        if(c_ == 2) dmg += b_;
+        if(dmg <= 0 ) dmg = 1;
 
         float barrel_y = ( (tr_body[0] != null) ? 
             (is_horizontal) ? tr_body[0].transform.rotation.eulerAngles.x : (tr_body[0].transform.rotation.eulerAngles.y + 180f)
