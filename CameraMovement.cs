@@ -8,10 +8,10 @@ using System.Linq;
 public class CameraMovement : MonoBehaviour
 {
     [Header ("Camera Smooth Auto-Aim divisor")]
-    private const float divisor = 60f;
+    private const float divisor = 55f;
 
     [Header ("Camera Main Rotation Ratio")]
-    private const float x_ratio = -0.0620f;
+    private const float x_ratio = -0.0640f;
 
 
     [Header ("Player Animator")]
@@ -36,7 +36,24 @@ public class CameraMovement : MonoBehaviour
     [HideInInspector] public float supl_yOff = 0.0f;
 
 
-    [Header ("SmoothDamp Values")]  
+
+    [Header ("NotSmooth Values")]
+    private int iterator_;
+    private bool trns_back = false, trns_fnc = false;
+    private float trns_vlue;
+    private List<float> values_flt = new List<float>(new float[6] {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
+    private List<float> mathRef_arr = new List<float>(new float[6] { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }); 
+    private List<string> values_ref = new List<string>(new string[6]{ "wallR_x_offst", "wallR_y_offst", "wallR_z_offst", "wallR_rot_x_offst", "wallR_rot_y_offst", "wallR_rot_z_offst"});    
+    private List<bool?> trns_back_arr = new List<bool?>(new bool?[6] {false, false, false ,false, false, false });    
+    private List<string> nms_ = new List<string>(new string[3] {"wallR_x_offst", "wallR_y_offst", "wallR_z_offst"});
+    // ROTATIONS REFS
+    private float mathfRef_x = 0.0f, mathfRef_y = 0.0f, mathfRef_z = 0.0f;
+    private float mathfRef0_x = 0.0f, mathfRef0_y = 0.0f, mathfRef0_z = 0.0f;
+    // POSITIONS REFS
+    private float mathfRef_pos_x = 0.0f, mathfRef_pos_y = 0.0f, mathfRef_pos_z = 0.0f;
+    private float mathfRef0_pos_x = 0.0f, mathfRef0_pos_y = 0.0f, mathfRef0_pos_z = 0.0f;
+    // Percentage % 
+    private float smoothTime_prc = 0f;
     private static IDictionary<string, float> rot_dc = new Dictionary<string, float>(){
         {"wallR_rot_x_offst", 0.0f  },
         {"wallR_rot_y_offst", 0.0f },  {"wallR_rot_z_offst",  0.0f }
@@ -48,29 +65,12 @@ public class CameraMovement : MonoBehaviour
 
 
 
+    [Header ("Smooth Values")]
+    private float lerpTime = 0.5f;
+    private float currentLerpTime = 0f;
+    private bool use_specialSmooth = false;
+    private Vector3 lerp_v_pos, lerp_v_rot;
 
-    [Header ("SmoothDamp Functions")]
-    private int iterator_;
-    private bool trns_fnc = false;
-    private bool trns_back = false;
-    private float trns_vlue;
-    private List<float> values_flt = new List<float>(new float[6] {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f});
-    private List<string> values_ref = new List<string>(new string[6]{ "wallR_x_offst", "wallR_y_offst", "wallR_z_offst", "wallR_rot_x_offst", "wallR_rot_y_offst", "wallR_rot_z_offst"});    
-    private List<bool?> trns_back_arr = new List<bool?>(new bool?[6] {
-        false, false, false ,false, false, false
-    });    
-    private List<string> nms_ = new List<string>(new string[3] {"wallR_x_offst", "wallR_y_offst", "wallR_z_offst"});
-    private List<float> mathRef_arr = new List<float>(new float[6] {
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
-    }); 
-    // ROTATIONS REFS
-    private float mathfRef_x = 0.0f, mathfRef_y = 0.0f, mathfRef_z = 0.0f;
-    private float mathfRef0_x = 0.0f, mathfRef0_y = 0.0f, mathfRef0_z = 0.0f;
-    // POSITIONS REFS
-    private float mathfRef_pos_x = 0.0f, mathfRef_pos_y = 0.0f, mathfRef_pos_z = 0.0f;
-    private float mathfRef0_pos_x = 0.0f, mathfRef0_pos_y = 0.0f, mathfRef0_pos_z = 0.0f;
-    // Percentage % 
-    private float smoothTime_prc = 0f;
 
 
     [Header ("Fov Floats")]
@@ -119,7 +119,7 @@ public class CameraMovement : MonoBehaviour
     }
     public void rst_aimedTarget()
     { aimed_target = null; }
-    [SerializeField] private float aim_x, aim_y;
+    private float aim_x, aim_y;
 
     private Camera c_;
 
@@ -154,7 +154,9 @@ public class CameraMovement : MonoBehaviour
             {coef = (( (Math.PI) / 180f) *(value)); }
         }
     }
-    [SerializeField] private double coef = 0;
+    private double coef = 0;
+
+
 
     private void Start()
     {
@@ -237,7 +239,34 @@ public class CameraMovement : MonoBehaviour
             }
             coef = (( (Math.PI) / 180f) * (bob_rad));
         }
+
+        // lerp
+        if(!use_specialSmooth)
+        {
+            if(
+                lerp_v_pos != new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"], pos_dc["wallR_z_offst"]) && 
+                lerp_v_rot != new Vector3(rot_dc["wallR_rot_x_offst"], rot_dc["wallR_rot_y_offst"], rot_dc["wallR_rot_z_offst"])
+            )
+                currentLerpTime += 0.30f * (Time.deltaTime);
+           
+            if (currentLerpTime > lerpTime)
+                currentLerpTime = lerpTime;
+            
+            //lerp!
+            float perc = currentLerpTime / lerpTime;
+
+            lerp_v_pos = Vector3.Lerp(
+                lerp_v_pos,
+                new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"], pos_dc["wallR_z_offst"]), 
+            perc);
+            
+            lerp_v_rot = Vector3.Lerp(
+                lerp_v_rot,
+                new Vector3(rot_dc["wallR_rot_x_offst"], rot_dc["wallR_rot_y_offst"], rot_dc["wallR_rot_z_offst"]), 
+            perc);
+        }
     }
+
 
 
     
@@ -267,10 +296,6 @@ public class CameraMovement : MonoBehaviour
                 if( values_flt[i] == 0.0f) break;
                 
                 bool s_ =  nms_.Contains(values_ref[i]);
-                if(!s_){
-                    // Debug.Log( ( !s_ ? rot_dc[values_ref[i]] : pos_dc[values_ref[i]] ) +
-                    //             " vs " + values_ref[i] );
-                }
 
                 if(trns_back_arr[i] == null)
                 {
@@ -289,7 +314,7 @@ public class CameraMovement : MonoBehaviour
 
                         if(trns_back_arr[i] == false)
                         {
-                            rot_dc[values_ref[i]] = Mathf.SmoothDamp( rot_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.0635f * (1.0f + (smoothTime_prc/100) ) ); 
+                            rot_dc[values_ref[i]] = Mathf.SmoothDamp( rot_dc[values_ref[i]], values_flt[i], ref srched_ref, 0.060f * (1.0f + (smoothTime_prc/100) ) ); 
 
                             if( Math.Abs(rot_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.0045f) {
                                 trns_back_arr[i] = true;
@@ -297,12 +322,10 @@ public class CameraMovement : MonoBehaviour
                         }
                         else if (trns_back_arr[i] == true)
                         { 
-                            rot_dc[values_ref[i]] = Mathf.SmoothDamp(rot_dc[values_ref[i]], 0.00f, ref srched_ref, 0.0460f * (1.0f + (smoothTime_prc/100) ) ); 
-                            //if( rot_dc[values_ref[i]] == 0.0f) {
+                            rot_dc[values_ref[i]] = Mathf.SmoothDamp(rot_dc[values_ref[i]], 0.00f, ref srched_ref, 0.055f * (1.0f + (smoothTime_prc/100) ) ); 
                             if(Math.Abs(rot_dc[values_ref[i]]) < 0.0040f ){
                                 it_++;
                                 trns_back_arr[i] = null;
-                                //Debug.Log("rotation done");
                             }
                         }  
                     }
@@ -325,7 +348,7 @@ public class CameraMovement : MonoBehaviour
                         }
                         else if (trns_back_arr[i] == true)
                         { 
-                            pos_dc[values_ref[i]] = Mathf.SmoothDamp(pos_dc[values_ref[i]], 0.00f, ref srched_ref, 0.040f * (0.8f + (smoothTime_prc/100) ) ); 
+                            pos_dc[values_ref[i]] = Mathf.SmoothDamp(pos_dc[values_ref[i]], 0.00f, ref srched_ref, 0.050f * (0.8f + (smoothTime_prc/100) ) ); 
                             if(Math.Abs(pos_dc[values_ref[i]]) < 0.0070f ){
                             //if( pos_dc[values_ref[i]] == 0.0f){
                                 it_++;
@@ -352,6 +375,7 @@ public class CameraMovement : MonoBehaviour
         // x_offst definition
         x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ? -1 *   (60 - (player_rb.rotation.eulerAngles.y - 300.0f)) : player_rb.rotation.eulerAngles.y);
 
+
         // Lerp Position
         if(((x_ratio * x_offst)) != lst_offst_x)
         {
@@ -367,21 +391,11 @@ public class CameraMovement : MonoBehaviour
         }
 
 
-        // end grapl transition detection
-        if(_grplPoint_ != new Vector3(0,0,0))
-        {
-            if( !end_trans_called && (player.position.z > _grplPoint_.z + 2.0f) )
-            {
-                end_grpl_Cm();
-            }
-        }
-        else { end_trans_called = false; }
-
 
         // time
         if(slow_time)
         {
-            Time.timeScale = 0.75f;
+            Time.timeScale = 0.8f;
         }
         else { Time.timeScale = 1f; }
 
@@ -402,22 +416,26 @@ public class CameraMovement : MonoBehaviour
                 bool aim_off =  (aimed_target == null || tyro_on ) ? true : false;
 
                 Quaternion desired_rt  = new Quaternion( 
-                    xRot + supl_xRot + rot_dc["wallR_rot_x_offst"] 
+                    xRot + supl_xRot 
+                     + (!use_specialSmooth ? lerp_v_rot.x : rot_dc["wallR_rot_x_offst"])
                      + ( (aim_off) ? 0 : (aim_x * xy_ratio) / (divisor * 0.35f))
-                      + ( (player_velocity.y < -1) ? ( player_velocity.y/240 ) : 0f)
-                    + cam_recoil
+                     // + ( (player_velocity.y < -1) ? ( player_velocity.y/240 ) : 0f) y neg velocity effect
                     ,
-                    (x_offst / (sliding_on ? 120f : 160.0f) ) + rot_dc["wallR_rot_y_offst"] 
+                    (!use_specialSmooth ? lerp_v_rot.y : rot_dc["wallR_rot_y_offst"])
+                     + (x_offst / (sliding_on ? 120f : 160.0f) )
                      + ( (aim_off) ? 0 : (aim_y * xy_ratio) / divisor)
                     , 
-                    (-1 * (x_offst / 360.0f)) + rot_dc["wallR_rot_z_offst"] + (tyro_on ? (tyro_z) : 0f)
+                    (!use_specialSmooth ? lerp_v_rot.z : rot_dc["wallR_rot_z_offst"])
+                     + (-1 * (x_offst / 360.0f))
+                     + (tyro_on ? (tyro_z) : 0f)
                      + cam_recoil
                     ,
                     1f
                 );
 
-                transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt,  (tyro_on || grappl_on) ? (grappl_on ? 0.070f : 0.020f) : 0.12f );
-                
+                transform.localRotation = Quaternion.Slerp(gameObject.transform.rotation, desired_rt,  (tyro_on || grappl_on) ? (grappl_on ? 0.070f : 0.020f) : 0.10f );
+
+
                 // Smooth Damp
                 Vector3 smoothFollow = Vector3.SmoothDamp(
                     transform.position,
@@ -425,8 +443,10 @@ public class CameraMovement : MonoBehaviour
                         desired_ + 
                             (tyro_on ? new Vector3(0f, 0.5f, 0.5f) : new Vector3(0f,0f,0f)) 
                         + 
-                        new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"])
-                        + new Vector3(0f, ( (player_velocity.y < -1) ? (player_velocity.y/14) : 0f), 0f) // y compensation
+                        (!use_specialSmooth ? 
+                            (lerp_v_pos) : (new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"]))
+                        )
+                        + new Vector3(0f, ( (player_velocity.y < -1) ? (player_velocity.y / 18) : 0f), 0f) // y neg velocity compensation
                         + new Vector3( (float)(x_y[0] * coef),(float) Math.Abs(x_y[1] * coef), 0f) // bob
                         + new Vector3(0, 0, (player_rb.velocity.z > 8 ) ? (player_rb.velocity.z - 8) * 0.05f : 0f ) // z speed compensation
                     ),
@@ -434,7 +454,7 @@ public class CameraMovement : MonoBehaviour
                     ( grappl_on ? 
                         0.0710f 
                     :
-                        (tyro_on) ? 0.080f : 0.065f
+                        (tyro_on) ? 0.080f : 0.0430f
                     )
                 ); 
 
@@ -487,7 +507,6 @@ public class CameraMovement : MonoBehaviour
     private void reset_smoothDmpfnc()
     {
         smoothTime_prc = 0.0f;
-        // new_fov = start_fov;
         mathfRef_x = mathfRef_y = mathfRef_z = mathfRef0_x = mathfRef0_y = mathfRef0_z = mathfRef_pos_x = mathfRef_pos_y = mathfRef_pos_z = mathfRef0_pos_x = mathfRef0_pos_y = mathfRef0_pos_z = 0.0f;
         mathRef_arr = new List<float>(new float[6] {
             0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
@@ -500,9 +519,25 @@ public class CameraMovement : MonoBehaviour
             else pos_dc[values_ref[b]] = 0.0f;
         }
         iterator_ = 0;
+
+        currentLerpTime = 0f;
+        lerp_v_rot = lerp_v_pos = Vector3.zero;
+        use_specialSmooth = false;
     }
 
 
+
+    private void reset_notSmooth()
+    {
+        currentLerpTime = 0f;
+        lerp_v_rot = lerp_v_pos = Vector3.zero;
+        use_specialSmooth = false;
+
+        supl_xRot = 0.0f;
+        new_fov = start_fov; 
+        pos_dc["wallR_x_offst"] = 0.0f; pos_dc["wallR_y_offst"] = 0.0f; pos_dc["wallR_z_offst"] = 0.0f;
+        rot_dc["wallR_rot_x_offst"] = 0.0f; rot_dc["wallR_rot_z_offst"] = 0.0f; rot_dc["wallR_rot_y_offst"] = 0.0f;
+    }
 
 
     // Wall run
@@ -510,11 +545,7 @@ public class CameraMovement : MonoBehaviour
     {
         if(is_ext)
         {
-            supl_xRot = 0.0f;
-            new_fov = start_fov;
-            pos_dc["wallR_x_offst"] = 0.0f; pos_dc["wallR_y_offst"] = 0.0f; pos_dc["wallR_z_offst"] = 0.0f;
-
-            rot_dc["wallR_rot_x_offst"] = 0.0f; rot_dc["wallR_rot_z_offst"] = 0.0f; rot_dc["wallR_rot_y_offst"] = 0.0f;
+            reset_notSmooth();
         }else
         {
             // // //
@@ -525,7 +556,7 @@ public class CameraMovement : MonoBehaviour
 
             //FovTrans(start_fov, 0.5f);
             new_fov = 93f;
-            pos_dc["wallR_y_offst"] = sns > 0 ? -1f : -0.75f;
+            pos_dc["wallR_y_offst"] = sns > 0 ? -1.1f : -0.9f;
 
             // SPACE UP || CLOSE UP Z OFFSET
             pos_dc["wallR_z_offst"] = (sns < 0) ? 0.8f :  0.4f;
@@ -553,81 +584,12 @@ public class CameraMovement : MonoBehaviour
 
 
 
-
-
-
-    // Grappling
-    public void grpl_offset(bool is_ext, Transform gm_ = null)
-    {
-        if(is_ext)
-        {
-            supl_xRot = 0.0f;
-            new_fov = start_fov;
-            grappl_on = false;
-
-            pos_dc["wallR_x_offst"] = 0.0f; Invoke("delay_yOf_grpl", 0.55f); pos_dc["wallR_z_offst"] = 0.0f;
-            rot_dc["wallR_rot_z_offst"] = 0.0f; rot_dc["wallR_rot_y_offst"] = 0.0f; rot_dc["wallR_rot_x_offst"] = 0.0f;
-        }else
-        {
-            if(gm_)
-            {
-                // // //
-                reset_smoothDmpfnc();
-                // // //
-                grappl_on = true;
-                new_fov = 95f;
-
-                // CLOSE UP Z OFFSET
-                pos_dc["wallR_z_offst"] = 1.45f;
-                pos_dc["wallR_y_offst"] = -0.40f;
-
-                // SMOOTH DAMP FOR X ROTATION boolean
-                smthDmp_grpl = true;
-
-                float sns =  player.position.x - gm_.position.x;
-                if(sns < 0 )rot_dc["wallR_rot_z_offst"] = -0.04f;
-                else rot_dc["wallR_rot_z_offst"] = 0.04f; 
-                
-
-            }
-        }
-    }
-    private void delay_yOf_grpl()
-    {
-        _grplPoint_ = new Vector3(0,0,0);
-        smthDmp_grpl_end = false; smthDmp_grpl = false;
-        rot_dc["wallR_y_offst"] = 0f;
-    }
-    // End grapple
-    private void end_grpl_Cm()
-    {
-        FindObjectOfType<Grappling>().waveHeight *= 4;
-        FindObjectOfType<Grappling>().soft_Grapple();
-        end_trans_called = true;
-        // SPACE UP Z OFFSET
-        pos_dc["wallR_z_offst"] = 1.0f;
-
-        pos_dc["wallR_x_offst"] = rot_dc["wallR_rot_y_offst"] = 0f;
-        pos_dc["wallR_y_offst"] = -1.90f;
-        // CANCEL smthDmp_grpl PREVIOUS SMOOTH DAMP X ROTATION
-        smthDmp_grpl = false; smthDmp_grpl_end = true;
-    }
-
-
-
-
-
-
     // Sliding
     public void sld_offset(bool is_ext)
     {
         if(is_ext)
         {
-            supl_xRot = 0.0f;
-            new_fov = start_fov;
-            pos_dc["wallR_y_offst"] = 0.0f; pos_dc["wallR_z_offst"] = 0.0f;
-            rot_dc["wallR_rot_x_offst"] = 0.0f; rot_dc["wallR_rot_z_offst"] = 0.0f;       
-
+              reset_notSmooth();
         }else
         {
             reset_smoothDmpfnc();
@@ -637,39 +599,34 @@ public class CameraMovement : MonoBehaviour
             float s_ = UnityEngine.Random.Range(1, 3);
 
             // CLOSE UP Z OFFSET
-            pos_dc["wallR_z_offst"] = s_ == 1 ? 1.5f : 1.9f;
-            pos_dc["wallR_y_offst"] = s_ == 1 ? 0.4f : 0.6f;
+            pos_dc["wallR_z_offst"] = 1.3f;
+            pos_dc["wallR_y_offst"] = -0.25f;
 
             // SMOOTH DAMP FOR X ROTATION
-            rot_dc["wallR_rot_x_offst"] = s_ == 1 ? 0.04f : 0.12f;    
-            rot_dc["wallR_rot_z_offst"] = -0.110f;       
+            rot_dc["wallR_rot_x_offst"] = -0.06f;    
+            rot_dc["wallR_rot_z_offst"] =  s_ == 1 ? -0.10f : 0.10f;       
   
         }
     }
 
 
     // Rail Slide
-    public void railSlide_offset(bool is_ext)
+    public void railSlide_offset(bool is_ext, bool side_)
     {
         if(is_ext)
         {
-            //FovTrans(85f, 0.5f);
-            supl_xRot = 0.0f;
-            new_fov = start_fov;
-            pos_dc["wallR_y_offst"] = 0.0f; pos_dc["wallR_z_offst"] = 0.0f; rot_dc["wallR_rot_x_offst"] = 0.0f; rot_dc["wallR_rot_z_offst"] = 0.0f;
-            pos_dc["wallR_x_offst"] = 0.0f;
-       
+            reset_notSmooth(); 
         }else
         {
             reset_smoothDmpfnc();
-            new_fov = 82f;
+            new_fov = 90f;
             // SPACE + OFFSET
-            pos_dc["wallR_x_offst"] = 0.5f;
-            pos_dc["wallR_y_offst"] = -0.35f;
-            pos_dc["wallR_z_offst"] = 0.5f;
+            pos_dc["wallR_x_offst"] = !side_ ? -0.4f : 0.4f;
+            pos_dc["wallR_y_offst"] = -0.45f;
+            pos_dc["wallR_z_offst"] = 1.4f;
 
-            rot_dc["wallR_rot_z_offst"] = -0.120f;       
-            rot_dc["wallR_rot_x_offst"] = -0.050f;       
+            rot_dc["wallR_rot_z_offst"] = !side_ ? 0.120f : -0.120f;       
+            rot_dc["wallR_rot_x_offst"] = 0.020f;       
 
         }
     }
@@ -679,11 +636,7 @@ public class CameraMovement : MonoBehaviour
     {
         if(is_ext)
         {
-            supl_xRot = 0.0f;
-            new_fov = start_fov;
-            pos_dc["wallR_y_offst"] = 0.0f; pos_dc["wallR_z_offst"] = 0.0f; rot_dc["wallR_rot_x_offst"] = 0.0f; rot_dc["wallR_rot_z_offst"] = 0.0f;
-            pos_dc["wallR_x_offst"] = 0.0f;
-       
+            reset_notSmooth();
         }else
         {
             reset_smoothDmpfnc();
@@ -745,11 +698,7 @@ public class CameraMovement : MonoBehaviour
     {
         if(is_ext)
         {
-            //FovTrans(85f, 0.5f);
-            supl_xRot = 0.0f;
-            new_fov = start_fov;
-            pos_dc["wallR_y_offst"] = 0.0f; pos_dc["wallR_z_offst"] = 0.0f;
-            rot_dc["wallR_rot_x_offst"] = 0.0f; rot_dc["wallR_rot_z_offst"] = 0.0f;
+            reset_notSmooth();
         }else
         {
             // // //
@@ -777,18 +726,13 @@ public class CameraMovement : MonoBehaviour
     {
         if(is_ext)
         {
-            //FovTrans(85f, 0.5f);
-            supl_xRot = 0.0f;
-            new_fov = start_fov;
-            pos_dc["wallR_y_offst"] = 0.0f; pos_dc["wallR_z_offst"] = 0.0f; rot_dc["wallR_rot_x_offst"] = 0.0f; rot_dc["wallR_rot_z_offst"] = 0.0f;
-            pos_dc["wallR_x_offst"] = 0.0f;
-       
+            reset_notSmooth();
         }else
         {
             reset_smoothDmpfnc();
             new_fov = 86f;
             // SPACE + OFFSET
-            pos_dc["wallR_y_offst"] = 0.9f;
+            pos_dc["wallR_y_offst"] = 1.4f;
             pos_dc["wallR_z_offst"] = 1.2f;
 
             rot_dc["wallR_rot_x_offst"] = 0.20f;       
@@ -802,17 +746,20 @@ public class CameraMovement : MonoBehaviour
 
 
 
+
+
+
     // Jump & DoubleJump
     public void jmp(bool is_dblJmp)
     {
         reset_smoothDmpfnc();  
 
-        // -30% smoothTime !!
-        smoothTime_prc = 0f;
+        // +10% smoothTime !!
+        smoothTime_prc = 10f;
 
-        iterator_ = 4;
+        iterator_ = 3;
         List<float> v_flt = new List<float>(new float[6] {
-            is_dblJmp ? -0.14f : -0.25f, is_dblJmp ? -0.9f : -1.7f, is_dblJmp ?  -0.12f : 0.12f, 
+            is_dblJmp ? -0.24f : -0.27f, is_dblJmp ? -1.7f : -1.9f, is_dblJmp ?  -0.14f : 0.14f, 
             0.0f, 0.0f, 0.0f
         } ); 
         List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "", "",""} ); 
@@ -823,10 +770,11 @@ public class CameraMovement : MonoBehaviour
             false, false, false ,false, false, false
         }); 
 
-        trns_fnc = true;
+        trns_fnc = use_specialSmooth = true;
         trns_back = false;
         StartCoroutine(time_coroutine());
     }
+    
     
 
     // Special Jump [LAUNCHER, BUMPER, TAP TAP] 
@@ -846,7 +794,7 @@ public class CameraMovement : MonoBehaviour
             false, false, false ,false, false, false
         }); 
 
-        trns_fnc = true; trns_back = false;
+        trns_fnc = use_specialSmooth = true; trns_back = false;
       
     }
 
@@ -856,10 +804,9 @@ public class CameraMovement : MonoBehaviour
     {
         reset_smoothDmpfnc();  
 
-        iterator_ = 3;
+        iterator_ = 4;
         List<float> v_flt; List<string> s_arr;
         
-        float s_ = UnityEngine.Random.Range(1, 3);
 
         // +40% smoothTime !!
         smoothTime_prc = 30f;
@@ -867,24 +814,16 @@ public class CameraMovement : MonoBehaviour
         // +5 fov  !!
         new_fov = 80f;
 
-        if(s_ == 1)
-        {
-            v_flt = new List<float>(new float[6] {-0.18f, -0.2f, -0.20f, -1.7f, 0f, 0f} ); 
-            s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_rot_z_offst", "wallR_z_offst", "wallR_y_offst", "",""} ); 
-        }else
-        {
-            v_flt = new List<float>(new float[6] {-0.18f, 0.2f, -0.20f, -1.7f, 0f, 0f} ); 
-            
-            s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_rot_z_offst", "wallR_z_offst", "wallR_y_offst", "",""} ); 
-        }
- 
+        v_flt = new List<float>(new float[6] {-0.20f, -0.12f, -1.5f, 0f, 0f, 0f} ); 
+        s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_rot_z_offst", "wallR_y_offst", "", "",""} ); 
+
         values_ref = s_arr;
         values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] {
             false, false, false ,false, false, false
         }); 
 
-        trns_fnc = true; trns_back = false;
+        trns_fnc = use_specialSmooth = true; trns_back = false;
       
     }
 
@@ -908,7 +847,7 @@ public class CameraMovement : MonoBehaviour
         values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false }); 
 
-        trns_fnc = true; trns_back = false; 
+        trns_fnc = use_specialSmooth = true; trns_back = false; 
     }
 
 
@@ -928,7 +867,7 @@ public class CameraMovement : MonoBehaviour
         values_ref = s_arr; values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false }); 
 
-        trns_fnc = true; trns_back = false; 
+        trns_fnc = use_specialSmooth = true; trns_back = false; 
     }
 
     // climb & ladder
@@ -952,7 +891,7 @@ public class CameraMovement : MonoBehaviour
         values_ref = s_arr; values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false }); 
 
-        trns_fnc = true; trns_back = false; 
+        trns_fnc = use_specialSmooth = true; trns_back = false; 
     }
 
 
@@ -978,7 +917,7 @@ public class CameraMovement : MonoBehaviour
         values_ref = s_arr; values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false }); 
 
-        trns_fnc = true; trns_back = false; 
+        trns_fnc = use_specialSmooth = true; trns_back = false; 
     }
 
 
@@ -1004,7 +943,7 @@ public class CameraMovement : MonoBehaviour
             false, false, false ,false, false, false
         }); 
 
-        trns_fnc = true; trns_back = false;
+        trns_fnc = use_specialSmooth = true; trns_back = false;
     }
 
     // under
@@ -1022,7 +961,7 @@ public class CameraMovement : MonoBehaviour
         values_ref = s_arr; values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false }); 
 
-        trns_fnc = true; trns_back = false;
+        trns_fnc = use_specialSmooth = true; trns_back = false;
     }
 
     // taptap
@@ -1045,7 +984,7 @@ public class CameraMovement : MonoBehaviour
         values_ref = s_arr; values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false }); 
 
-        trns_fnc = true; trns_back = false; 
+        trns_fnc = use_specialSmooth = true; trns_back = false; 
     }
 
 
@@ -1067,7 +1006,7 @@ public class CameraMovement : MonoBehaviour
         values_ref = s_arr; values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false }); 
 
-        trns_fnc = true; trns_back = false;
+        trns_fnc = use_specialSmooth = true; trns_back = false;
     }
 
 

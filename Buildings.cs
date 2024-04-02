@@ -37,8 +37,7 @@ public class Buildings : MonoBehaviour
     {
         RenderSettings.skybox.SetFloat("_Rotation", 0f);
 
-        // Gen_Bldngs(20);
-        Gen_PrefbSections(2);
+        Gen_PrefbSections(3);
     }
 
     // fixedupdate for player transform

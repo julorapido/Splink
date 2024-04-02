@@ -239,8 +239,8 @@ public class Grappling : MonoBehaviour
             FindObjectOfType<PlayerMovement>().rotate_bck();
 
             // CALL CAMERA GRAPPLE MOVEMENTS
-            FindObjectOfType<CameraMovement>()._grplPoint_ = gplr_point;
-            FindObjectOfType<CameraMovement>().grpl_offset(false, gplr_gm.transform);
+            //FindObjectOfType<CameraMovement>()._grplPoint_ = gplr_point;
+            // FindObjectOfType<CameraMovement>().grpl_offset(false, gplr_gm.transform);
         }
       
     }
@@ -257,7 +257,6 @@ public class Grappling : MonoBehaviour
 
         // Player Mvmnt fnc call
         FindObjectOfType<PlayerMovement>().swing_anm(true, new Vector3(0,0,0));
-        FindObjectOfType<CameraMovement>().grpl_offset(true);
 
         Rigidbody ply_r = plyr_pos.gameObject.GetComponent<Rigidbody>();
 

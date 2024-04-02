@@ -5,237 +5,222 @@ using UnityEngine;
 
 public class A_T_Projectile : MonoBehaviour
 {
-    
-    /// <summary>
-    /// An impassable tile is one which does not allow the player to move through
-    /// it at all. It is completely solid.
-    /// </summary>
-    [Header ("Weapon Bullet Specifics")]
+    [Header ("WeaponBullet Specifics")]
     [HideInInspector] public bool horitzontal_target;
     [HideInInspector] public Vector3 weapon_precision;
     [HideInInspector] public float weapon_dmg;
-    [HideInInspector] public Transform player_;
     [HideInInspector] public bool target_isLeft;
     [HideInInspector] public bool is_crticial;
-    private ParticleSystem blt_expl;
-    private Weapon blt_wpnScript;
 
-    [Header ("Player_")]
-    [HideInInspector] public Transform plyr_target;
+    [Header ("Target")]
+    private Transform target_;
+    [HideInInspector] public Transform set_target{
+        get {  return null; }
+        set { if(value.GetType() == typeof(Transform)) target_ = value; }
+    }
 
-    [HideInInspector] public enum turret_Type{
-        Normal,
-        Double,
-        Catapult,
-        Heavy,
-        Sniper,
-        Gattling,
-        Military,
-        Blast,
-        Robot,
-        WeaponBullet
+
+    [Header ("Bullet Type & Damage")]
+    [HideInInspector] public bool player_bullet = false;
+    [HideInInspector] public Bullet_Type bullet_type;
+    [HideInInspector] public enum Bullet_Type{
+        Direct,
+        Tracking,
+        Ricochet,
+        Grenade,
     };
-    [SerializeField]
-    public turret_Type blt_type;
+ 
 
     [Header ("Rocket Near-Inprecision")]
-    private float near_inPrecision = 0.0f;
+    private float rocket_near_inPrecision = 0.0f;
     
     [Header ("Attached Objects")]
-    private MeshRenderer[] bullet_msh;
-    private LineRenderer[] bullet_lr;
-    private Collider[] bullet_cldrs;
-
-    private ParticleSystem[] bullet_explosions_;
-
+    private ParticleSystem blt_expl;
     private Rigidbody bullet_rb;
     private Vector3 bullet_qtrn;
 
-    [Header ("Projectile_Speeds")]
-    private float speed = 20f;
-    private float turnSpeed = 14f;
+    [Header ("Projectile Speed")]
+    private const float turnSpeed = 8f;
+    private float speed = 4f;
+    [HideInInspector] public float set_projSpeed {
+        set { if(value.GetType() == typeof(float)) speed = value; }
+        get { return 0f; }
+    }
 
-
-    [Header ("Stored directions & rotations")]
+    [Header ("Stored direction")]
     private Vector3 l_dir;
     private int z_ = 0;
 
-    [Header ("Player Passed Bools")]
-    private bool is_behind = false;
-    private bool plyr_passed = false;
-
-    [Header ("ExplosionAnimation Position")]
+    [Header ("Bools")]
     private Vector3 expl_offset;
+    private bool is_behind = false;
+    private bool target_passed = false;
     private bool exploded = false;
-
 
     [Header ("ExplosionAnimation Position")]
     private const string turret_parts = "tr_Barrel tr_Stand tr_Plate tr_Radar tr_Shootp tr_BarrelHz";
 
 
 
-    // Start is called before the first frame update
+    // Start
     private void Start()
     {
-        if(blt_type != turret_Type.WeaponBullet)
-        {
-            ParticleSystem[] ps_arr = gameObject.GetComponentsInChildren<ParticleSystem>();
-            bullet_explosions_ = ps_arr;
-            
-            bullet_msh  = gameObject.GetComponentsInChildren<MeshRenderer>();
-            bullet_lr = gameObject.GetComponentsInChildren<LineRenderer>();
-            bullet_cldrs = gameObject.GetComponentsInChildren<Collider>();
-
-
-
-
-            float dir =  transform.position.z - (plyr_target.position.z);
+        if(!player_bullet)
+        {  
+            float dir =  transform.position.z - (target_.position.z);
             if(dir < 0 ) is_behind = true;
 
-
-            LeanTween.scale(gameObject, transform.localScale * 0.5f, 1f).setEaseInCubic();
-
-          
+            LeanTween.scale(gameObject, transform.localScale * 0.5f, 2f).setEaseInCubic();
         }
 
+        bullet_rb = gameObject.GetComponent<Rigidbody>();
         ParticleSystem[] ps_0 = gameObject.GetComponentsInChildren<ParticleSystem>();
         blt_expl = ps_0.Length > 0 ? ps_0[0] : null;
 
-        bullet_rb = gameObject.GetComponent<Rigidbody>();
-        bullet_qtrn = Vector3.RotateTowards(transform.forward, (plyr_target.position - transform.position), Time.deltaTime * 100, 0.0f);
 
+        // direct 
+        if(bullet_type == Bullet_Type.Direct)
+            bullet_qtrn = Vector3.RotateTowards(
+                transform.forward,
+                (target_.position + (player_bullet ?
+                    (horitzontal_target ? 
+                        new Vector3(target_isLeft ? 2.0f : -3f, 2.5f, 0f) : new Vector3(0f, 2.25f, 0f) 
+                    )
+                : (Vector3.zero) ) - transform.position), 
+                Time.deltaTime * 100, 0.0f
+        );
 
-        near_inPrecision = UnityEngine.Random.Range(0.5f, 4f);
-
-        if(blt_type == turret_Type.Robot)
-        {
-            speed =  UnityEngine.Random.Range(14f, 22f);
-        }
-
-        if(blt_type == turret_Type.WeaponBullet){
-            Weapon w = FindObjectOfType<Weapon>();
-            blt_wpnScript = w;
-        }
-
+        // tracking
+        if(bullet_type == Bullet_Type.Tracking)
+            rocket_near_inPrecision = UnityEngine.Random.Range(0.5f, 4f);
 
     }
 
 
     
-
-    // Update is called once per frame
+    // Update
     private void Update()
     {
-        if(blt_type != turret_Type.WeaponBullet)
+
+
+        // NON-PLAYER BULLET
+        if(!player_bullet)
         {
-            float passedNear_inPrecision =  ( blt_type == turret_Type.Normal || blt_type == turret_Type.Double ?
-                near_inPrecision : 0f
-            );
-            
-            float dst_ = (transform.position.z - plyr_target.position.z);
-            if( (is_behind ? (dst_ > passedNear_inPrecision) : (dst_ < passedNear_inPrecision) ) && !plyr_passed)
-            {
-                plyr_passed = true; speed *= 1.3f;
-                Invoke("bullet_explode", 0.35f);
+            float passedNear_inPrecision =  (bullet_type == Bullet_Type.Tracking ? rocket_near_inPrecision : 0f);
+            float dst_ = (transform.position.z - target_.position.z);
+
+            // detect player passed
+            if(
+                (bullet_type != Bullet_Type.Ricochet && bullet_type != Bullet_Type.Grenade)
+                && (is_behind ? (dst_ > passedNear_inPrecision) : (dst_ < passedNear_inPrecision) ) 
+                && !target_passed
+            ){
+                target_passed = true; 
+                speed *= 1.30f;
+                Invoke("player_hit", 2.25f);
             }
 
             if(!exploded)
             {
                 try{
-                    Vector3 dir = (plyr_target.position + new Vector3(0f, 1f, 0f) ) - transform.position;
-
-                    if(!plyr_passed)
-                        l_dir = dir;
+                    Vector3 dir = (target_.position + new Vector3(0f, 1f, 0f) ) - transform.position;
                         
-                    if(plyr_passed &&  (dst_ > 12) && !exploded)
-                        bullet_explode();
+                    if(target_passed && bullet_type == Bullet_Type.Tracking)
+                        dir = l_dir;
 
-                    Vector3 newDirection = Vector3.RotateTowards(transform.forward, dir, Time.deltaTime * turnSpeed, 0.0f);
-                    switch(blt_type)
+                    switch(bullet_type)
                     {
-                        case turret_Type.Normal:
-                        case turret_Type.Double:
-                            //Debug.DrawRay(transform.position, newDirection, Color.red);
+                        case Bullet_Type.Tracking:
+                            Vector3 newDirection = Vector3.RotateTowards(transform.forward, dir, Time.deltaTime * turnSpeed, 0.0f);
 
                             transform.Translate(Vector3.forward * Time.deltaTime * speed);
-                            Vector3 l_r  = plyr_passed ? l_dir : newDirection;
-                            if( l_r != new Vector3(0, 0, 0) ){
-                                transform.rotation = Quaternion.LookRotation(plyr_passed ? l_dir : newDirection);
-                            }
-                            transform.rotation = Quaternion.Euler(transform.eulerAngles.x, transform.eulerAngles.y, z_);
+                            transform.rotation = Quaternion.LookRotation(newDirection);
+
+                            if(!target_passed)
+                                l_dir = new Vector3(dir.x, 0, dir.z);
 
                             z_+= 3;
                             break;
 
-                        case turret_Type.Heavy:
-                        case turret_Type.Sniper:
-                        case turret_Type.Gattling:
-                        case turret_Type.Blast:
-                        case turret_Type.Robot:
+                        case Bullet_Type.Direct:
                             Vector3 shoot_dir = dir.normalized;
 
-                            // transform.rotation = Quaternion.LookRotation(bullet_qtrn); // Quaternion.Euler(bullet_qtrn.x, bullet_qtrn.y, bullet_qtrn.z);
-                            // transform.LookAt(plyr_target);
                             transform.rotation = Quaternion.LookRotation(bullet_qtrn);
                             bullet_rb.AddForce( (speed / 15) * shoot_dir, ForceMode.VelocityChange);
-
                             break;
-                        case turret_Type.Catapult:
-                            Vector3 p = CalculateCatapult(plyr_target.position, transform.position, 1f);
+
+                        case Bullet_Type.Grenade:
+                            Vector3 p = CalculateGrenadeJump(target_.position, transform.position, 1f);
                             break;
                     }
-
-                    //if( (transform.position.z - plyr_target.position.z ) < 4f) bullet_explode();
-
+                    
                 }catch(Exception err){
                     Debug.Log(err);
                 }
-            }else
-            {
-                transform.position = plyr_target.position + expl_offset;
-
-                Vector3 dir = (plyr_target.position + new Vector3(0f, 1f, 0f) ) - transform.position;
-                Vector3 newDirection = Vector3.RotateTowards(transform.forward, dir, Time.deltaTime * 10f, 0.0f);
-                transform.rotation = Quaternion.LookRotation(newDirection);
             }
-
-
         }
+
+
+
+        // PLAYER BULLET
         else
         {
             if(!exploded)
             {
-                if( (plyr_target.position.z - transform.position.z) < -2f){ plyr_passed = true;}
-
-                bool is_left =  ((plyr_target.rotation.eulerAngles.y >= 170 ) ? true : false);  
-                is_left = target_isLeft;
-
-                Vector3 dir = (plyr_passed == true) ? 
-                    (l_dir) : 
-                    (plyr_target.position +
-                            (horitzontal_target ? new Vector3(is_left ? 2.0f : -3f, 2.5f, 0f) :
-                             new Vector3(0f, 2.25f, 0f) )
-                         - transform.position 
+                try{
+                    Vector3 dir = (target_passed == true) ? 
+                        (l_dir) : 
+                        (target_.position +
+                                (
+                                    horitzontal_target ? 
+                                        new Vector3(target_isLeft ? 2.0f : -3f, 2.5f, 0f) : new Vector3(0f, 2.25f, 0f) 
+                                )
+                            - transform.position 
                     ) + (weapon_precision);
 
-                if(!plyr_passed) l_dir = new Vector3(dir.x, 0, dir.z);
+                    switch(bullet_type)
+                    {
+                        case Bullet_Type.Tracking:
+                            if( (target_.position.z - transform.position.z) < 0f)
+                                target_passed = true;
+                            
+                            if(!target_passed)
+                                l_dir = dir;
 
-                Vector3 shoot_dir = dir.normalized;
+                            Vector3 newDirection = Vector3.RotateTowards(transform.forward, dir, Time.deltaTime * turnSpeed, 0.0f);
 
-                transform.rotation = Quaternion.LookRotation(bullet_qtrn);
-                bullet_rb.AddForce((plyr_passed ? 10f : 6f) * shoot_dir, ForceMode.VelocityChange);
+                            transform.rotation = Quaternion.LookRotation(newDirection);
+                            transform.Translate(Vector3.forward * Time.deltaTime * speed);
 
-                if(plyr_passed)
-                {
-                    float dst = Vector3.Distance(transform.position, plyr_target.position);
-                    if(dst > 40) destry();
+                            if(target_passed)
+                            {
+                                if(Vector3.Distance(transform.position, target_.position) > 60)
+                                    destry();
+                            }
+                            break;
+                        case Bullet_Type.Direct:
+                            // Vector3 shoot_dir = dir.normalized;
+
+                            // transform.rotation = Quaternion.LookRotation(bullet_qtrn);
+                            bullet_rb.AddForce( (speed / 15) * (bullet_qtrn), ForceMode.VelocityChange);
+                            break;
+                        case Bullet_Type.Grenade:
+                            Vector3 p = CalculateGrenadeJump(target_.position, transform.position, 1f);
+
+                            bullet_rb.AddForce(p, ForceMode.VelocityChange);
+                            break;
+                    }   
+                }catch(Exception err){
+                    Debug.Log(err);
                 }
             }
             else
             {
-                transform.position = plyr_target.position + expl_offset;
+                transform.position = target_.position + expl_offset;
             }
         }
+
+
     }
 
     private void FixedUpdate()
@@ -244,43 +229,43 @@ public class A_T_Projectile : MonoBehaviour
     }
 
 
+    // Player bullet
     private void OnCollisionEnter(Collision other)
     {
-        if(blt_type == turret_Type.WeaponBullet)
+        if(player_bullet)
         {
             GameObject member_gmObj_replaced = other.gameObject; // force initialization beacuse it's a GameObj
-            string member_hit = other.gameObject.tag;
+            string hit_tag = other.gameObject.tag;
             Transform parent_ = other.gameObject.transform.parent;
 
-            if( turret_parts.Contains(member_hit) )
+
+            // hit a turret
+            if( turret_parts.Contains(hit_tag) )
             {
-                // while(parent_ != null)
                 for(int i = 0; i < 50; i ++)
                 {
                     if(parent_.parent != null)
                     {
-                        if(member_hit == "Untagged" && parent_.gameObject.tag != "Untagged")
+                        if(hit_tag == "Untagged" && parent_.gameObject.tag != "Untagged")
                         {
-                            member_hit = parent_.gameObject.tag;
+                            hit_tag = parent_.gameObject.tag;
                             member_gmObj_replaced = parent_.gameObject;
                         }
 
-                        if(member_hit == "rocket"){
-                            Debug.Log(parent_.gameObject);
-                        }
 
                         parent_ = parent_.parent;
                         if( (parent_.gameObject.tag == "TURRET" || parent_.gameObject.tag == "ENEMY") && !exploded)
                         {
                             AutoTurret turret = parent_.GetComponent<AutoTurret>();
+                                 
                             turret.turret_damage(
-                                member_hit,
-                                weapon_dmg, other.gameObject.tag != "Untagged" ?  other.gameObject : member_gmObj_replaced,
-                                player_,
-                                is_crticial
+                                hit_tag,
+                                weapon_dmg, 
+                                other.gameObject.tag != "Untagged" ?  other.gameObject : member_gmObj_replaced,
+                                is_crticial,
+                                transform.position - target_.position
                             );
                             enemy_hit();
-                            blt_wpnScript.hitmarker();
                             parent_ = null;
                             break;
                         }
@@ -290,89 +275,63 @@ public class A_T_Projectile : MonoBehaviour
                     }
                 }
             }
-
        }
     }
 
 
+    // Enemy Bullet
     private void OnTriggerEnter(Collider other)
     {
-        if(blt_type != turret_Type.WeaponBullet)
+        if(!player_bullet)
         {
-            if(other.gameObject.tag == "player_hitbx" && !exploded) bullet_explode();
-            if(other.gameObject.tag == "ground" && !exploded) bullet_explode();
+            if(other.gameObject.tag == "player_hitbx" && !exploded) player_hit();
+            if(other.gameObject.tag == "ground" && !exploded) player_hit();
         }
     }
 
-    // TURRETS AMMO EXPLODE
-    private void bullet_explode()
+
+    // TURRETS hit
+    private void player_hit()
     {
-        // Destroy(gameObject);
+        if(exploded) return;
+
         exploded = true;
-        expl_offset = ( transform.position - plyr_target.transform.position );
-
-        if(bullet_msh.Length > 0)
-        {
-            for (int i = 0; i < bullet_msh.Length; i ++)
-            {
-                bullet_msh[i].enabled = false;
-            }
-        }
-      
-        for (int j = 0; j < bullet_lr.Length; j ++) bullet_lr[j].enabled = false;
-        for (int k = 0; k < bullet_cldrs.Length; k ++) bullet_cldrs[k].enabled = false;
-
-        if(blt_type == turret_Type.Normal || blt_type == turret_Type.Double)
-        {
-            if(bullet_explosions_.Length > 0 && bullet_explosions_[0] != null)
-            {
-                if(bullet_explosions_[0].gameObject != null) Destroy(bullet_explosions_[0].gameObject);
-                if(bullet_explosions_[1].gameObject != null) Destroy(bullet_explosions_[1].gameObject);
-            }
-            // bullet_explosions_[0].Stop();
-            // bullet_explosions_[1].Stop();
-        }else
-        {
-            if(bullet_explosions_.Length > 0)
-            {
-                for (int l = 0; l < bullet_explosions_.Length; l ++)
-                    bullet_explosions_[l].Stop();
-            }
-        }
-
-   
-        // if (explosion_) explosion_.Play();
-
-        Invoke("destry", 0.75f);
+        
+        
+        Destroy(gameObject);
     }
 
 
-    // PLAYER WEAPON HIT
+    // PLAYER hit
     private void enemy_hit()
     {
-
-        expl_offset = ( transform.position - plyr_target.transform.position );
+        if(exploded) return;
+        
         exploded = true;
         Invoke("destry", 0.75f);
-        if(blt_expl != null) blt_expl.Play();
+        if(blt_expl != null) 
+            blt_expl.Play();
         TrailRenderer tr = gameObject.GetComponent<TrailRenderer>();
-        if(tr != null) tr.enabled = false;
+        if(tr != null) 
+            tr.enabled = false;
+            
         // if(bullet_explosions_.Length > 0)
         // {
         //     for (int l = 0; l < bullet_explosions_.Length; l ++)
         //         bullet_explosions_[l].Play();
         // }
-        bool is_left =  ((plyr_target.rotation.eulerAngles.y >= 170 ) ? true : false);  
+
+        bool is_left =  ((target_.rotation.eulerAngles.y >= 170 ) ? true : false);  
     }
 
     private void destry(){ Destroy(gameObject); }
 
 
-    private Vector3 CalculateCatapult(Vector3 target, Vector3 origen, float time)
+    private Vector3 CalculateGrenadeJump(Vector3 target, Vector3 origen, float time)
     {
         Vector3 distance = target - origen;
-        Vector3 distanceXZ = distance;
-        distanceXZ.y = 0;
+        Vector3 distanceXZ = new Vector3(distance.x, 0, distance.z);
+        // distanceXZ.y = 0;
 
         float Sy = distance.y;
         float Sxz = distanceXZ.magnitude;

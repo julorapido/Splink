@@ -30,6 +30,8 @@ public class PlayerVectors : MonoBehaviour
     private void Start(){
         g_v = new GameObject[60];
     }
+
+
     private void FixedUpdate()
     {
         // Detect Side Bldgs

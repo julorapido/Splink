@@ -17,16 +17,18 @@ public class Weapon : MonoBehaviour
     private bool ammo_fixed  = true;
 
     [Header ("Weapon Stats")]
-    private const int damage = 1;
-    private const int precision_ = 50;
-    private const float fireRate = 0.4f;
-    private const int criticalChance = 7; // /100
-    private const int range_ = 60;
+    private const int damage = 10;
+    private const int precision_ = 70;
+    private const float fireRate = 0.6f;
+    private const int criticalChance = 20; // /100
+    private const int range_ = 40;
     private const int magSize = 12;
     private const float reloadTime = 2f;
+    private const float bullet_speed = 30f;
 
-
-    [Header ("Player Movement/Collision Script")]
+    [Header ("Player Movement/Collision/UI/Camera Scripts")]
+    private GameUI g_ui;
+    private CameraMovement cm_movement;
     private PlayerMovement pm;
     private PlayerCollisions pm_cls;
     public int get_attRange {
@@ -45,7 +47,18 @@ public class Weapon : MonoBehaviour
     private bool recoil_side = false;
 
 
-    // [Header ("Weapon Level")]
+    private enum WeaponType
+    {
+        PISTOL,
+        SMG,
+        RIFLE,
+        SEMIAUTO,
+        HEAVY,
+        SHOTGUN,
+        LIGHTGUN,
+        SNIPER
+    };
+    WeaponType weapon_type = new WeaponType();
     public enum GunLevel
     {
         COMMON,
@@ -105,34 +118,13 @@ public class Weapon : MonoBehaviour
     private GameObject wpn_prefab;
 
 
-    [Header ("Game-UI")]
-    private GameUI g_ui;
-
-    [Header ("CameraMovement")]
-    private CameraMovement cm_movement;
-
     [Header ("Hitmarker")]
     private GameObject hitmarker_;
 
-    // [Header ("Weapon-Type")]
-    private enum WeaponType
-    {
-        PISTOL,
-        SMG,
-        RIFLE,
-        SEMIAUTO,
-        HEAVY,
-        SHOTGUN,
-        LIGHTGUN,
-        SNIPER
-    };
-    WeaponType weapon_type = new WeaponType();
+  
 
-
-
-
-    // Awake is called even if the script is disabled
-    private void Awake()
+    // Awake
+    private async void Awake()
     {
         m_r = gameObject.GetComponentsInChildren<Transform>();
         pm = FindObjectOfType<PlayerMovement>();
@@ -140,9 +132,11 @@ public class Weapon : MonoBehaviour
         g_ui = FindObjectOfType<GameUI>();
         cm_movement = FindObjectOfType<CameraMovement>();
 
-        // init all guns (Assets/Resources/CollectibleGuns/0)
+        // await first to get gun name from database
+
+        // init all guns (Assets/Resources/PlayerWeapon/0)
         // load gun prefabs
-        UnityEngine.Object[] guns = Resources.LoadAll("CollectibleGuns/" + gun_name + "/",  typeof(GameObject));
+        UnityEngine.Object[] guns = Resources.LoadAll("PlayerWeapon/" + gun_name + "/",  typeof(GameObject));
         int i = 0;
         foreach(var t in guns)
         {
@@ -151,9 +145,10 @@ public class Weapon : MonoBehaviour
         }
         wpn_prefab = weaponsResourcesPrefab_buffer[0];
 
+        // init weapon stats
+
         // set weapon type
         weapon_type = WeaponType.PISTOL;
-        // WeaponType[] two_handeds = new WeaponType[2]{WeaponType.PISTOL, WeaponType.SMG};
 
         if( weapon_type == WeaponType.PISTOL || weapon_type == WeaponType.SMG )
         {
@@ -170,8 +165,6 @@ public class Weapon : MonoBehaviour
         }
 
         pm.set_weaponReloadTime = reloadTime;
-
-        // init weapon stats
 
     }
 
@@ -191,22 +184,7 @@ public class Weapon : MonoBehaviour
     }
 
 
-
-    //collisions??
-    private void OnCollisionEnter(Collision other)
-    {
-        if(other.collider.gameObject.tag == "TURRET" || other.collider.gameObject.tag == "enemy" ) 
-        {
-            GameObject enemy = other.collider.gameObject;
-
-            // get index of bullet child in parents 
-            // split target arr 
-            // delete from parent
-        }
-    }
-
-
-    // Update is called for lerp values
+    // Update
     private void Update()
     {
         if(ammo == 0)
@@ -258,55 +236,61 @@ public class Weapon : MonoBehaviour
 
     public void Shoot(Transform target_transform, bool horizontal_enm)
     {
-        if(!canShoot) return;
-        // if(target_ == target_transform) target_ = target_transform;
+        if(!canShoot || target_transform == null) return;
 
         em_recoil = 0f;
         pm.set_recoil = 0f;
         StartCoroutine(shoot_recoil());
 
-        ammo--;
+        // ammo--;
 
         cm_movement.shoot_recoil(recoil_side);
         recoil_side = !recoil_side;
 
-        GameObject new_bullet =  Instantiate(weapon_bullets[0], fire_point[point_indx].position, fire_point[point_indx].rotation);
-        A_T_Projectile proj_scrpt = new_bullet.GetComponent<A_T_Projectile>();
+        GameObject new_bullet =  Instantiate(
+            weapon_bullets[0], fire_point[point_indx].position, 
+            Quaternion.LookRotation(pm.transform.forward) //fire_point[point_indx].rotation
+        );
         
         float cr = UnityEngine.Random.Range(0, 100);
         bool is_criticalHit = cr <= criticalChance ? true : false;
 
         AutoTurret AT_ = target_transform.gameObject.GetComponent<AutoTurret>();
-        if(AT_ != null) proj_scrpt.target_isLeft = AT_.is_left;
-
+        A_T_Projectile proj_scrpt = new_bullet.GetComponent<A_T_Projectile>();
+        if(AT_ != null) 
+            proj_scrpt.target_isLeft = AT_.is_left;
+            
+        proj_scrpt.player_bullet = true;
+        proj_scrpt.bullet_type = A_T_Projectile.Bullet_Type.Direct;
         proj_scrpt.is_crticial = is_criticalHit;
-        proj_scrpt.plyr_target = target_transform;
+        proj_scrpt.set_target = target_transform;
         proj_scrpt.horitzontal_target = horizontal_enm;
         proj_scrpt.weapon_dmg = damage;
-        proj_scrpt.player_ = transform.root;
+        proj_scrpt.set_projSpeed = bullet_speed;
 
-        float x_ = UnityEngine.Random.Range(-1f *(100f - (float)(precision_)) / 2f, (100f - (float)(precision_)) / 2f);
-        float y_ = UnityEngine.Random.Range(-1f *(100f - (float)(precision_)) / 3f, (100f - (float)(precision_)) / 3f);
+        float x_ = UnityEngine.Random.Range(
+            -1f * (100f - (float)(precision_)) / 2f, (100f - (float)(precision_)) / 2f
+        ) * 0.1f;
+        float y_ = UnityEngine.Random.Range(
+            -1f * (100f - (float)(precision_)) / 3f, (100f - (float)(precision_)) / 3f
+        ) * 0.1f;
 
-        x_ /= 15f; y_ /= 12f;
-
-        if( Vector3.Distance(target_transform.position, transform.position) < 16f){
-            x_ /= 20f;
-            y_ /= 30;
+        if( Vector3.Distance(target_transform.position, transform.position) < 16f)
+        {
+            x_ /= 2f;
+            y_ /= 2f;
         }
-        if( Vector3.Distance(target_transform.position, transform.position) < 7f) 
-            y_ /= 10;
         
+        proj_scrpt.weapon_precision = new Vector3(x_, y_, 0);
 
-        Vector3 randomized_aim = new Vector3(x_, y_, 0);
-        proj_scrpt.weapon_precision = randomized_aim;
 
         LeanTween.scale( gameObject, 
-            new Vector3(gameObject.transform.localScale.x * 2, gameObject.transform.localScale.y * 2, gameObject.transform.localScale.z * 2),
+            new Vector3(gameObject.transform.localScale.x * 1.2f, gameObject.transform.localScale.y * 1.2f, gameObject.transform.localScale.z * 1.2f),
             fireRate - 0.02f
         ).setEasePunch();
  
-        for(int i = 0; i < ps_shots.Length; i ++) ps_shots[i].Play();
+        for(int i = 0; i < ps_shots.Length; i ++) 
+            ps_shots[i].Play();
 
 
         // reload
@@ -354,9 +338,13 @@ public class Weapon : MonoBehaviour
     // turn off meshes, partsystms, etc..
     public void equip_Weapon(bool? pocket_weapon)
     {   
-        // +3 mag && full actual mag
-        ammo_inMagazine += 3 * (magSize);
-        ammo = (magSize);
+
+        if(pocket_weapon != null)
+        {
+            // +3 mag && full actual mag
+            ammo_inMagazine += 3 * (magSize);
+            ammo = (magSize);
+        }
         
         // nullable bool for Start 
         if(pocket_weapon == null)
@@ -388,6 +376,7 @@ public class Weapon : MonoBehaviour
 
 
 
+
     // public reload method
     public void reload()
     {
@@ -400,11 +389,4 @@ public class Weapon : MonoBehaviour
 
 
 
-    public void hitmarker(){
-
-        for(int i = 0; i < hitmarker_.transform.childCount; i ++){
-            LeanTween.moveLocal(hitmarker_.transform.GetChild(i).gameObject, hitmarker_.transform.GetChild(i).localPosition + new Vector3(0f, 0f, 0.1f), 1.4f).setEasePunch();
-            LeanTween.scale(hitmarker_.transform.GetChild(i).gameObject, hitmarker_.transform.GetChild(i).localScale * 1.4f, 1.4f).setEasePunch();
-        }
-    }
 }

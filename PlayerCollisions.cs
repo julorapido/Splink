@@ -1,6 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Immutable;
+//using System.Collections.Immutable;
 using UnityEngine;
 using PathCreation.Utility;
 using System;
@@ -8,6 +8,7 @@ using System.Reflection;
 
 using UnityEditor;
 
+/*
 [CustomEditor(typeof(PlayerCollisions)), CanEditMultipleObjects]
 public class PlayerCollisionsEditor : Editor 
 {
@@ -34,7 +35,7 @@ public class PlayerCollisionsEditor : Editor
 
         // serializedObject.ApplyModifiedProperties();
     }
-}
+}*/
 
 
 
@@ -126,7 +127,6 @@ public class PlayerCollisions : MonoBehaviour
             set_playerRagdoll(false);
         }
     }
-
 
 
     // Start
@@ -271,48 +271,36 @@ public class PlayerCollisions : MonoBehaviour
 
         if(player_ammo > 0)
         {
-
-
             // player shots auto-aim
-            if(slcted_clsion == "boxCastAutoAim" && (true == false))
-            {
-                enemy_inSight = 0;
+            // if(slcted_clsion == "boxCastAutoAim" && (true == false))
+            // {
+            //     enemy_inSight = 0;
+            //     RaycastHit[] top = Physics.BoxCastAll(m_Collider.bounds.center, transform.localScale, transform.forward, transform.rotation, 200f);
+            //     RaycastHit[] bottom = Physics.BoxCastAll(m_Collider.bounds.center, transform.localScale + new Vector3(0, -1, 0), transform.forward, transform.rotation, 200f);
+            //     m_Hits  = new RaycastHit[top.Length + bottom.Length];
+            //     top.CopyTo(m_Hits, 0);
+            //     bottom.CopyTo(m_Hits, top.Length);
 
-                RaycastHit[] top = Physics.BoxCastAll(m_Collider.bounds.center, transform.localScale, transform.forward, transform.rotation, 200f);
-                RaycastHit[] bottom = Physics.BoxCastAll(m_Collider.bounds.center, transform.localScale + new Vector3(0, -1, 0), transform.forward, transform.rotation, 200f);
-                m_Hits  = new RaycastHit[top.Length + bottom.Length];
-                top.CopyTo(m_Hits, 0);
-                bottom.CopyTo(m_Hits, top.Length);
-
-                for(int i = 0; i < m_Hits.Length; i ++)
-                {
-
-                    if ( (m_Hits[i].collider.tag == "TURRET") )
-                    {
-                        //Output the name of the enemy you hits
-                        Debug.Log("Hit : " + m_Hits[i].collider.name);
-
-                        aimed_enemy = m_Hits[i].transform.gameObject;
-                        if(storedAimed_enemy != aimed_enemy)
-                        {
-                            storedAimed_enemy = aimed_enemy;
-                            p_movement.animateCollision("newEnemyAim", new Vector3(0, 0, 0), storedAimed_enemy);
-                        }
-
-                        enemy_inSight++;
-
-                        break;
-                    }
-                }
-
-                if(enemy_inSight == 0 && (aimed_enemy != null) )
-                    p_movement.animateCollision("emptyEnemyAim", new Vector3(0, 0, 0));
-                    aimed_enemy = null;
-    
-            }
-
-
-
+            //     for(int i = 0; i < m_Hits.Length; i ++)
+            //     {
+            //         if ( (m_Hits[i].collider.tag == "TURRET") )
+            //         {
+            //             //Output the name of the enemy you hits
+            //             Debug.Log("Hit : " + m_Hits[i].collider.name);
+            //             aimed_enemy = m_Hits[i].transform.gameObject;
+            //             if(storedAimed_enemy != aimed_enemy)
+            //             {
+            //                 storedAimed_enemy = aimed_enemy;
+            //                 p_movement.animateCollision("newEnemyAim", new Vector3(0, 0, 0), storedAimed_enemy);
+            //             }
+            //             enemy_inSight++;
+            //             break;
+            //         }
+            //     }
+            //     if(enemy_inSight == 0 && (aimed_enemy != null) )
+            //         p_movement.animateCollision("emptyEnemyAim", new Vector3(0, 0, 0));
+            //         aimed_enemy = null;
+            // }
 
 
             // Player Box Auto-Aim
@@ -321,22 +309,28 @@ public class PlayerCollisions : MonoBehaviour
             {
                 float minDistance = float.MaxValue;
 
-                
-                // DisplayBox(transform.position,  
-                //     new Vector3(4f, 10f, player_attackRange), 
-                //     wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
-                // );
-
-                Collider[] hitColliders = Physics.OverlapBox(transform.position,
-                    new Vector3(4f, 10f, player_attackRange),
-                    wallRun_aimBox ? Quaternion.Euler(0, transform.rotation.y, z_wallRun_aimRotation) : transform.rotation
+                DisplayBox(transform.position,  
+                    new Vector3(4f, 10f, player_attackRange), 
+                    wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
                 );
 
-                if(hitColliders.Length > 0)
+                int maxColliders = (player_attackRange / 10) * 100;
+                Collider[] hitColliders = new Collider[maxColliders];
+                int numColliders = Physics.OverlapBoxNonAlloc
+                (
+                    transform.position,
+                    new Vector3(4f, 10f, player_attackRange), 
+                    hitColliders,
+                    transform.rotation
+                );
+
+                if(numColliders > 0)
                 {   
                     turretInSight = 0;
                     for (int i = 0; i < hitColliders.Length; i ++)
                     {   
+                        if(hitColliders[i] == null ) continue;
+
                         if(hitColliders[i].tag == "TURRET" || hitColliders[i].tag == "ENEMY")
                         {
                             Vector3 possiblePosition = hitColliders[i].transform.position;
@@ -689,7 +683,7 @@ public class PlayerCollisions : MonoBehaviour
         Rigidbody[] pico_rb = pico_chan.GetComponentsInChildren<Rigidbody>();
         Collider[] pico_cldr = pico_chan.GetComponentsInChildren<Collider>();
         CharacterJoint[] pico_cjoint = pico_chan.GetComponentsInChildren<CharacterJoint>();
-
+        
         for(int c = 0; c < pico_cldr.Length; c++){
             pico_cldr[c].enabled = v_;
         }   
@@ -704,14 +698,13 @@ public class PlayerCollisions : MonoBehaviour
         if(!(v_)){
             character_connectedBodies = new Rigidbody[pico_cjoint.Length];
             pico_characterJoints = pico_cjoint;
-        }
+        }else { Debug.Log(pico_characterJoints.Length); }
 
-        for(int cj = 0; cj < pico_cjoint.Length; cj ++){
+        for(int cj = 0; cj < ((v_) ? pico_characterJoints.Length : pico_cjoint.Length); cj ++){
             
             // pico_cjoint[cj].enableProjection = v_;
             // pico_cjoint[cj].enablePreprocessing = v_;
             // pico_cjoint[cj].enableCollision = v_;
-            
             if(v_ == false){
                 // character_connectedBodies[cj] = pico_cjoint[cj].connectedBody;
                 // pico_cjoint[cj].connectedBody = null;
@@ -720,6 +713,7 @@ public class PlayerCollisions : MonoBehaviour
             else{ 
                 // pico_cjoint[cj].connectedBody = character_connectedBodies[cj]; 
                 CharacterJoint c_j = pico_cjoint[cj].gameObject.AddComponent<CharacterJoint>();
+                Debug.Log(pico_characterJoints[cj]);
                 c_j = pico_characterJoints[cj];
             }
 
