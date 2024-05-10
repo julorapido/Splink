@@ -10,7 +10,7 @@ public class AutoTurret : MonoBehaviour
     [Header ("Turret Stats")]
     [SerializeField, Range(20, 50)] private int t_range;
     [SerializeField, Range(50, 600)] private int t_health;
-    [SerializeField, Range(10, 400)] private int t_damage;
+    [SerializeField, Range(10, 40)] private int t_damage;
     [SerializeField, Range(0.01f, 3f)] private float t_fireRate;
 
 
@@ -74,7 +74,7 @@ public class AutoTurret : MonoBehaviour
 
 
     [Header ("Turret Projectile")]
-    public GameObject turret_bullet;
+    [SerializeField] private GameObject turret_bullet;
 
 
     [Header ("Turret Orientation")]
@@ -344,7 +344,7 @@ public class AutoTurret : MonoBehaviour
 
     private void shoot_prjcle()
     {
-        if(plyr_n_sight)
+        if(plyr_n_sight && !turret_exploded)
         {
             try{
                 Vector3 msl_scale = turret_bullet.transform.localScale;
@@ -376,6 +376,7 @@ public class AutoTurret : MonoBehaviour
                         A_T_Projectile projectile_scrpt = missle_Go.GetComponent<A_T_Projectile>();
                         projectile_scrpt.set_target = plyr_gm.transform;
                         projectile_scrpt.bullet_type = A_T_Projectile.Bullet_Type.Tracking;
+                        projectile_scrpt.set_damage = t_damage;
                         break;
 
 
@@ -394,6 +395,7 @@ public class AutoTurret : MonoBehaviour
                         A_T_Projectile proj_scrpt_s = missle_Go_s.GetComponent<A_T_Projectile>();
                         proj_scrpt_s.set_target = plyr_gm.transform;
                         proj_scrpt_s.bullet_type = A_T_Projectile.Bullet_Type.Direct;
+                        proj_scrpt_s.set_damage = t_damage;
                         break;
                     case turret_Type.Gattling:
                         StartCoroutine(gtlng_(msl_scale));
@@ -441,6 +443,9 @@ public class AutoTurret : MonoBehaviour
     // TARGET Check
     private void target_check()
     {
+        if(turret_exploded)
+            return;
+
         // OvSphere => OvSphereNonAlloc
         int maxColliders = 125 * (t_range / 10);
         Collider[] hitColliders = new Collider[maxColliders];

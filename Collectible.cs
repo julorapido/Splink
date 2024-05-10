@@ -20,7 +20,6 @@ public class Collectible : MonoBehaviour {
     private float rotationSpeed = 1f;
 
     [Header ("Floating Settings")]
-    private float floatSpeed = 1f;
     private bool goingUp = true;
     private float floatTimer;
 
@@ -107,35 +106,39 @@ public class Collectible : MonoBehaviour {
         
         if(isAnimated)
         {
+            // rotate
             if(isRotating)
             {
                 transform.Rotate(rotationAngle * rotationSpeed * Time.deltaTime, Space.World    );
             }
 
 
+            // float
             if(isFloating)
             {
                 floatTimer += Time.deltaTime;
                 //Vector3 moveDir = new Vector3(0.0f, floatSpeed / 130f, 0.0f);
-                transform.Translate( (goingUp ? Vector3.up : Vector3.down) * (Time.fixedDeltaTime / 4), Space.World);
+                
+                transform.Translate( 
+                    (goingUp ? Vector3.up : Vector3.down) * (Time.fixedDeltaTime / 4), 
+                Space.World);
 
-                if (goingUp && floatTimer >= scaleAndFloatRate)
+                if (goingUp && floatTimer > scaleAndFloatRate)
                 {
                     goingUp = false;
                     floatTimer = 0;
-                    // floatSpeed = -floatSpeed;
                 }
 
-                else if(!goingUp && floatTimer >= scaleAndFloatRate)
+                else if(!goingUp && floatTimer > scaleAndFloatRate)
                 {
                     goingUp = true;
                     floatTimer = 0;
-                    // floatSpeed = +floatSpeed;
                 }
             }
 
 
-            if(isScaling && (false == true) && !isScaling)
+            // scale
+            if(isScaling)
             {
                 scaleTimer += Time.deltaTime;
                 float interpolationRatio = (float)(scalingUp ? elapsedFrames2 : elapsedFrames) / interpolationFramesCount;

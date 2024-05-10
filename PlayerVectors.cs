@@ -91,15 +91,18 @@ public class PlayerVectors : MonoBehaviour
 
         }
 
-        if(init_gmbj == last_gm) return;
-        else last_gm = init_gmbj;
+        if(init_gmbj == last_gm) 
+            return;
+        else
+            last_gm = init_gmbj;
 
         // Disable previous slippery arr
         if(acutal_grnds[0] != null)
         {
             for(int j = 0; j < acutal_grnds.Length; j++)
             {
-                if(acutal_grnds[j] == null) break;
+                if(acutal_grnds[j] == null) 
+                    break;
                 Collider col_ = acutal_grnds[j].GetComponent<Collider>();
                 col_.material = null;
             }

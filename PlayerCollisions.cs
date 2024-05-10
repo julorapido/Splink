@@ -338,7 +338,9 @@ public class PlayerCollisions : MonoBehaviour
                             float currDistance = Vector3.Distance(transform.position, possiblePosition);
                             float zDist = possiblePosition.z - transform.position.z;
 
-                            if(zDist < 1f) continue;
+                            if(zDist < 1f
+                                || ((zDist <= 15) && ((possiblePosition.y - transform.position.y) > 10f))
+                            ) continue;
 
                             // If the distance is smaller than the one before...
                             if ( (currDistance < minDistance) )
@@ -385,7 +387,7 @@ public class PlayerCollisions : MonoBehaviour
             {
                 case "ground":
 
-                    // Grnd hit
+                    // Groundroll
                     if(collision.gameObject.tag == "ground")
                     {
                         p_movement.animateCollision("groundHit", _size);
@@ -396,64 +398,55 @@ public class PlayerCollisions : MonoBehaviour
                         }
                     }
 
-                    // Obstcl hit
+                    // Obstacle
                     if(collision.gameObject.tag == "obstacle")
                     {
                         p_movement.animateCollision("obstacleHit", _size, collision.gameObject);
                     }
 
-                    // Launcher jmp
+                    // Launcher
                     if(collision.gameObject.tag == "launcher")
-                    {
                         p_movement.animateCollision("launcherHit", _size, collision.gameObject);
-                    }
 
                     // Tyro hit
                     if(collision.gameObject.tag == "tyro")
-                    {
                         p_movement.tyro_movement(collision.gameObject);
-                    }
 
-                    // Bumper jmp
+                    // Bumper
                     if(collision.gameObject.tag == "bumper")
-                    {
                         p_movement.animateCollision("bumper", _size, collision.gameObject);
-                    }
-
-                    // Tap Tap Jump
-                    if(collision.gameObject.tag == "tapTapJump") p_movement.animateCollision("tapTapJump", _size, collision.gameObject);
                     
-                    // FallBox
-                    if(collision.gameObject.tag == "fallBox")
-                    {
-                        p_movement.animateCollision("fallBoxHit", _size, collision.gameObject);
-                        c_movement.fall_Box();
+
+                    // TapTap Jump
+                    if(collision.gameObject.tag == "tapTapJump") 
+                        p_movement.animateCollision("tapTapJump", _size, collision.gameObject);
+                    
+                    // Land
+                    if(collision.gameObject.tag == "fallBox"){
+                        p_movement.animateCollision("land", _size, collision.gameObject);
                     }  
 
-                    // void
-                    if(collision.gameObject.tag == "void"){
-                        p_movement.animateCollision("void", _size, collision.gameObject);
-
+                    // void & sidevoid
+                    if(collision.gameObject.tag == "void" || collision.gameObject.tag == "sideVoid"){
+                        if(collision.gameObject.tag == "void")
+                            p_movement.animateCollision("void", _size, collision.gameObject);
+                        else
+                            p_movement.animateCollision("sideVoid", _size, collision.gameObject);
                     }
                     
                     break;
 
                 case "frontwall":
-
-                    // front wall gameover
-                    if(collision.gameObject.tag == "ground")
-                    {
+                    // FrontWall Gameover
+                    if(collision.gameObject.tag == "ground"){
                         p_movement.animateCollision("frontWallHit", _size, collision.gameObject);
                     }
 
 
-                    // ladder hit
-                    if(collision.gameObject.tag == "ladder")
-                    {
+                    // Ladder
+                    if(collision.gameObject.tag == "ladder"){
                         p_movement.animateCollision("ladderHit", _size, collision.gameObject);
                     }
-
-
                     break;
 
                 case "sidewall":
@@ -467,22 +460,12 @@ public class PlayerCollisions : MonoBehaviour
                             FindObjectOfType<PlayerVectors>().slippery_trigr(false, collision.gameObject);
                         // }
                     }
-
-                    // side Hang hit
-                    if(collision.gameObject.tag == "sideHang")
-                    {
-                        p_movement.animateCollision("sideHangHit", _size, collision.gameObject);
-                    }
                     break; 
 
                 case "slider":
                     // Slider hit
                     if(collision.gameObject.tag == "slider")
                     {
-                        LeanTween.moveLocal(collision.gameObject, 
-                            collision.gameObject.transform.localPosition + new Vector3(0f, -0.25f, 0f), 
-                        0.85f).setEaseInOutCubic();
-
                         p_movement.animateCollision("sliderHit", _size);
                         c_movement.sld_offset(false);
 
@@ -494,12 +477,6 @@ public class PlayerCollisions : MonoBehaviour
                     {
                         p_movement.animateCollision("railSlide", _size, collision.gameObject);
                         // c_movement.railSlide_offset(false); moved to pm.cs
-                    }
-
-                    // Hang   
-                    if(collision.gameObject.tag == "hang")
-                    {
-                        p_movement.animateCollision("hang", _size, collision.gameObject);
                     }
 
                     // Ramp   
@@ -565,20 +542,20 @@ public class PlayerCollisions : MonoBehaviour
             switch (slcted_clsion)
             {
                 case "ground":
-                    // Ground leave
+                    // ground, land
                     if(collision.gameObject.tag == "ground" || collision.gameObject.tag == "fallBox")
                     {
                         p_movement.animateCollision("groundLeave", _size);
                     }
 
-                    // Obstacl leave
+                    // obstacle
                     if(collision.gameObject.tag == "obstacle")
                     {
                         p_movement.animateCollision("obstacleLeave", _size, collision.gameObject);
                     }
                     
 
-                    // Tap Tap Jump
+                    // taptap
                     if(collision.gameObject.tag == "tapTapJump")
                         p_movement.animateCollision("tapTapJumpExit", _size, collision.gameObject);
 
@@ -595,13 +572,9 @@ public class PlayerCollisions : MonoBehaviour
                     break; 
 
                 case "slider":
-                    // slider leave
+                    // slider
                     if(collision.gameObject.tag == "slider")
-                    {
-                        LeanTween.moveLocal(collision.gameObject, 
-                            collision.gameObject.transform.localPosition + new Vector3(0f, 0.25f, 0f), 
-                        0.85f).setEaseInOutCubic();
-                        
+                    {   
                         p_movement.animateCollision("groundLeave", _size);
                         p_movement.animateCollision("sliderLeave", _size);
                         c_movement.sld_offset(true);
@@ -609,14 +582,13 @@ public class PlayerCollisions : MonoBehaviour
                         psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].slide, false, "", true);
                     }
 
-                    // rail slide leave
+                    // rail
                     if(collision.gameObject.tag == "slideRail")
                     {
                         p_movement.animateCollision("railSlideExit", _size);
-                        // c_movement.railSlide_offset(true); moved to pm.cs
                     }
 
-                    // ramp leave   
+                    // ramp   
                     if(collision.gameObject.tag == "ramp")
                     {
                         p_movement.animateCollision("rampSlideExit", _size, collision.gameObject);
@@ -625,7 +597,7 @@ public class PlayerCollisions : MonoBehaviour
                     break;
 
                 case "frontwall":
-                    // ladder hit
+                    // ladder
                     if(collision.gameObject.tag == "ladder")
                     {
                         p_movement.animateCollision("ladderLeave", _size, collision.gameObject);
@@ -677,49 +649,59 @@ public class PlayerCollisions : MonoBehaviour
     }
 
 
-    public void set_playerRagdoll(bool v_){
-        Transform pico_chan  = transform.parent.GetChild(transform.parent.childCount - 1);
+    public void set_playerRagdoll(bool v_)
+    {
+        if(slcted_clsion == "boxAutoAim")
+        {
+            Transform pico_chan  = transform.parent.GetChild(transform.parent.childCount - 1);
         
-        Rigidbody[] pico_rb = pico_chan.GetComponentsInChildren<Rigidbody>();
-        Collider[] pico_cldr = pico_chan.GetComponentsInChildren<Collider>();
-        CharacterJoint[] pico_cjoint = pico_chan.GetComponentsInChildren<CharacterJoint>();
-        
-        for(int c = 0; c < pico_cldr.Length; c++){
-            pico_cldr[c].enabled = v_;
-        }   
+            Rigidbody[] pico_rb = pico_chan.GetComponentsInChildren<Rigidbody>();
+            Collider[] pico_cldr = pico_chan.GetComponentsInChildren<Collider>();
+            // CharacterJoint[] pico_cjoint = pico_chan.GetComponentsInChildren<CharacterJoint>();
+            Animator a_ = transform.root.GetComponent<Animator>();
 
-        for(int r = 0; r < pico_rb.Length; r ++){
-            pico_rb[r].isKinematic = v_;
-            pico_rb[r].useGravity = v_;
-            pico_rb[r].detectCollisions = v_;
-            pico_rb[r].freezeRotation = (!v_);
-        }
+    
+            for(int c = 0; c < pico_cldr.Length; c++)
+            {
+                pico_cldr[c].enabled = v_;
+            }   
 
-        if(!(v_)){
-            character_connectedBodies = new Rigidbody[pico_cjoint.Length];
-            pico_characterJoints = pico_cjoint;
-        }else { Debug.Log(pico_characterJoints.Length); }
-
-        for(int cj = 0; cj < ((v_) ? pico_characterJoints.Length : pico_cjoint.Length); cj ++){
-            
-            // pico_cjoint[cj].enableProjection = v_;
-            // pico_cjoint[cj].enablePreprocessing = v_;
-            // pico_cjoint[cj].enableCollision = v_;
-            if(v_ == false){
-                // character_connectedBodies[cj] = pico_cjoint[cj].connectedBody;
-                // pico_cjoint[cj].connectedBody = null;
-                Destroy(pico_cjoint[cj]);
-            }
-            else{ 
-                // pico_cjoint[cj].connectedBody = character_connectedBodies[cj]; 
-                CharacterJoint c_j = pico_cjoint[cj].gameObject.AddComponent<CharacterJoint>();
-                Debug.Log(pico_characterJoints[cj]);
-                c_j = pico_characterJoints[cj];
+            for(int r = 0; r < pico_rb.Length; r ++)
+            {
+                pico_rb[r].isKinematic = !(v_);
+                pico_rb[r].useGravity = v_;
             }
 
+            if(v_)  
+                a_.enabled = false;
 
-        }
-        
-    }
+            // if(!(v_))
+            // {
+            //     character_connectedBodies = new Rigidbody[pico_cjoint.Length];
+            //     pico_characterJoints = pico_cjoint;
+            // }else { Debug.Log(pico_characterJoints.Length); }
+
+            //     for(int cj = 0; cj < ((v_) ? pico_characterJoints.Length : pico_cjoint.Length); cj ++)
+            //     {
+            //         // pico_cjoint[cj].enableProjection = v_;
+            //         // pico_cjoint[cj].enablePreprocessing = v_;
+            //         // pico_cjoint[cj].enableCollision = v_;
+
+            //         if(v_ == false)
+            //         {
+            //             //character_connectedBodies[cj] = pico_cjoint[cj].connectedBody;
+            //         // pico_cjoint[cj].connectedBody = null;
+            //             // Destroy(pico_cjoint[cj]);
+            //         }
+            //         else
+            //         { 
+            //             // pico_cjoint[cj].connectedBody = character_connectedBodies[cj]; 
+            //             // CharacterJoint c_j = pico_cjoint[cj].gameObject.AddComponent<CharacterJoint>();
+            //             // Debug.Log(pico_characterJoints[cj]);
+            //             // c_j = pico_characterJoints[cj];
+            //         }
+            //     }
+            // }
+    }}
 
 }

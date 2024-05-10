@@ -6,15 +6,17 @@ using System;
 using TMPro;
 using System.Linq; // Make 'Select' extension available
 
-
+// [ExecuteInEditMode]
 public class GameUI : MonoBehaviour
 {
     [Header ("CAMERA")]
     [SerializeField] private Camera ui_camera;
 
-    [Header ("PLAYER STATS")]
-    private int max_health = 200;
-    private int player_health = 200;
+    [Header ("PLAYER HEALTH")]
+    [SerializeField] private GameObject healh_ui;
+    private TextMeshProUGUI healh_text;
+    private int max_health = 4000;
+    private int player_health = 0; // = 200;
     private int set_health
     {
         get { return 0; }
@@ -60,11 +62,11 @@ public class GameUI : MonoBehaviour
 
     [Header ("Scripts")]
     private Weapon weapon_scrpt;
-    
+    private PlayerMovement p_movement;
+
     [Header ("Player")]
     private Transform plyr_transform;
     private Rigidbody plyr_rgBody;
-    private PlayerMovement p_movement;
 
     [Header ("KILLS")]
     [SerializeField] private GameObject kill_obj;
@@ -102,6 +104,11 @@ public class GameUI : MonoBehaviour
     private LTDescr combo_lt;
 
 
+    // Awake
+    private void Awake()
+    {
+        player_health = max_health;
+    }
 
     // Start
     private void Start()
@@ -139,6 +146,9 @@ public class GameUI : MonoBehaviour
         weapon_reload = weapon_ui_obj.transform.parent.GetChild(1).gameObject;
         weapon_reload.SetActive(false);
 
+        // health 
+        healh_text = healh_ui.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
+        healh_ui.transform.GetChild(1).GetComponent<TextMeshProUGUI>().text = max_health.ToString();
 
         newEnemy_UI(true);
         Invoke("countScore", 0.25f);
@@ -161,11 +171,7 @@ public class GameUI : MonoBehaviour
         money_txt.text = player_money.ToString();
         weapon_ammoTxts[1].text = weapon_scrpt.get_ammo.ToString() + " ";
         weapon_ammoTxts[0].text = "| " + weapon_scrpt.get_ammoInMag.ToString();
-        if(at_turret != null)
-        {
-            //enemy_health = at_turret.get_health;
-            //enemy_maxhealth = at_turret.get_maxHealth;
-        }
+        healh_text.text = player_health.ToString();
 
 
         // money
@@ -275,22 +281,18 @@ public class GameUI : MonoBehaviour
                     float x_health = ( ( (float)enemy_health / (float)enemy_maxhealth) * 100f);
                     if(LeanTween.isTweening(enemy_information.transform.GetChild(0).GetChild(1).gameObject))
                     {
-                        LeanTween.cancel(enemy_information.transform.GetChild(0).GetChild(0).gameObject);
+                        LeanTween.cancel(enemy_information.transform.GetChild(0).GetChild(1).gameObject);
+                    }
+                    if(LeanTween.isTweening(enemy_information.transform.GetChild(0).GetChild(2).gameObject))
+                    {
                         LeanTween.cancel(enemy_information.transform.GetChild(0).GetChild(1).gameObject);
                     }
                     LeanTween.scale(enemy_information.transform.GetChild(0).GetChild(1).gameObject, new Vector3(x_health / 100, 1, 1), 0.25f).setEaseInOutCubic();
-                    LeanTween.scale(enemy_information.transform.GetChild(0).GetChild(2).gameObject, new Vector3(x_health / 100, 1, 1), 0.2f).setEaseInOutCubic();
+                    LeanTween.scale(enemy_information.transform.GetChild(0).GetChild(2).gameObject, new Vector3(x_health / 100, 1, 1), 0.5f).setEaseInOutCubic();
                 }
 
             }
         }
-
-
-
-
-        // health
-
-        
     }
 
 
@@ -384,7 +386,8 @@ public class GameUI : MonoBehaviour
                     LeanTween.scale(tris.transform.GetChild(0).GetChild(s).gameObject, tris.transform.GetChild(1).GetChild(s).localScale * 2f, 1.4f).setEasePunch();
                 }
 
-                if(combo_v == combo_goal){ // PERFECT !
+                if(combo_v == combo_goal) // PERFECT !
+                {
                     GameObject combo_txt_obj = combo_obj.transform.GetChild(1).gameObject;
                     GameObject combo_x1 = combo_obj.transform.GetChild(3).gameObject;
 
@@ -515,24 +518,6 @@ public class GameUI : MonoBehaviour
 
 
 
-    // public KILL method
-    public void kill_ui()
-    {
-        p_movement.player_kill();
-    }
-
-
-
-
-    // public GAMEOVER method
-    public void gameOver_ui()
-    {
-        return;
-    }
-
-
-
-
     // public GUN-LEVELUP method
     public void Gun_levelUp(int level)
     {
@@ -621,17 +606,19 @@ public class GameUI : MonoBehaviour
                 damage_hits_offst[i] = offset;
 
                 float y = UnityEngine.Random.Range(0f, 1f);
-                float x = UnityEngine.Random.Range(-1.5f, 1.5f);
+                float x = UnityEngine.Random.Range(-0.5f, 0.5f);
 
-                LeanTween.value(damage_hits[i], damage_hits_offst[i], offset + new Vector3(x, 0.75f + y, 0f), 0.9f )
+                LeanTween.value(damage_hits[i], damage_hits_offst[i], offset + new Vector3(x, 0.5f + y, 0f), 1.2f )
                     .setEaseOutCubic()
                     .setOnUpdate( (Vector3 value) => {
                         damage_hits_offst[i] = value; 
                     });
             
                 TextMeshProUGUI txt = damage_hits[i].GetComponent<TextMeshProUGUI>();
-                if(is_crit_hit == null) txt.text = "CRTICIAL";
-                else txt.text = damage_value.ToString();
+                if(is_crit_hit == null) 
+                    txt.text = "CRTICIAL";
+                else
+                    txt.text = damage_value.ToString();
 
                 LeanTween.scale(damage_hits[i], damage_hits[i].transform.localScale * 1.4f, 0.7f).setEasePunch();
 
@@ -659,6 +646,36 @@ public class GameUI : MonoBehaviour
 
 
 
+    // pubic PLAYER_DAMAGE method
+    public void player_damage(int dmg_v)
+    {
+        if(player_health == 0)
+            return ;
+
+        if(player_health - dmg_v <= 0)
+        {
+            gameOver_ui("damage", Quaternion.identity);
+            player_health = 0;
+        }else
+        {
+            player_health -= dmg_v;
+        }
+
+
+        if(LeanTween.isTweening(healh_ui.transform.GetChild(2).GetChild(1).gameObject))
+        {
+            LeanTween.cancel(healh_ui.transform.GetChild(2).GetChild(1).gameObject);
+        }
+
+        float health = ( ( (float)player_health / (float)max_health) );
+
+        LeanTween.scale(
+            healh_ui.transform.GetChild(2).GetChild(1).gameObject, 
+            new Vector3(health, 1f, 0f), 1f
+        ).setEaseInOutCubic();
+    } 
+
+
 
 
     // public RELOAD method
@@ -669,6 +686,45 @@ public class GameUI : MonoBehaviour
 
     }
     private void off_wReload(){weapon_reload.SetActive(false);}
+
+
+
+
+
+    // public KILL method
+    public void kill_ui()
+    {
+        // StartCoroutine()
+        p_movement.player_kill();
+    }
+
+
+
+
+    // public GAMEOVER method
+    public void gameOver_ui(
+        string death_mode, Quaternion player_rotation, GameObject optional_wall = null
+    )
+    {
+        switch(death_mode)
+        {
+            case "front":
+            case "sideVoid":
+                StartCoroutine(p_movement.game_Over(death_mode, optional_wall));
+                break;
+            case "damage":
+                StartCoroutine(p_movement.game_Over(death_mode));
+                break;
+            case "void":
+                StartCoroutine(p_movement.game_Over(death_mode));
+                // p_movement.game_Over(death_mode);
+                break;
+        }
+        return;
+    }
+
+
+
 
 
     // private Fade routine
@@ -737,4 +793,6 @@ public class GameUI : MonoBehaviour
         if(obj_ == enemy_information)
             enemy_ui_fading = false;
     }
+
+
 }

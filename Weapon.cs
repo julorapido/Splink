@@ -19,11 +19,11 @@ public class Weapon : MonoBehaviour
     [Header ("Weapon Stats")]
     private const int damage = 10;
     private const int precision_ = 70;
-    private const float fireRate = 0.6f;
+    private const float fireRate = 0.5f;
     private const int criticalChance = 20; // /100
-    private const int range_ = 40;
-    private const int magSize = 12;
-    private const float reloadTime = 2f;
+    private const int range_ = 25; // max range 70-ish
+    private const int magSize = 40;
+    private const float reloadTime = 1.30f;
     private const float bullet_speed = 30f;
 
     [Header ("Player Movement/Collision/UI/Camera Scripts")]
@@ -41,11 +41,17 @@ public class Weapon : MonoBehaviour
     private bool canShoot = true;
 
     [Header ("Weapon Recoil")]
-    private const float recoil_strength = 5.25f;
-    private const float recoil_speed = 40.0f;
-    private float em_recoil = 0.0f;
     private bool recoil_side = false;
-
+    private Vector3 recoil_v = new Vector3(0f, 0f, 0f);
+    [HideInInspector] public Vector3 get_WeaponRecoil {
+        set { return ; }
+        get { return (recoil_v); }
+    }
+    private Vector3 arm_recoil = new Vector3(0f, 0f, 0f);
+    [HideInInspector] public Vector3 get_ArmRecoil {
+        set { return ; }
+        get { return (arm_recoil); }
+    }
 
     private enum WeaponType
     {
@@ -79,16 +85,15 @@ public class Weapon : MonoBehaviour
         get {return gun_level;} set { return;}
     }
 
-    
+
 
     [Header ("Weapon Shot PartSystems")]
     private  ParticleSystem[] ps_shots;
 
-    [Header ("Weapon Bullet")]
-    [SerializeField] private GameObject[] weapon_bullets;  
+    [Header ("Bullet")]
+    [SerializeField] private GameObject[] weapon_bullets;
 
-
-    [Header ("Weapon FirePoint")]
+    [Header ("FirePoint")]
     [SerializeField] private Transform[] fire_point;
     private int point_indx = 0;
 
@@ -99,7 +104,7 @@ public class Weapon : MonoBehaviour
     private Transform target_;
     private Transform[] m_r;
 
-    
+
     [Header ("Weapon Prefabs")]
     private const string gun_name = "usps";
     private GameObject[] weaponsResourcesPrefab_buffer = new GameObject[7]{null, null, null, null, null, null, null};
@@ -121,7 +126,7 @@ public class Weapon : MonoBehaviour
     [Header ("Hitmarker")]
     private GameObject hitmarker_;
 
-  
+
 
     // Awake
     private async void Awake()
@@ -155,8 +160,8 @@ public class Weapon : MonoBehaviour
             pm.set_weaponHandedMode = true;
             pm.set_weaponReloadType = 0;
         }else
-        {  
-            pm.set_weaponHandedMode = false; 
+        {
+            pm.set_weaponHandedMode = false;
             if(weapon_type == WeaponType.SHOTGUN || weapon_type == WeaponType.HEAVY || weapon_type == WeaponType.SNIPER){
                 pm.set_weaponReloadType = 2;
             }else{
@@ -169,7 +174,7 @@ public class Weapon : MonoBehaviour
     }
 
 
-
+    // Start
     private void Start()
     {
 
@@ -197,76 +202,51 @@ public class Weapon : MonoBehaviour
     }
 
 
-    // private method to get enum position number
-    private int GetEnumPosition<T>(T src) where T : struct
+
+
+    // ----------------------------------------
+    // ------------------ SHOOT ---------------
+    public void Shoot(Transform target_transform)
     {
-        if (!typeof(T).IsEnum) throw new ArgumentException(String.Format("Argument {0} is not an Enum", typeof(T).FullName));
+        if( (!canShoot) || (target_transform == null)
+            || (target_transform.GetType() != typeof(Transform))
+        )
+            return;
+        
+        if(target_ != target_transform)
+            target_ = target_transform;
 
-        T[] Arr = (T[])Enum.GetValues(src.GetType());
-        int j = Array.IndexOf<T>(Arr, src);
-        return j;            
-    }
-
-
-    // private method to get next LevelEnum Value
-    private T Next<T>(T src) where T : struct
-    {
-        if (!typeof(T).IsEnum) throw new ArgumentException(String.Format("Argument {0} is not an Enum", typeof(T).FullName));
-
-        T[] Arr = (T[])Enum.GetValues(src.GetType());
-        int j = Array.IndexOf<T>(Arr, src) + 1;
-        return (Arr.Length==j) ? Arr[0] : Arr[j];            
-    }
-
-    public void GunLevelUp()
-    {
-
-        pm_cls = FindObjectOfType<PlayerCollisions>();
-        pm_cls.set_AttackRange = range_;
-
-        gun_level =  Next(gun_level);
-
-        wpn_prefab = weaponsResourcesPrefab_buffer[GetEnumPosition(gun_level)];
-        g_ui.Gun_levelUp(GetEnumPosition(gun_level));
-    }
-
-
-
-
-
-    public void Shoot(Transform target_transform, bool horizontal_enm)
-    {
-        if(!canShoot || target_transform == null) return;
-
-        em_recoil = 0f;
-        pm.set_recoil = 0f;
         StartCoroutine(shoot_recoil());
+        StartCoroutine(delay_shoot());
 
-        // ammo--;
+        ammo--;
 
         cm_movement.shoot_recoil(recoil_side);
         recoil_side = !recoil_side;
 
         GameObject new_bullet =  Instantiate(
-            weapon_bullets[0], fire_point[point_indx].position, 
+            weapon_bullets[0], fire_point[point_indx].position,
             Quaternion.LookRotation(pm.transform.forward) //fire_point[point_indx].rotation
         );
-        
+
         float cr = UnityEngine.Random.Range(0, 100);
-        bool is_criticalHit = cr <= criticalChance ? true : false;
 
         AutoTurret AT_ = target_transform.gameObject.GetComponent<AutoTurret>();
         A_T_Projectile proj_scrpt = new_bullet.GetComponent<A_T_Projectile>();
-        if(AT_ != null) 
+        if(AT_ != null)
             proj_scrpt.target_isLeft = AT_.is_left;
-            
+        else
+            proj_scrpt.target_isLeft = false;
+
+        proj_scrpt.is_crticial = ((cr) <= (criticalChance));
+        proj_scrpt.horitzontal_target = (
+            (AT_ != null && AT_.is_horizontal) ? true : false 
+        );
+        proj_scrpt.bullet_type = (A_T_Projectile.Bullet_Type.Direct);
+        proj_scrpt.set_projSpeed = (bullet_speed);
+        proj_scrpt.set_target = (target_transform);
+        proj_scrpt.set_damage = (damage);
         proj_scrpt.player_bullet = true;
-        proj_scrpt.bullet_type = A_T_Projectile.Bullet_Type.Direct;
-        proj_scrpt.is_crticial = is_criticalHit;
-        proj_scrpt.set_target = target_transform;
-        proj_scrpt.horitzontal_target = horizontal_enm;
-        proj_scrpt.weapon_dmg = damage;
-        proj_scrpt.set_projSpeed = bullet_speed;
 
         float x_ = UnityEngine.Random.Range(
             -1f * (100f - (float)(precision_)) / 2f, (100f - (float)(precision_)) / 2f
@@ -278,18 +258,17 @@ public class Weapon : MonoBehaviour
         if( Vector3.Distance(target_transform.position, transform.position) < 16f)
         {
             x_ /= 2f;
-            y_ /= 2f;
+            y_ /= 5f;
         }
-        
+
         proj_scrpt.weapon_precision = new Vector3(x_, y_, 0);
 
+        // LeanTween.scale( gameObject,
+        //     new Vector3(gameObject.transform.localScale.x * 1.2f, gameObject.transform.localScale.y * 1.2f, gameObject.transform.localScale.z * 1.2f),
+        //     fireRate - 0.02f
+        // ).setEasePunch();
 
-        LeanTween.scale( gameObject, 
-            new Vector3(gameObject.transform.localScale.x * 1.2f, gameObject.transform.localScale.y * 1.2f, gameObject.transform.localScale.z * 1.2f),
-            fireRate - 0.02f
-        ).setEasePunch();
- 
-        for(int i = 0; i < ps_shots.Length; i ++) 
+        for(int i = 0; i < ps_shots.Length; i ++)
             ps_shots[i].Play();
 
 
@@ -298,33 +277,83 @@ public class Weapon : MonoBehaviour
         {
             reload();
         }
-
     }
 
 
 
+    // recoil
     private IEnumerator shoot_recoil()
     {
-        StartCoroutine(delay_shoot());
-        float recoil_time = (fireRate/2) - 0.05f;
-        float recoil_tick_ = recoil_strength / 30;
+        // em_recoil = 0f;
+        // float recoil_time = (fireRate/2) - 0.05f;
+        // float recoil_tick_ = recoil_strength / 30;
+        // while(em_recoil < recoil_strength)
+        // {
+        //     em_recoil += recoil_tick_ * 4f;
+        //     pm.set_recoil = em_recoil;
+        //     yield return new WaitForSeconds( (recoil_time/2) / 30 ); // 0.15f per transition
+
+        //     if(em_recoil >= recoil_strength) break;
+        //}
+
+        // while(em_recoil > 0)
+        // {
+        //     em_recoil -= recoil_tick_ * 4f;
+        //     pm.set_recoil = em_recoil;
+        //     yield return new WaitForSeconds(  (recoil_time/2) / 30); // 0.15f
+        //}
+        if(!(LeanTween.isTweening(gameObject)))
+        {
+            switch(weapon_type)
+            {
+                case WeaponType.PISTOL:
+                case WeaponType.SHOTGUN:
+                case WeaponType.SEMIAUTO:
+                case WeaponType.SNIPER:
+                    LeanTween.value( gameObject, 
+                            new Vector3(0f, 0f, 0f), 
+                            new Vector3(
+                                (target_.position.z - transform.position.z) * 0.15f, 
+                                (target_.position.y > transform.position.y + 5f ? 0.5f : 1.25f)
+                                    + ((target_.position.z - transform.position.z) * 0.1f),
+                                (target_.position.z - transform.position.z) * -0.2f
+                            ), 
+                            (fireRate) * (UnityEngine.Random.Range(1.30f, 2.5f))
+                        )
+                        .setOnUpdate(
+                            (Vector3 val) =>  {recoil_v = val;}
+                        )
+                        .setEasePunch();
+                    break;
+                case WeaponType.RIFLE:
+                case WeaponType.SMG:
+                case WeaponType.HEAVY:
+                    Debug.Log("ret");
+                    break;
+            }
+        }
+
+        if(arm_recoil == Vector3.zero)
+        {
+            LeanTween.value( gameObject, 
+                new Vector3(0f, 0f, 0f), 
+                new Vector3(
+                    UnityEngine.Random.Range(-5f, -15f), 
+                    (UnityEngine.Random.Range(-40f, -60f)) + (damage * 0.1f), 
+                    0f
+                ), 
+                (fireRate * 2f)
+            ).setOnUpdate(
+                (Vector3 v) =>  {arm_recoil = v;}
+            ).setEasePunch();
+        }
         
-        while(em_recoil < recoil_strength)
-        {
-            em_recoil += recoil_tick_ * 4f;
-            pm.set_recoil = em_recoil;
-            yield return new WaitForSeconds( (recoil_time/2) / 30 ); // 0.15f per transition
-
-            if(em_recoil >= recoil_strength) break;
-        }
-
-        while(em_recoil > 0)
-        {
-            em_recoil -= recoil_tick_ * 4f;
-            pm.set_recoil = em_recoil;
-            yield return new WaitForSeconds(  (recoil_time/2) / 30); // 0.15f
-        }
+    
+        yield break;
     }
+
+
+    // shoot mechanic
     private IEnumerator delay_shoot()
     {
         canShoot = false;
@@ -335,18 +364,19 @@ public class Weapon : MonoBehaviour
 
 
 
-    // turn off meshes, partsystms, etc..
     public void equip_Weapon(bool? pocket_weapon)
-    {   
+    {
+        // turn off meshes, partsystms, etc..
+
 
         if(pocket_weapon != null)
         {
             // +3 mag && full actual mag
-            ammo_inMagazine += 3 * (magSize);
+            ammo_inMagazine += 30 * (magSize);
             ammo = (magSize);
         }
-        
-        // nullable bool for Start 
+
+        // nullable bool for Start
         if(pocket_weapon == null)
         {
             pocket_slot[0].SetActive(false);
@@ -377,11 +407,63 @@ public class Weapon : MonoBehaviour
 
 
 
-    // public reload method
+
+    // private method to get enum position number
+    private int GetEnumPosition<T>(T src) where T : struct
+    {
+        if (!typeof(T).IsEnum) 
+            throw new ArgumentException(String.Format("Argument {0} is not an Enum", typeof(T).FullName));
+
+        T[] Arr = (T[])Enum.GetValues(src.GetType());
+        int j = Array.IndexOf<T>(Arr, src);
+        return j;
+    }
+    // private method to get next LevelEnum Value
+    private T Next<T>(T src) where T : struct
+    {
+        if (!typeof(T).IsEnum) 
+            throw new ArgumentException(String.Format("Argument {0} is not an Enum", typeof(T).FullName));
+
+        T[] Arr = (T[])Enum.GetValues(src.GetType());
+        int j = Array.IndexOf<T>(Arr, src) + 1;
+        return (Arr.Length==j) ? Arr[0] : Arr[j];
+    }
+
+
+
+
+
+    // --------------
+    //  GUN LEVEL UP
+    // --------------
+    public void GunLevelUp()
+    {
+
+        pm_cls = FindObjectOfType<PlayerCollisions>();
+        pm_cls.set_AttackRange = range_;
+
+        gun_level =  Next(gun_level);
+
+        wpn_prefab = weaponsResourcesPrefab_buffer[GetEnumPosition(gun_level)];
+        g_ui.Gun_levelUp(GetEnumPosition(gun_level));
+    }
+
+
+
+    // --------------
+    //     RELOAD
+    // --------------
     public void reload()
     {
-        ammo = ((ammo_inMagazine < magSize) ?  ammo_inMagazine :  magSize);
-        ammo_inMagazine = ((ammo_inMagazine < magSize) ?  0 :  (ammo_inMagazine - magSize));
+        ammo = (
+            ammo_inMagazine < magSize ? 
+                (ammo_inMagazine) :  (magSize)
+        );
+
+        ammo_inMagazine = (
+            ammo_inMagazine < magSize ?  
+                (0) :  (ammo_inMagazine - magSize)
+        );
 
         pm.player_reload();
         g_ui.ui_reload(reloadTime);

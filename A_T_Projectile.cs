@@ -8,7 +8,6 @@ public class A_T_Projectile : MonoBehaviour
     [Header ("WeaponBullet Specifics")]
     [HideInInspector] public bool horitzontal_target;
     [HideInInspector] public Vector3 weapon_precision;
-    [HideInInspector] public float weapon_dmg;
     [HideInInspector] public bool target_isLeft;
     [HideInInspector] public bool is_crticial;
 
@@ -29,7 +28,11 @@ public class A_T_Projectile : MonoBehaviour
         Ricochet,
         Grenade,
     };
- 
+    private int bullet_damage = 0;
+    [HideInInspector] public int set_damage{
+        get {  return 0; }
+        set { if(value.GetType() == typeof(int)) bullet_damage = value; }
+    }
 
     [Header ("Rocket Near-Inprecision")]
     private float rocket_near_inPrecision = 0.0f;
@@ -40,8 +43,8 @@ public class A_T_Projectile : MonoBehaviour
     private Vector3 bullet_qtrn;
 
     [Header ("Projectile Speed")]
-    private const float turnSpeed = 8f;
-    private float speed = 4f;
+    private const float turnSpeed = 5f;
+    private float speed = 13f;
     [HideInInspector] public float set_projSpeed {
         set { if(value.GetType() == typeof(float)) speed = value; }
         get { return 0f; }
@@ -82,17 +85,21 @@ public class A_T_Projectile : MonoBehaviour
         if(bullet_type == Bullet_Type.Direct)
             bullet_qtrn = Vector3.RotateTowards(
                 transform.forward,
-                (target_.position + (player_bullet ?
-                    (horitzontal_target ? 
-                        new Vector3(target_isLeft ? 2.0f : -3f, 2.5f, 0f) : new Vector3(0f, 2.25f, 0f) 
+                (target_.position + 
+                    (player_bullet ?
+                        ( 
+                        (horitzontal_target ? 
+                            new Vector3(target_isLeft ? 2.0f : -3f, 0f, 0f) : new Vector3(0f, 2.25f, 0f) 
+                        ) + (weapon_precision) 
                     )
-                : (Vector3.zero) ) - transform.position), 
+                    : (Vector3.zero) ) - transform.position
+                ), 
                 Time.deltaTime * 100, 0.0f
         );
 
         // tracking
         if(bullet_type == Bullet_Type.Tracking)
-            rocket_near_inPrecision = UnityEngine.Random.Range(0.5f, 4f);
+            rocket_near_inPrecision = UnityEngine.Random.Range(0.2f, 3f);
 
     }
 
@@ -114,10 +121,11 @@ public class A_T_Projectile : MonoBehaviour
                 (bullet_type != Bullet_Type.Ricochet && bullet_type != Bullet_Type.Grenade)
                 && (is_behind ? (dst_ > passedNear_inPrecision) : (dst_ < passedNear_inPrecision) ) 
                 && !target_passed
+                && !exploded
             ){
                 target_passed = true; 
                 speed *= 1.30f;
-                Invoke("player_hit", 2.25f);
+                Invoke("bullet_explode", 2.25f);
             }
 
             if(!exploded)
@@ -137,7 +145,7 @@ public class A_T_Projectile : MonoBehaviour
                             transform.rotation = Quaternion.LookRotation(newDirection);
 
                             if(!target_passed)
-                                l_dir = new Vector3(dir.x, 0, dir.z);
+                                l_dir = new Vector3(dir.x, dir.y / 2, dir.z);
 
                             z_+= 3;
                             break;
@@ -260,7 +268,7 @@ public class A_T_Projectile : MonoBehaviour
                                  
                             turret.turret_damage(
                                 hit_tag,
-                                weapon_dmg, 
+                                bullet_damage, 
                                 other.gameObject.tag != "Untagged" ?  other.gameObject : member_gmObj_replaced,
                                 is_crticial,
                                 transform.position - target_.position
@@ -284,20 +292,26 @@ public class A_T_Projectile : MonoBehaviour
     {
         if(!player_bullet)
         {
-            if(other.gameObject.tag == "player_hitbx" && !exploded) player_hit();
-            if(other.gameObject.tag == "ground" && !exploded) player_hit();
+            if(other.gameObject.tag == "player_hitbx" && !exploded) bullet_explode(other.gameObject);
+            if(other.gameObject.tag == "ground" && !exploded) bullet_explode();
+            // if(other.gameObject.tag == "obstacle" && !exploded) bullet_explode();
         }
     }
 
 
     // TURRETS hit
-    private void player_hit()
+    private void bullet_explode(GameObject go_ = null)
     {
         if(exploded) return;
 
         exploded = true;
         
-        
+        if(go_ != null)
+        {
+            GameUI g_ui = FindObjectOfType<GameUI>();
+            g_ui.player_damage(bullet_damage);
+        }
+        CancelInvoke("bullet_explode");
         Destroy(gameObject);
     }
 
@@ -327,6 +341,8 @@ public class A_T_Projectile : MonoBehaviour
     private void destry(){ Destroy(gameObject); }
 
 
+
+    // grenade throw
     private Vector3 CalculateGrenadeJump(Vector3 target, Vector3 origen, float time)
     {
         Vector3 distance = target - origen;
