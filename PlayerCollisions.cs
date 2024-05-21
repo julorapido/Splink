@@ -5,9 +5,7 @@ using UnityEngine;
 using PathCreation.Utility;
 using System;
 using System.Reflection;
-
 using UnityEditor;
-
 /*
 [CustomEditor(typeof(PlayerCollisions)), CanEditMultipleObjects]
 public class PlayerCollisionsEditor : Editor 
@@ -36,9 +34,6 @@ public class PlayerCollisionsEditor : Editor
         // serializedObject.ApplyModifiedProperties();
     }
 }*/
-
-
-
 public class PlayerCollisions : MonoBehaviour
 {
     // [DrawIf("someFloat", 1f, ComparisonType.GreaterOrEqual)]
@@ -118,7 +113,7 @@ public class PlayerCollisions : MonoBehaviour
     private Rigidbody[] character_connectedBodies;
     private CharacterJoint[] pico_characterJoints;
 
-    // awake
+    // AWAKE
     private void Awake()
     {
         // disable ragdoll
@@ -329,7 +324,8 @@ public class PlayerCollisions : MonoBehaviour
                     turretInSight = 0;
                     for (int i = 0; i < hitColliders.Length; i ++)
                     {   
-                        if(hitColliders[i] == null ) continue;
+                        if(hitColliders[i] == null ) 
+                            continue;
 
                         if(hitColliders[i].tag == "TURRET" || hitColliders[i].tag == "ENEMY")
                         {
@@ -353,7 +349,8 @@ public class PlayerCollisions : MonoBehaviour
                         }
                     }
 
-                    if( (sphereStored_aimed_turret != sphere_aimed_turret) && 
+                    if( (sphereStored_aimed_turret != sphere_aimed_turret)
+                                                && 
                         (!firstEverDetectedEnemy || (sphere_aimed_turret != null) ) 
                     ){
                         p_movement.animateCollision("newEnemyAim", new Vector3(0, 0, 0), sphere_aimed_turret);
@@ -427,7 +424,8 @@ public class PlayerCollisions : MonoBehaviour
                     }  
 
                     // void & sidevoid
-                    if(collision.gameObject.tag == "void" || collision.gameObject.tag == "sideVoid"){
+                    if(collision.gameObject.tag == "void" || collision.gameObject.tag == "sideVoid")
+                    {
                         if(collision.gameObject.tag == "void")
                             p_movement.animateCollision("void", _size, collision.gameObject);
                         else
@@ -653,55 +651,36 @@ public class PlayerCollisions : MonoBehaviour
     {
         if(slcted_clsion == "boxAutoAim")
         {
-            Transform pico_chan  = transform.parent.GetChild(transform.parent.childCount - 1);
+            Transform pico_chan  = GameObject.FindGameObjectsWithTag("player_character")[0].GetComponent<Transform>();
         
             Rigidbody[] pico_rb = pico_chan.GetComponentsInChildren<Rigidbody>();
             Collider[] pico_cldr = pico_chan.GetComponentsInChildren<Collider>();
-            // CharacterJoint[] pico_cjoint = pico_chan.GetComponentsInChildren<CharacterJoint>();
             Animator a_ = transform.root.GetComponent<Animator>();
+            // CharacterJoint[] pico_cjoint = pico_chan.GetComponentsInChildren<CharacterJoint>();
 
-    
+            // Colliders
             for(int c = 0; c < pico_cldr.Length; c++)
             {
                 pico_cldr[c].enabled = v_;
             }   
 
+            // Rigidbodies
             for(int r = 0; r < pico_rb.Length; r ++)
             {
                 pico_rb[r].isKinematic = !(v_);
                 pico_rb[r].useGravity = v_;
             }
 
-            if(v_)  
+            if(v_)
+            {
                 a_.enabled = false;
-
-            // if(!(v_))
-            // {
-            //     character_connectedBodies = new Rigidbody[pico_cjoint.Length];
-            //     pico_characterJoints = pico_cjoint;
-            // }else { Debug.Log(pico_characterJoints.Length); }
-
-            //     for(int cj = 0; cj < ((v_) ? pico_characterJoints.Length : pico_cjoint.Length); cj ++)
-            //     {
-            //         // pico_cjoint[cj].enableProjection = v_;
-            //         // pico_cjoint[cj].enablePreprocessing = v_;
-            //         // pico_cjoint[cj].enableCollision = v_;
-
-            //         if(v_ == false)
-            //         {
-            //             //character_connectedBodies[cj] = pico_cjoint[cj].connectedBody;
-            //         // pico_cjoint[cj].connectedBody = null;
-            //             // Destroy(pico_cjoint[cj]);
-            //         }
-            //         else
-            //         { 
-            //             // pico_cjoint[cj].connectedBody = character_connectedBodies[cj]; 
-            //             // CharacterJoint c_j = pico_cjoint[cj].gameObject.AddComponent<CharacterJoint>();
-            //             // Debug.Log(pico_characterJoints[cj]);
-            //             // c_j = pico_characterJoints[cj];
-            //         }
-            //     }
-            // }
+                //     for(int cj = 0; cj < ((v_) ? pico_characterJoints.Length : pico_cjoint.Length); cj ++)
+                //     {
+                //         // pico_cjoint[cj].enableProjection = v_;
+                //         // pico_cjoint[cj].enablePreprocessing = v_;
+                //         // pico_cjoint[cj].enableCollision = v_;
+                //     }
+            }
     }}
 
 }

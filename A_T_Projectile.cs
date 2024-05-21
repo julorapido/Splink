@@ -70,8 +70,8 @@ public class A_T_Projectile : MonoBehaviour
     {
         if(!player_bullet)
         {  
-            float dir =  transform.position.z - (target_.position.z);
-            if(dir < 0 ) is_behind = true;
+            // float dir =  transform.position.z - (target_.position.z);
+            is_behind = (transform.position.z < target_.position.z);
 
             LeanTween.scale(gameObject, transform.localScale * 0.5f, 2f).setEaseInCubic();
         }
@@ -114,12 +114,13 @@ public class A_T_Projectile : MonoBehaviour
         if(!player_bullet)
         {
             float passedNear_inPrecision =  (bullet_type == Bullet_Type.Tracking ? rocket_near_inPrecision : 0f);
-            float dst_ = (transform.position.z - target_.position.z);
+            float dst_ = (is_behind) ? 
+                (transform.position.z - target_.position.z) : (target_.position.z - transform.position.z);
 
             // detect player passed
             if(
-                (bullet_type != Bullet_Type.Ricochet && bullet_type != Bullet_Type.Grenade)
-                && (is_behind ? (dst_ > passedNear_inPrecision) : (dst_ < passedNear_inPrecision) ) 
+                ((bullet_type != Bullet_Type.Ricochet) && (bullet_type != Bullet_Type.Grenade))
+                && (dst_ > passedNear_inPrecision) 
                 && !target_passed
                 && !exploded
             ){
@@ -151,10 +152,10 @@ public class A_T_Projectile : MonoBehaviour
                             break;
 
                         case Bullet_Type.Direct:
-                            Vector3 shoot_dir = dir.normalized;
+                            // Vector3 shoot_dir = dir.normalized;
 
-                            transform.rotation = Quaternion.LookRotation(bullet_qtrn);
-                            bullet_rb.AddForce( (speed / 15) * shoot_dir, ForceMode.VelocityChange);
+                            // transform.rotation = Quaternion.LookRotation(bullet_qtrn);
+                            bullet_rb.AddForce( (speed / 15) * bullet_qtrn, ForceMode.VelocityChange);
                             break;
 
                         case Bullet_Type.Grenade:
@@ -176,6 +177,9 @@ public class A_T_Projectile : MonoBehaviour
             if(!exploded)
             {
                 try{
+                    if (transform.position.z > target_.position.z)
+                        target_passed = true;
+
                     Vector3 dir = (target_passed == true) ? 
                         (l_dir) : 
                         (target_.position +
@@ -189,8 +193,6 @@ public class A_T_Projectile : MonoBehaviour
                     switch(bullet_type)
                     {
                         case Bullet_Type.Tracking:
-                            if( (target_.position.z - transform.position.z) < 0f)
-                                target_passed = true;
                             
                             if(!target_passed)
                                 l_dir = dir;
@@ -202,7 +204,7 @@ public class A_T_Projectile : MonoBehaviour
 
                             if(target_passed)
                             {
-                                if(Vector3.Distance(transform.position, target_.position) > 60)
+                                if(Vector3.Distance(transform.position, target_.position) > 60f)
                                     destry();
                             }
                             break;

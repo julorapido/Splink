@@ -28,8 +28,19 @@ public class CameraMovement : MonoBehaviour
 
     [Header ("GameOver")]
     private bool game_Over_ = false;
-    private string d_mode;
-    private float game_over_yUp = 15f;
+    private int cam_gameOver_mode = 0;
+    [HideInInspector] public int set_cam_gameOver_mode
+    {
+        set { if(value.GetType() == typeof(int) ) cam_gameOver_mode = value;}
+        get { return -1; }
+    }
+    [HideInInspector] public bool set_gameOver_cam
+    {
+        set { if(value.GetType() == typeof(bool) ) game_Over_ = value;}
+        get { return false; }
+    }
+    private Vector3  death_CAM_pos, death_V_pos, saved_deathPosition = Vector3.zero;
+    private string death_mode;
 
     [Header ("Immediate Camera Transitions Values")]
     [HideInInspector] public float supl_xRot = 0.0f;
@@ -225,10 +236,9 @@ public class CameraMovement : MonoBehaviour
                 aiming_rotation.eulerAngles.y > 180 ?  (aiming_rotation.eulerAngles.y - 360f) : (aiming_rotation.eulerAngles.y),
                 aiming_rotation.eulerAngles.x > 180f ?  (aiming_rotation.eulerAngles.x - 360f) : (aiming_rotation.eulerAngles.x),
                 0f
-            ),
+            ) * (0.2f),
             4f * Time.deltaTime
         )) : (Vector3.zero);
-
         // aim_v = new Vector3(
         //     aiming_rotation.eulerAngles.y > 180 ?  (aiming_rotation.eulerAngles.y - 360f) : (aiming_rotation.eulerAngles.y),
         //     aiming_rotation.eulerAngles.x > 180f ?  (aiming_rotation.eulerAngles.x - 360f) : (aiming_rotation.eulerAngles.x),
@@ -380,13 +390,14 @@ public class CameraMovement : MonoBehaviour
 
 
         // Lerp Position
-        if(((x_ratio * x_offst)) != lst_offst_x)
+        if( (x_ratio * x_offst) != lst_offst_x)
         {
             desired_  = (player.position + offset);
             desired_.x = desired_.x +  (
-                (x_ratio * (tyro_on ?
-                    x_offst * 2 :
-                    (x_offst/2.5f)
+                (x_ratio * ( (tyro_on) ?
+                    (x_offst * 2)
+                        :
+                    (x_offst / 2.5f)
                 ))
             );
             desired_.z = desired_.z +  (Math.Abs(x_offst)) / 80f;
@@ -411,7 +422,6 @@ public class CameraMovement : MonoBehaviour
     {
         if (!game_Over_)
         {
-
             float xy_ratio = 0.0590f;
 
             // Dampen towards target rotation
@@ -463,32 +473,35 @@ public class CameraMovement : MonoBehaviour
 
             if(tyro_on)
                 transform.LookAt( player.position + new Vector3(0, 1.25f, 0) );
-        }else
+        }
+        else
         {
-            // game over cam
-            transform.LookAt(player_rag.position);
-            transform.RotateAround(player_rag.position, Vector3.up, 20 * Time.deltaTime);
-
-            if(game_over_yUp > 0)
+            // ---------------------
+            //   GameOver Behavior
+            // ---------------------
+            // 1 -> [MoveUp Y-AXIS] && [LookAt Player]
+            if(cam_gameOver_mode == 1)
             {
-                game_over_yUp -= Time.deltaTime * 2f;
-                transform.position = transform.position + new Vector3(0f, 0.005f, -0.001f);
-            }
+                transform.LookAt(player_rag.position);
+                death_V_pos = player_rag.position;
 
+           
+                transform.position = transform.position + new Vector3(0f, 0.003f, -0.004f);
+            }
+            // 2 -> [Return_DeathPos] && [LooktAt Player-Death]
+            else if(cam_gameOver_mode == 2)
+            {
+                transform.LookAt(death_V_pos);
+                transform.position = death_CAM_pos;
+                // if(transform.position.y < 4f)
+                // {
+                //     transform.position += new Vector3(0f, 0.0175f, 0.001f);
+                // }
+            }
         }
 
     }
 
-
-
-
-
-    // game OVR
-    public void cam_GamerOver_(string death_mode)
-    {
-        d_mode = death_mode;
-        game_Over_ = true;
-    }
 
 
 
@@ -590,7 +603,7 @@ public class CameraMovement : MonoBehaviour
 
             // CLOSE UP Z OFFSET
             pos_dc["wallR_z_offst"] = 1.3f;
-            pos_dc["wallR_y_offst"] = -0.65f;
+            pos_dc["wallR_y_offst"] = -0.8f;
 
             // SMOOTH DAMP FOR X ROTATION
             rot_dc["wallR_rot_x_offst"] = -0.09f;
@@ -1041,6 +1054,100 @@ public class CameraMovement : MonoBehaviour
             new_fov = start_fov;
         }
     }
+
+    // dash_down
+    public void dash_down()
+    {
+        reset_smoothDmpfnc();
+
+        
+        // +10%
+        smoothTime_prc = 7f;
+
+        iterator_ = 3; 
+        List<float> v_flt = new List<float>(new float[6] {0.3f, 0.09f, 0.12f,
+        0.3f, 0f, 0f} );
+
+        List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
+        "wallR_z_offst", "",  ""} );
+
+        values_ref = s_arr;
+        values_flt = v_flt;
+        trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
+        trns_fnc = use_specialSmooth = true; trns_back = false;
+     
+    }
+
+
+    // -------------------------------
+    //       CAM DEATH_ANIMATION
+    // -------------------------------
+    public void cam_death(string death_mode)
+    {
+        // register death position
+        saved_deathPosition = player.position;
+
+
+        reset_smoothDmpfnc();
+
+         // +15%
+        smoothTime_prc = 14f;
+
+        new_fov = 85f;
+        
+        switch(death_mode)
+        {
+            case "front":
+                iterator_ = 4; 
+                List<float> v_flt = new List<float>(new float[6] {1.2f, 0.09f, 0.28f,
+                0.7f, 0f, 0f} );
+
+                List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
+                "wallR_z_offst", "",  ""} );
+
+                values_ref = s_arr;
+                values_flt = v_flt;
+                break;
+            case "damage":
+                break;
+            case "void":
+                break;
+            case "sideVoid":
+                break;
+
+  
+        }
+   
+        trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
+        trns_fnc = use_specialSmooth = true; trns_back = false;
+    }
+    // ----------------------
+    //     FINAL GAMEOVER
+    // ----------------------
+    public void cam_gameOver(string d_mode)
+    {
+        death_mode = d_mode;
+
+
+        Vector3 pos = transform.position + new Vector3(0f, 4f - transform.position.y , 0f);
+
+        // Lean cam position
+        LeanTween.value(gameObject, transform.position, pos , 2f)
+            .setEaseOutCubic()
+            .setOnUpdate( (Vector3 value) => {
+                death_CAM_pos = value; 
+            });
+
+        // Lean look position
+        LeanTween.value(gameObject, death_V_pos, 
+            new Vector3(death_V_pos.x, -5f, death_V_pos.z + 13f) , 2.3f)
+            .setEaseOutCubic()
+            .setOnUpdate( (Vector3 value) => {
+                death_V_pos = value; 
+            });
+    }
+
+
 
     private IEnumerator time_coroutine()
     {

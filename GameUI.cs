@@ -74,9 +74,9 @@ public class GameUI : MonoBehaviour
 
     [Header ("DAMAGE")]
     [SerializeField] private GameObject damage_obj;
-    private GameObject[] damage_hits = new GameObject[25]; // 25 fixed bfr
-    private Transform[] damage_hits_t = new Transform[25]; // 25 fixed bfr
-    private Vector3[] damage_hits_offst = new Vector3[25]; // 25 fixed bfr
+    private GameObject[] damage_hits = new GameObject[40]; // 25 fixed bfr
+    private Transform[] damage_hits_t = new Transform[40]; // 25 fixed bfr
+    private Vector3[] damage_hits_offst = new Vector3[40]; // 25 fixed bfr
 
     [Header ("GUN UI")]
     [SerializeField] private GameObject gun_ui;
@@ -87,14 +87,13 @@ public class GameUI : MonoBehaviour
     private GameObject[] gun_fetchedPrefabs;
 
 
-    [Header ("ENEMY")]
-    [SerializeField] private GameObject enemy_information;
-    private int enemy_maxhealth, enemy_health, enemy_shield;
-    private bool can_aim = false, enemy_ui_fading = false;
-    private Transform aimed_enemy;
-    private AutoTurret at_turret;
-  
-    
+    [Header ("ENEMY UI")]
+    [SerializeField] private GameObject enemy_ui_instance;
+    private GameObject[] ui_enemies = new GameObject[25]; // 25 fixed bfr
+    private Transform[] enemies_tr = new Transform[25]; // 25 fixed bfr
+    private Vector3[] enemies_offst = new Vector3[25]; // 25 fixed bfr
+    [SerializeField] private Transform er;
+
 
     [Header ("COMBO")]
     [SerializeField] private Sprite[] combo_masks;
@@ -150,12 +149,9 @@ public class GameUI : MonoBehaviour
         healh_text = healh_ui.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
         healh_ui.transform.GetChild(1).GetComponent<TextMeshProUGUI>().text = max_health.ToString();
 
-        newEnemy_UI(true);
         Invoke("countScore", 0.25f);
-        Invoke("canAim", 1.5f);
     }
     private void countScore(){ countScore_ = true; }
-    private void canAim(){ can_aim = true; }
 
 
 
@@ -194,24 +190,71 @@ public class GameUI : MonoBehaviour
         }
 
 
+
+
+     
+
+
         // floating damages
-        for(int i = 24; i > 0; i--)
+        for(int i = 0; i < 40; i++)
         {
             if(damage_hits[i] != null && damage_hits_t[i] != null)
             {
-                Vector3 scr_pos =  ui_camera.WorldToScreenPoint(damage_hits_t[i].position + damage_hits_offst[i]);
-                damage_hits[i].transform.localPosition = scr_pos;
-                // damage_hits[i].transform.localRotation = plyr_transform.rotation;
-            }else
-            {
-                // break;
+                damage_hits[i].transform.position = damage_hits_t[i].position + damage_hits_offst[i];
+                damage_hits[i].transform.LookAt(ui_camera.transform);
+                damage_hits[i].transform.rotation = Quaternion.Euler(
+                    -1 * damage_hits[i].transform.rotation.eulerAngles.x,
+                    damage_hits[i].transform.rotation.eulerAngles.y + 180,
+                    damage_hits[i].transform.rotation.eulerAngles.z
+                );
+
+                float distanceToCamera = Vector3.Distance(ui_camera.transform.position, damage_hits[i].transform.position);
+                float cam_scale = (
+                        2.0f * (distanceToCamera * 0.15f) * 
+                        Mathf.Tan(Mathf.Deg2Rad * (ui_camera.fieldOfView * 0.5f)
+                    )
+                ) * (7f);
+                cam_scale = (cam_scale < 65f) ? 65f : (cam_scale > 140f ? 140f : cam_scale);
+                damage_hits[i].transform.localScale = new Vector3(cam_scale, cam_scale, cam_scale);
             }
         }
+
+
+
+        // enemies ui
+        if(ui_enemies[0] != null)
+        {
+            for(int i = 0; i < 25; i++)
+            {
+                if(ui_enemies[i] == null)
+                    continue;
+        
+                float distanceToCamera = Vector3.Distance(ui_camera.transform.position, enemies_tr[i].position);
+                float cam_scale = (
+                        2.0f * (distanceToCamera * 0.85f) * 
+                        Mathf.Tan(Mathf.Deg2Rad * (ui_camera.fieldOfView * 0.5f)
+                    )
+                ) * (7f);
+                cam_scale = (cam_scale < 125f) ? 125f : (cam_scale > 200f ? 200f : cam_scale);
+
+                ui_enemies[i].transform.localScale = new Vector3(cam_scale, cam_scale, cam_scale);
+
+                ui_enemies[i].transform.position = enemies_tr[i].position + enemies_offst[i];
+                ui_enemies[i].transform.LookAt(ui_camera.transform);        
+                ui_enemies[i].transform.rotation = Quaternion.Euler(
+                    -1 * ui_enemies[i].transform.rotation.eulerAngles.x,
+                    ui_enemies[i].transform.rotation.eulerAngles.y +  180f,
+                    ui_enemies[i].transform.rotation.eulerAngles.z
+                );
+            }
+        }
+
     }   
 
 
-
+    // -----------
     // FixedUpdate 
+    // -----------
     private void FixedUpdate()
     {
 
@@ -261,94 +304,138 @@ public class GameUI : MonoBehaviour
             v_score += (decimal) 0.1f;
             score += (( v_score % 2) == 0 ? (uint)4 : (uint)3);
         }
-
-
-
-
-        // aimed enemy
-        if(at_turret != null)
-        {
-            if(enemy_health != at_turret.get_health)
-            {
-                enemy_health = at_turret.get_health;
-
-                if(at_turret.get_health == 0) // 0 health => turn off ui
-                {
-                    newEnemy_UI(true);
-                }
-                else // health damage effect
-                {
-                    float x_health = ( ( (float)enemy_health / (float)enemy_maxhealth) * 100f);
-                    if(LeanTween.isTweening(enemy_information.transform.GetChild(0).GetChild(1).gameObject))
-                    {
-                        LeanTween.cancel(enemy_information.transform.GetChild(0).GetChild(1).gameObject);
-                    }
-                    if(LeanTween.isTweening(enemy_information.transform.GetChild(0).GetChild(2).gameObject))
-                    {
-                        LeanTween.cancel(enemy_information.transform.GetChild(0).GetChild(1).gameObject);
-                    }
-                    LeanTween.scale(enemy_information.transform.GetChild(0).GetChild(1).gameObject, new Vector3(x_health / 100, 1, 1), 0.25f).setEaseInOutCubic();
-                    LeanTween.scale(enemy_information.transform.GetChild(0).GetChild(2).gameObject, new Vector3(x_health / 100, 1, 1), 0.5f).setEaseInOutCubic();
-                }
-
-            }
-        }
     }
 
 
 
 
-    // public NEW_ENEMY method
-    public void newEnemy_UI(bool is_empty, Transform enemy_ = null)
+    // =======================
+    //        ENEMY UI
+    // =======================
+    public void newEnemy_UI(Transform enemy_)
     {
-        
-        if(is_empty)
+        if(enemy_ == null)
+            return;
+
+        for(int i = 0; i < 25; i ++)
         {
-            at_turret = null;
-            enemy_information.SetActive(false);
+            if(enemies_tr[i] == enemy_)
+                break;
 
-        }else
-        {
-            if(!can_aim) return;
-            if(enemy_ == null)
-                return;
-
-            // if(aimed_enemy != null && aimed_enemy != enemy_ )
-            if(!enemy_ui_fading)
-                StartCoroutine(fade_ui_obj(enemy_information, 0.4f));
-
-            if(!LeanTween.isTweening(enemy_information))
+            if(ui_enemies[i] == null)
             {
-                enemy_information.transform.localPosition = new Vector3(0, -300, 0);
-                LeanTween.moveLocal(enemy_information, new Vector3(0, -230, 0), 1f).setEaseOutSine();
+                ui_enemies[i] = Instantiate(enemy_ui_instance, 
+                    enemy_.transform.position +  new Vector3(0f, 1.5f, 0f),
+                    Quaternion.identity,
+                    er
+                    //Quaternion.Euler(0f, enemy_.transform.rotation.eulerAngles.y, 0f)
+                    //,damage_obj.transform
+                );
+
+                enemies_tr[i] = enemy_;
+                StartCoroutine(fade_ui_obj(ui_enemies[i], 1.5f));
+
+                Transform t = ui_enemies[i].transform;
+
+                AutoTurret at_turret = enemy_.GetComponent<AutoTurret>();
+
+
+                enemies_offst[i] = at_turret.is_horizontal ? 
+                    (at_turret.is_left ? 
+                        new Vector3(2.45f, 2.4f, -0.3f) : new Vector3(-2.45f, 2.4f, -0.3f)
+                    ) 
+                    : (new Vector3(0f, 3.3f, 0f)
+                );
+
+                int enemy_health = at_turret.get_health;
+                int enemy_maxhealth = at_turret.get_maxHealth;
+
+                // // Name & Level Assignation
+                t.GetChild(1).GetComponent<TMPro.TextMeshPro>().text = at_turret.turret_name;
+                t.GetChild(2).GetComponent<TMPro.TextMeshPro>().text = ""  + at_turret.turret_level.ToString();
+                t.GetChild(3).GetComponent<TMPro.TextMeshPro>().text = enemy_health.ToString() + "/"  + enemy_maxhealth.ToString();
+
+                // // Health Attribution
+                float x_health = (((float)enemy_health / (float)enemy_maxhealth) * 100f);
+                //t.GetChild(0).GetChild(1).localScale = new Vector3( (float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);
+                //t.GetChild(0).GetChild(2).localScale = new Vector3((float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);
+                break;
             }
+        }
+        
+    }
 
-            aimed_enemy = enemy_;
 
-            enemy_information.SetActive(true);
-            at_turret = (enemy_ as Transform).GetComponent<AutoTurret>();
-            enemy_health = at_turret.get_health;
-            enemy_maxhealth = at_turret.get_maxHealth;
 
-            // Name & Level Assignation
-            enemy_information.transform.GetChild(1).GetComponent<TMPro.TextMeshProUGUI>().text = at_turret.turret_name;
-            enemy_information.transform.GetChild(2).GetComponent<TMPro.TextMeshProUGUI>().text = "LEVEL "  + at_turret.turret_level.ToString();
-            enemy_information.transform.GetChild(3).GetComponent<TMPro.TextMeshProUGUI>().text = enemy_health.ToString() + "/"  + enemy_maxhealth.ToString();
+    // =======================
+    //       ENEMY_DAMAGE
+    // =======================
+    public void damage_ui(Transform enemy, int damage_value, bool? is_crit_hit, Vector3 offset)
+    {
+        if(damage_value.GetType() != typeof(int))
+            return;
 
-            // Health Attribution
-            float x_health = (((float)enemy_health / (float)enemy_maxhealth) * 100f);
-            enemy_information.transform.GetChild(0).GetChild(1).localScale = new Vector3( (float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);
-            enemy_information.transform.GetChild(0).GetChild(2).localScale = new Vector3((float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);
+        for(int i = 0; i < 45; i ++)
+        {
+            if(damage_hits[i] == null)
+            {
+
+                damage_hits[i] = Instantiate(
+                    damage_obj,
+                    enemy.position, 
+                    Quaternion.identity,
+                    er
+                ); 
+
+                damage_hits[i].transform.localScale = new Vector3(100f, 100f, 100f);
+                damage_hits_t[i] = enemy;
+                damage_hits_offst[i] = offset + new Vector3(0f, 0.5f, 0f);
+
+                float y = UnityEngine.Random.Range(0f, 1f);
+                float x = UnityEngine.Random.Range(-1f, 1f);
+
+                LeanTween.value(damage_hits[i], damage_hits_offst[i], offset + new Vector3(x, 1.5f + y, 0f), 1.3f )
+                    .setEaseOutCubic()
+                    .setOnUpdate( (Vector3 value) => {
+                        damage_hits_offst[i] = value; 
+                    });
+            
+                TMPro.TextMeshPro txt = damage_hits[i].GetComponent<TMPro.TextMeshPro>();
+                if(is_crit_hit == null) 
+                    txt.text = "CRTICIAL";
+                else
+                    txt.text = damage_value.ToString();
+
+                LeanTween.scale(damage_hits[i], damage_hits[i].transform.localScale * 1.4f, 1f).setEasePunch();
+
+                StartCoroutine(reset_damage_slot(i));
+
+                if((bool?)is_crit_hit == true)
+                    damage_ui(enemy, 0, null, offset);
+
+                break;
+            }
+     
 
         }
+    }
+    private IEnumerator reset_damage_slot(int i_)
+    {
+        yield return new WaitForSeconds(0.6f);
+        StartCoroutine(fade_ui_obj(damage_hits[i_], 0.4f, true));
+        yield return new WaitForSeconds(0.4f);
+        Destroy(damage_hits[i_]);
+        damage_hits[i_] = null;
+        damage_hits_t[i_] = null;  
     }
 
 
 
 
 
-
-    // public COMBO_HIT method
+    // =======================
+    //          COMBO
+    // =======================
     public void combo_hit(bool combo_end)
     {
         if(combo_end)   
@@ -456,7 +543,10 @@ public class GameUI : MonoBehaviour
 
 
 
-    // public GAIN_MONEY method
+
+    // =======================
+    //        GAIN MONEY
+    // =======================
     public void gain_money(int money_vv)
     {
         if(money_vv > 0){
@@ -518,7 +608,9 @@ public class GameUI : MonoBehaviour
 
 
 
-    // public GUN-LEVELUP method
+    // =======================
+    //       GUN LEVEL-UP
+    // =======================
     public void Gun_levelUp(int level)
     {
         if(level == 2) 
@@ -583,70 +675,16 @@ public class GameUI : MonoBehaviour
 
 
 
-    // public DAMAGE method
-    public void damage_ui(Transform enemy, int damage_value, bool? is_crit_hit, Vector3 offset)
-    {
-        if(damage_value.GetType() != typeof(int))
-            return;
-
-        for(int i = 24; i > 0; i --)
-        {
-            if(damage_hits[i] == null)
-            {
-
-                damage_hits[i] = Instantiate(
-                    damage_obj.transform.GetChild(0).gameObject,
-                    Vector3.zero, 
-                    Quaternion.identity,
-                    damage_obj.transform
-                ); 
-
-                damage_hits[i].transform.localPosition = Vector3.zero;
-                damage_hits_t[i] = enemy;
-                damage_hits_offst[i] = offset;
-
-                float y = UnityEngine.Random.Range(0f, 1f);
-                float x = UnityEngine.Random.Range(-0.5f, 0.5f);
-
-                LeanTween.value(damage_hits[i], damage_hits_offst[i], offset + new Vector3(x, 0.5f + y, 0f), 1.2f )
-                    .setEaseOutCubic()
-                    .setOnUpdate( (Vector3 value) => {
-                        damage_hits_offst[i] = value; 
-                    });
-            
-                TextMeshProUGUI txt = damage_hits[i].GetComponent<TextMeshProUGUI>();
-                if(is_crit_hit == null) 
-                    txt.text = "CRTICIAL";
-                else
-                    txt.text = damage_value.ToString();
-
-                LeanTween.scale(damage_hits[i], damage_hits[i].transform.localScale * 1.4f, 0.7f).setEasePunch();
-
-                StartCoroutine(reset_damage_slot(i));
-
-                if((bool?)is_crit_hit == true)
-                    damage_ui(enemy, 0, null, offset);
-
-                break;
-            }
-     
-
-        }
-    }
-    private IEnumerator reset_damage_slot(int i_)
-    {
-        yield return new WaitForSeconds(0.8f);
-        StartCoroutine(fade_ui_obj(damage_hits[i_], 0.4f, true));
-        yield return new WaitForSeconds(0.7f);
-        Destroy(damage_hits[i_]);
-        damage_hits[i_] = null;
-        damage_hits_t[i_] = null;  
-    }
 
 
 
 
-    // pubic PLAYER_DAMAGE method
+
+
+
+    // =======================
+    //       PLAYER_DAMAGE
+    // =======================
     public void player_damage(int dmg_v)
     {
         if(player_health == 0)
@@ -678,7 +716,9 @@ public class GameUI : MonoBehaviour
 
 
 
-    // public RELOAD method
+    // =====================
+    //        RELOAD
+    // =====================
     public void ui_reload(float reload_time)
     {
         weapon_reload.SetActive(true);
@@ -701,7 +741,9 @@ public class GameUI : MonoBehaviour
 
 
 
-    // public GAMEOVER method
+    // =====================
+    //       GAME OVER
+    // =====================
     public void gameOver_ui(
         string death_mode, Quaternion player_rotation, GameObject optional_wall = null
     )
@@ -725,21 +767,66 @@ public class GameUI : MonoBehaviour
 
 
 
+    // =====================
+    //        RESTART
+    // =====================
+    public void restart_ui(bool is_aGameOver)
+    {
+        // Menu ui
+        for(int i = 0; i < 3; i ++)
+        {
+            GameObject restart_slice = transform.GetChild(4 + i).gameObject;
+
+            StartCoroutine(fade_ui_obj(restart_slice, 2f, false));
+            LeanTween.moveLocal(
+                restart_slice, 
+                (is_aGameOver) ? (
+                        (transform.GetChild(4 + i).transform.localPosition)
+                        + new Vector3(0f, 1700f, 0f)
+                    ) : (
+                        new Vector3(0f, -1700, 0f)
+                    ), 
+                2f
+            ).setEaseInOutCubic();
+        }
+
+        // Gameplay ui
+        for(int i = 0; i < 3; i ++)
+        {
+            GameObject gameplay_slice = transform.GetChild(0 + i).gameObject;
+
+            StartCoroutine(fade_ui_obj(gameplay_slice, 2f, true));
+            LeanTween.moveLocal(
+                gameplay_slice, 
+                (is_aGameOver) ? 
+                    (new Vector3(gameplay_slice.transform.localPosition.x, 1700, gameplay_slice.transform.localPosition.z))
+                    : 
+                    (transform.GetChild(0 + i).transform.localPosition - new Vector3(0f, 1700, 0f))
+                , 
+                2f
+            ).setEaseInOutCubic();
+        }
+    }
 
 
-    // private Fade routine
+
+
+
+
+    // =====================
+    //        FADE_UI
+    // =====================
     private IEnumerator fade_ui_obj(GameObject obj_, float fade_time, bool fadeOut_ = false)
     {
         const int refresh_rate = 120;
         // const float fade_time = 1.5f;
-        if(obj_ == enemy_information)
-            enemy_ui_fading = true;
-
+   
         TextMeshProUGUI[] texts = obj_.transform.GetComponentsInChildren<TextMeshProUGUI>();
         SpriteRenderer[] sprites = obj_.transform.GetComponentsInChildren<SpriteRenderer>();
         Image[] images = obj_.transform.GetComponentsInChildren<Image>();
+        TMPro.TextMeshPro[] texts_3D = obj_.transform.GetComponentsInChildren<TMPro.TextMeshPro>();
 
-        float[][] alpha_refs = new float[3][]{new float[25], new float [25], new float [25]};
+        float[][] alpha_refs = new float[4][]{new float[25], new float [25], new float [25], new float [25]};
         int r_ = 0;
     
         if(!fadeOut_)
@@ -757,6 +844,11 @@ public class GameUI : MonoBehaviour
             for(int z = r_ = 0; z < images.Length; z++){
                 alpha_refs[2][r_] = images[z].color.a;
                 images[z].color = new Color(images[z].color.r, images[z].color.g, images[z].color.b, 0);
+                r_++;
+            }
+            for(int a = r_ = 0; a < texts_3D.Length; a++){
+                alpha_refs[3][r_] = texts_3D[a].color.a;
+                texts_3D[a].color = new Color(texts_3D[a].color.r, texts_3D[a].color.g, texts_3D[a].color.b, 0);
                 r_++;
             }
         }
@@ -785,13 +877,17 @@ public class GameUI : MonoBehaviour
                     fadeOut_ ? (fade_outV) : ((tick * i) / fade_time) * alpha_refs[2][l]
                 );
             }
-
+            for(int l = 0; l < (texts_3D.Length); l ++)
+            {
+                (texts_3D[l]).color = new Color( texts_3D[l].color.r, texts_3D[l].color.g, texts_3D[l].color.b,
+                    fadeOut_ ? (fade_outV) : ((tick * i) / fade_time) * alpha_refs[3][l]
+                );
+            }
 
             yield return new WaitForSeconds(fade_time / refresh_rate);
             i++;
         }
-        if(obj_ == enemy_information)
-            enemy_ui_fading = false;
+
     }
 
 

@@ -6,54 +6,143 @@ using System.Linq;
 
 public class Buildings : MonoBehaviour
 {
-    [SerializeField]
+    [Header ("SECTIONS")]
     private GameObject[] buildngs_prefb;
-    [SerializeField]
-    private GameObject[] sections_prefb;
+    [SerializeField] private GameObject[] sections_prefabs;
 
-    private float x_pos = 0.0f;
-    private float z_pos = 0.0f;
-    private float space_t_fill = 0.0f;
 
-    // GLOBAL WIDTH OF BUILDGS GEN
-    private const float fnc_gn_w = 50.0f;
-
+    [Header ("Player")]
     [SerializeField] private Transform player_trsf;
-
     [SerializeField] private Transform bldg_parent;
 
-    [Header ("A Section Z-Size")]
-    private const float section_z = 135.0f;
+    [Header ("Optimization")]
+    private GameObject[] activated_go_bfr = new GameObject[30]; // 30 fixed bfr
+    private GameObject[] optmized_go_bfr = new GameObject[30]; // 30 fixed bfr
 
-    [Header ("Section SpaceBetweens")]
-    private const float sect_spacing = 4.0f;
-
-    [Header ("Generation Apparition-Space")]
-    private float spawn_space = 0.0f;
-
-
-    // Start is called before the first frame update
+    // Start
     private void Start()
     {
         RenderSettings.skybox.SetFloat("_Rotation", 0f);
 
-        Gen_PrefbSections(2);
+        Gen_PrefabSection();
+        Gen_PrefabSection();
     }
 
-    // fixedupdate for player transform
+
+
+    // FixedUpdate
     private void FixedUpdate()
     {
-        // skybox
         float p =  RenderSettings.skybox.GetFloat("_Rotation");
         if(p == 359.5f)
             RenderSettings.skybox.SetFloat("_Rotation", 0);
         
         RenderSettings.skybox.SetFloat("_Rotation", p + (Time.deltaTime * 0.20f) );
+
+        optimize_sections();
     }
+
+
+    // -----------------------------
+    //       Optimize Sections
+    // -----------------------------
+    private void optimize_sections()
+    {
+        GameObject[] active_sections = GameObject.FindGameObjectsWithTag("Section");
+        for(int i = 0; i < active_sections.Length; i++)
+        {
+                // if(player_trsf.position.z > active_sections[i].transform.position.z)
+                //     continue;
+
+                // focus
+                List<string> focus_objs = new List<string>(new string[12]
+                {
+                    "obstacle", // obst
+                    "tyro", // special
+                    "slider", "slideRail", "fallBox",// modules
+                    "tapTapJump", "bumper", "launcher", "hang", "ladder", "underSlide", "bareer", // interacts
+                } );
+                //collectibles
+                List<string> collectibles_objs = new List<string>(new string[3]
+                {
+                    "coin", "gun", "health", 
+                } );
+                //turrets
+                List<string> turret_objs = new List<string>(new string[1]{
+                    "TURRET"
+                } );
+
+                float dst = (active_sections[i].transform.position.z - (135 / 2)) - player_trsf.position.z;
+
+                GameObject s = active_sections[i];
+                if(dst >= 40 || dst <= -180) // optimize [behind and below]
+                {
+                    if( !optmized_go_bfr.Contains(active_sections[i]) )
+                    {
+                        Transform[] gm_t = active_sections[i].GetComponentsInChildren<Transform>();
+                        for(int j = 0; j < gm_t.Length; j++)
+                        {
+                            if(gm_t[j]?.gameObject.tag == null || !gm_t[j].gameObject.activeSelf)
+                                continue;
+
+
+                            if(focus_objs.Contains(gm_t[j].gameObject.tag) || collectibles_objs.Contains(gm_t[j].gameObject.tag)
+                                || turret_objs.Contains(gm_t[j].gameObject.tag)
+                            )
+                            { gm_t[j].gameObject.SetActive(false); }
+                        }
+
+                        // add optimized GO to arr
+                        for(int k = 0; k < optmized_go_bfr.Length; k++)
+                            if(optmized_go_bfr[k] == null)
+                                optmized_go_bfr[k] = active_sections[i];
+                    }
+                }else // cancel optimization
+                {
+                    if( !activated_go_bfr.Contains(active_sections[i]) )
+                    {
+                        Transform[] gm_t = active_sections[i].GetComponentsInChildren<Transform>();
+                        for(int j = 0; j < gm_t.Length; j++)
+                        {
+                            if(gm_t[j]?.gameObject.tag == null || gm_t[j].gameObject.activeSelf)
+                                continue;
+
+                            
+                            if(focus_objs.Contains(gm_t[j].gameObject.tag) || collectibles_objs.Contains(gm_t[j].gameObject.tag) 
+                                || turret_objs.Contains(gm_t[j].gameObject.tag))
+                                gm_t[j].gameObject.SetActive(true);
+                            
+                        }
+
+                        // add activated GO to arr
+                        for(int k = 0; k < activated_go_bfr.Length; k++)
+                            if(activated_go_bfr[k] == null)
+                                activated_go_bfr[k] = active_sections[i];
+                    }
+                }
+        }
+
+        // clear [inside] alr activated
+        for(int j = 0; j < activated_go_bfr.Length; j++)
+        {
+            float dst = (activated_go_bfr[i].transform.position.z - (135 / 2)) - player_trsf.position.z;
+            if(dst < 40)
+                activated_go_bfr[i] = null;
+        } 
+        // clear [passed-on] alr optimized
+        for(int k = 0; k < optmized_go_bfr.Length; k++)
+        {
+            float dst = (optmized_go_bfr[i].transform.position.z - (135 / 2)) - player_trsf.position.z;
+            if(dst > -180)
+                optmized_go_bfr[i] = null;
+        }
+    }
+
 
     private void Gen_Bldngs(int z_len)
     {
         int ln_ = buildngs_prefb.Length;
+        float x_pos, space_t_fill, z_pos;
         // Z 
         for(int p = 0; p < z_len; p++)
         {
@@ -62,6 +151,7 @@ public class Buildings : MonoBehaviour
             // X 
             for(int i = 0; i < ln_; i ++)
             {
+                const float fnc_gn_w = 50.0f;
                 if(x_pos > fnc_gn_w){break;}
 
                 int rdm_ = UnityEngine.Random.Range(0, ln_);/// RAND bat indx
@@ -152,68 +242,63 @@ public class Buildings : MonoBehaviour
                     bld_wdth = (bld_wdth * sl_coldrs[indx_scale].gameObject.transform.localScale.x) * sl.transform.localScale.x;
                     //bld_wdth = bld_wdth  * sl.transform.localScale.x;
                 }
-                Instantiate(sl, new Vector3(x_pos + bld_wdth/2 , 0, z_pos), new Quaternion(0f, 90f, 0f, 1), bldg_parent);
+                Instantiate(sl, new Vector3(x_pos + bld_wdth/2 , 0, 0), new Quaternion(0f, 90f, 0f, 1), bldg_parent);
 
                 x_pos += bld_wdth;
             } 
-            z_pos += 40.0f;
+            //z_pos += 40.0f;
         }
     }
 
 
 
-
-
-    private void Gen_PrefbSections(int z_len)
+    // ========================================
+    //             SPAWN NEW SECTION
+    // ========================================
+    private void Gen_PrefabSection()
     {
-        int ln_ = sections_prefb.Length;
-        float z_step = 19.0f; // STEP ON Z-AXIS
-        float svd_z = 0.0f;
-        float y_ = 0.0f;
-        // Z MAP
-        for(int p = 0; p < z_len; p++)
+        int ln_ = sections_prefabs.Length;
+        float z = 0f;
+
+        GameObject[] active_sections = GameObject.FindGameObjectsWithTag("Section");
+        // Debug.Log("Section gen " + active_sections.Length);
+        for(int i = 0; i < active_sections.Length; i ++)
         {
-            // X MAP
-            x_pos = 0f;
-            for(int i = 0; i < ln_; i ++)
-            {
-                if(x_pos > fnc_gn_w) break;
-
-                int rdm_ = UnityEngine.Random.Range(0, ln_);/// RAND Section indx 
-                int rdm_2 = UnityEngine.Random.Range(0, ln_);/// RAND Section indx 
-                int r_ = UnityEngine.Random.Range(1, 3);/// RAND Section indx 
-                GameObject sl = sections_prefb[r_ == 1 ? rdm_ : rdm_2];
-
-
-                // Get Box Cldr Size as whole Sect Size
-                Vector3 sl_size = sl.GetComponent<BoxCollider>().size;
-                
-                GameObject buffer_sect = Instantiate(sl, new Vector3(x_pos - sl_size.x/2, 0 + y_, z_pos + sl_size.z / 2 + 20f), new Quaternion(0f, 0f, 0f, 1), bldg_parent);
-                if(buffer_sect.transform.childCount >= 2)
-                {
-                    combine_Meshes(buffer_sect, buffer_sect.transform.childCount);
-                    // generate_SubTerrain(buffer_sect);
-                    // generateBounds(buffer_sect);
-                }
-
-                x_pos += sl_size.x;
-                svd_z = sl_size.z;
-                y_ -= 4.5f;
-            }
-            z_pos += svd_z + sect_spacing;
-
-            spawn_space += section_z;
+            BoxCollider bx = active_sections[i].GetComponent<BoxCollider>();
+            float z_size = bx.size.z; //+ bx.center.z;
+            // Debug.Log(z_size + " : " + bx.size.z + " + " + bx.center.z);
+            z += z_size;
         }
 
+        int rdm_ = UnityEngine.Random.Range(0, ln_ - 1);/// RAND Section indx 
+        int rdm_2 = UnityEngine.Random.Range(0, ln_ - 1);/// RAND Section indx 
+        GameObject sl = sections_prefabs[UnityEngine.Random.Range(1, 3) == 1 ? rdm_ : rdm_2];
 
+        // BoxCldr Size as whole Sect Size
+        Vector3 sl_size = sl.GetComponent<BoxCollider>().size;
+
+        GameObject buffer_sect = Instantiate(sl, 
+            new Vector3(
+                -1 * (sl_size.x / 2), 0f, z + (sl_size.z / 2) // + 1f
+            ), 
+            new Quaternion(0f, 0f, 0f, 1), 
+        bldg_parent);
+
+        if(buffer_sect.transform.childCount >= 2)
+        {
+            combine_Meshes(buffer_sect, buffer_sect.transform.childCount);
+            // generate_SubTerrain(buffer_sect);
+            // generateBounds(buffer_sect);
+        }
     }
 
 
 
 
 
-
-
+    // ========================================
+    //              COMBINE MESHES
+    // ========================================
     private void combine_Meshes(GameObject section_parent, int chld_len)
     {
         MeshFilter? filter_Reference = null;
@@ -339,7 +424,7 @@ public class Buildings : MonoBehaviour
                         ci.subMeshIndex = o;
                         cmb_inst[(i * sumbeshesCount) + o] = ci;
                         
-                        // turn off gmObj
+                        // turn off gm_tObj
                         if (v > 0) meshFilters_[i].gameObject.SetActive(false);
                     }
                     v++;
@@ -640,7 +725,7 @@ public class Buildings : MonoBehaviour
                             //ci.transform = meshFilters_[i].transform.localToWorldMatrix;
                             ci.transform = meshFilters_[i].transform.worldToLocalMatrix;
                             cmb_inst[i] = ci;
-                            // turn off gmObj
+                            // turn off gm_tObj
                             meshFilters_[i].gameObject.SetActive(false);
 
                             v++;
