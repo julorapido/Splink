@@ -63,6 +63,7 @@ public class GameUI : MonoBehaviour
     [Header ("Scripts")]
     private Weapon weapon_scrpt;
     private PlayerMovement p_movement;
+    private Buildings building_s;
 
     [Header ("Player")]
     private Transform plyr_transform;
@@ -72,11 +73,6 @@ public class GameUI : MonoBehaviour
     [SerializeField] private GameObject kill_obj;
 
 
-    [Header ("DAMAGE")]
-    [SerializeField] private GameObject damage_obj;
-    private GameObject[] damage_hits = new GameObject[40]; // 25 fixed bfr
-    private Transform[] damage_hits_t = new Transform[40]; // 25 fixed bfr
-    private Vector3[] damage_hits_offst = new Vector3[40]; // 25 fixed bfr
 
     [Header ("GUN UI")]
     [SerializeField] private GameObject gun_ui;
@@ -87,13 +83,18 @@ public class GameUI : MonoBehaviour
     private GameObject[] gun_fetchedPrefabs;
 
 
-    [Header ("ENEMY UI")]
+    [Header ("DAMAGE && ENEMY UI")]
     [SerializeField] private GameObject enemy_ui_instance;
     private GameObject[] ui_enemies = new GameObject[25]; // 25 fixed bfr
     private Transform[] enemies_tr = new Transform[25]; // 25 fixed bfr
     private Vector3[] enemies_offst = new Vector3[25]; // 25 fixed bfr
+    private AutoTurret[] enemies_aT = new AutoTurret[40]; // 25 fixed bfr
     [SerializeField] private Transform er;
-
+    /////////////////////////////////////////////
+    [SerializeField] private GameObject damage_obj;
+    private GameObject[] damage_hits = new GameObject[40]; // 25 fixed bfr
+    private Transform[] damage_hits_t = new Transform[40]; // 25 fixed bfr
+    private Vector3[] damage_hits_offst = new Vector3[40]; // 25 fixed bfr
 
     [Header ("COMBO")]
     [SerializeField] private Sprite[] combo_masks;
@@ -113,6 +114,7 @@ public class GameUI : MonoBehaviour
     private void Start()
     {
         weapon_scrpt = FindObjectOfType<Weapon>();
+        building_s = FindObjectOfType<Buildings>();
 
         PlayerMovement pm = FindObjectOfType<PlayerMovement>();
         p_movement = pm;
@@ -339,7 +341,7 @@ public class GameUI : MonoBehaviour
 
                 AutoTurret at_turret = enemy_.GetComponent<AutoTurret>();
 
-
+                enemies_aT[i] = at_turret;
                 enemies_offst[i] = at_turret.is_horizontal ? 
                     (at_turret.is_left ? 
                         new Vector3(2.45f, 2.4f, -0.3f) : new Vector3(-2.45f, 2.4f, -0.3f)
@@ -372,9 +374,11 @@ public class GameUI : MonoBehaviour
     // =======================
     public void damage_ui(Transform enemy, int damage_value, bool? is_crit_hit, Vector3 offset)
     {
-        if(damage_value.GetType() != typeof(int))
+        if(damage_value.GetType() != typeof(int) || enemy == null)
             return;
 
+
+        // throw float damage
         for(int i = 0; i < 45; i ++)
         {
             if(damage_hits[i] == null)
@@ -415,8 +419,37 @@ public class GameUI : MonoBehaviour
 
                 break;
             }
-     
+        }
 
+        // health bar
+        for(int j = 0; j < enemies_tr.Length; j++)
+        {
+            if(enemies_tr[j] == enemy)
+            {
+                AutoTurret a = enemies_aT[j];
+                Transform t = ui_enemies[j].transform;
+
+                
+                float x_health = (((float)(a.get_health) / (float)(a.get_maxHealth)) * 100f);
+
+                if(x_health == 0)
+                {
+                    Destroy(ui_enemies[j]);
+                    ui_enemies[j] = null;
+                    enemies_tr[j] = null;
+                    enemies_aT[j] = null;
+                    return;
+                }
+
+                LeanTween.scale(
+                    t.GetChild(0).GetChild(2).gameObject, new Vector3( (float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1), 
+                0.3f).setEaseInOutCubic();
+                LeanTween.scale(
+                    t.GetChild(0).GetChild(1).gameObject, new Vector3( (float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1), 
+                0.75f).setEaseInOutCubic();
+                //t.GetChild(0).GetChild(1).localScale = new Vector3( (float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);
+                //t.GetChild(0).GetChild(2).localScale = new Vector3((float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);       
+            }
         }
     }
     private IEnumerator reset_damage_slot(int i_)
@@ -748,6 +781,8 @@ public class GameUI : MonoBehaviour
         string death_mode, Quaternion player_rotation, GameObject optional_wall = null
     )
     {
+        building_s.set_game_over = true;
+
         switch(death_mode)
         {
             case "front":
@@ -755,6 +790,7 @@ public class GameUI : MonoBehaviour
                 StartCoroutine(p_movement.game_Over(death_mode, optional_wall));
                 break;
             case "damage":
+            case "turretCollision":
                 StartCoroutine(p_movement.game_Over(death_mode));
                 break;
             case "void":

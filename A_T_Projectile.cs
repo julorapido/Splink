@@ -294,8 +294,11 @@ public class A_T_Projectile : MonoBehaviour
     {
         if(!player_bullet)
         {
-            if(other.gameObject.tag == "player_hitbx" && !exploded) bullet_explode(other.gameObject);
-            if(other.gameObject.tag == "ground" && !exploded) bullet_explode();
+            if(other.gameObject.tag == "player_hitbx" && !exploded)
+                bullet_explode(other.gameObject);
+            if(other.gameObject.tag == "ground" || other.gameObject.tag == "obstacle" || 
+                other.gameObject.tag == "slide" && !exploded)
+                bullet_explode();
             // if(other.gameObject.tag == "obstacle" && !exploded) bullet_explode();
         }
     }
@@ -304,8 +307,10 @@ public class A_T_Projectile : MonoBehaviour
     // TURRETS hit
     private void bullet_explode(GameObject go_ = null)
     {
-        if(exploded) return;
+        if(exploded) 
+            return;
 
+        CancelInvoke("bullet_explode");
         exploded = true;
         
         if(go_ != null)
@@ -313,7 +318,6 @@ public class A_T_Projectile : MonoBehaviour
             GameUI g_ui = FindObjectOfType<GameUI>();
             g_ui.player_damage(bullet_damage);
         }
-        CancelInvoke("bullet_explode");
         Destroy(gameObject);
     }
 
@@ -321,8 +325,9 @@ public class A_T_Projectile : MonoBehaviour
     // PLAYER hit
     private void enemy_hit()
     {
-        if(exploded) return;
-        
+        if(exploded) 
+            return;
+
         exploded = true;
         Invoke("destry", 0.75f);
         if(blt_expl != null) 

@@ -80,7 +80,8 @@ public class PlayerMovement : MonoBehaviour
     // #4 interact jumps [boxFall, hang, sideHang, rails, underslide, bareer, ladder...]
     [HideInInspector] public bool plyr_hanging = false;
     private bool plyr_underSliding = false, plyr_boxFalling = false, plyr_launchJumping = false, plyr_climbingLadder = false;
-    private bool plyr_bareerJumping_fHalf, plyr_bareerJumping = false, plyr_bumping = false, plyr_tapTapJumping = false;
+    private bool plyr_bareerJumping = false, plyr_bumping = false, plyr_tapTapJumping = false;
+    private bool plyr_sideHanging = false, plyr_sideExitHanging = false;
 
     // #5 animkill, shooting & reloading
     private bool plyr_shooting = false, plyr_animKilling = false, plyr_reloading = false;
@@ -120,10 +121,19 @@ public class PlayerMovement : MonoBehaviour
 
     [Header ("SideHang Var")]
     private bool sHng_leftSide = false;
+    private bool anim_bool_hang = false;
 
     [Header ("TapTap Var")]
     private bool tapTap_exited = false;
 
+    [Header ("LandBox ")]
+    private int last_landBoxId = 0;
+    private int last_jumpedOut_landBoxId = 0;
+
+    [Header ("Bareer")]
+    private bool front_notRegister_bareer = false;
+    private int bareer_j_type = 0;
+    private GameObject side_hang_obj = null;
 
     [Header ("Game State")]
     private bool gameOver_ = false;
@@ -797,7 +807,7 @@ public class PlayerMovement : MonoBehaviour
 
                 // reset pico y previous rotations
                 if(!plyr_wallRninng && !plyr_hanging && !plyr_rampSliding && !plyr_bumping && !plyr_bareerJumping
-                    && !plyr_climbingLadder && !plyr_boxFalling
+                    && !plyr_climbingLadder && !plyr_sideHanging
                 )
                 {
                     pico_character.transform.localRotation = Quaternion.Euler(
@@ -987,7 +997,7 @@ public class PlayerMovement : MonoBehaviour
             // rotate back [Quaternion Slerp]
             if(!plyr_tyro && !plyr_intro_tyro && !plyr_wallRninng && !plyr_railSliding &&
                 !plyr_hanging && !plyr_saveClimbing && !plyr_bareerJumping && !plyr_climbingLadder
-                && !plyr_boxFalling
+                && !plyr_boxFalling && !plyr_sideHanging
             ) 
             {
                 if (!Input.GetKey("q") && !Input.GetKey("d"))  rotate_bck();
@@ -1034,7 +1044,7 @@ public class PlayerMovement : MonoBehaviour
                         plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y,
                             ((player_speed + momentum_ + action_momentum) * 1.40f)
                                                 *
-                                    (plyr_shooting ? 0.8f : 1f)
+                                    (plyr_shooting ? 0.65f : 1f)
                         );
                     }
 
@@ -1044,7 +1054,7 @@ public class PlayerMovement : MonoBehaviour
                         plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 4f,
                            ((player_speed + momentum_ + action_momentum) * 1.15f)
                                                 *
-                                    (plyr_shooting ? 0.75f : 1f)
+                                    (plyr_shooting ? 0.7f : 1f)
                         );
                     }
 
@@ -1059,12 +1069,22 @@ public class PlayerMovement : MonoBehaviour
                     }
 
                     // TAP TAP JUMPNG
-                    else if(plyr_tapTapJumping) plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y,
-                       (plyr_rb.velocity.z < (tapTap_exited ? (player_speed * 0.3f) : (player_speed * 0.7f)) ?
-                            (tapTap_exited ? player_speed * 0.3f : player_speed * 0.7f) :
-                            (plyr_rb.velocity.z)
-                        )
-                    );
+                    else if(plyr_tapTapJumping)
+                    { 
+                        plyr_rb.velocity = new Vector3(
+                            plyr_rb.velocity.x, plyr_rb.velocity.y,
+                            (plyr_rb.velocity.z < (tapTap_exited ? (player_speed * 0.3f) : (player_speed * 0.7f)) ?
+                                (tapTap_exited ? player_speed * 0.3f : player_speed * 0.7f) 
+                                :
+                                (plyr_rb.velocity.z)
+                            )
+                        );
+                    }
+
+                    else if(plyr_sideHanging)
+                    {
+
+                    }
 
 
                     // RUNNING & FLYING SPEED
@@ -1073,7 +1093,7 @@ public class PlayerMovement : MonoBehaviour
                         plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 
                                 ((player_speed + momentum_ + action_momentum) * 1f)
                                                     *
-                                        (plyr_shooting || plyr_animKilling ? 0.72f : 1f)
+                                        (plyr_shooting || plyr_animKilling ? 0.7f : 1f)
                         );
 
                         if(Input.GetKeyDown("f"))
@@ -1101,7 +1121,7 @@ public class PlayerMovement : MonoBehaviour
                         }
 
 
-                        float max_leftX = -1.2f * (player_speed + momentum_ + action_momentum);
+                        float max_leftX = (plyr_shooting ? -0.75f : -1.2f) * (player_speed + momentum_ + action_momentum);
 
                         if(plyr_rb.velocity.x > max_leftX)
                             plyr_rb.AddForce((-4 * (Vector3.right * strafe_speed) ), ForceMode.VelocityChange);
@@ -1127,7 +1147,7 @@ public class PlayerMovement : MonoBehaviour
                         }
 
                       
-                        float max_rightX = 1.2f * (player_speed + momentum_ + action_momentum);
+                        float max_rightX = (plyr_shooting ? 0.75f : 1.2f) * (player_speed + momentum_ + action_momentum);
 
                         if(plyr_rb.velocity.x < max_rightX)
                             plyr_rb.AddForce((-4 * (Vector3.left * strafe_speed) ), ForceMode.VelocityChange);
@@ -1148,14 +1168,19 @@ public class PlayerMovement : MonoBehaviour
                         (!plyr_downDashing)
                     )
                     {
-                        if(plyr_rb.velocity.y < -7f)
-                            plyr_rb.velocity =  new Vector3(plyr_rb.velocity.x, -7f, plyr_rb.velocity.z);
+                        if(aimed_enemy != null)
+                        {
+                            float y_cap = Vector3.Distance(aimed_enemy.position, transform.position) < 9f ? -4f : -6.5f;
+                            if(plyr_rb.velocity.y < y_cap)
+                                plyr_rb.velocity =  new Vector3(plyr_rb.velocity.x, y_cap, plyr_rb.velocity.z);
+                        }
                     }
                 }
 
 
                 // railSlide Cancel
-                if ((Input.GetKey("q") || Input.GetKey("d")) && plyr_railSliding)
+                if ((Input.GetKey("q") || Input.GetKey("d")) 
+                    && plyr_railSliding)
                 {
                     plyr_railSliding = false;
                     plyr_rb.AddForce(( 
@@ -1193,14 +1218,55 @@ public class PlayerMovement : MonoBehaviour
                     }
                 }
             }
+            // ------------------------------------------------------------------------------------------------------------------------------------------------
 
 
+            // ------------------------------------------
+            // ------------     SIDEHANG    -------------
+            // ------------------------------------------
+            if ((Input.GetKey("q") || Input.GetKey("d")) 
+                && plyr_sideHanging && _anim.GetBool("sideHang"))
+            {
+                plyr_rb.useGravity = true;
+                plyr_rb.AddForce(new Vector3(0, 14f, 0f), ForceMode.VelocityChange);
+                _anim.SetBool("sideHang", false);
+                cm_movement.side_hang(true);
+                cm_movement.side_hang_jumpOut();
+                LeanTween.rotateLocal(pico_character, new Vector3(0, 0, 0), 1f).setEaseInSine();
+                movement_auth = true;
+                plyr_sideHanging = false;
+                StartCoroutine(Dly_bool_anm(1f, "specialHANG"));
+            }
+
+
+            // ------------------------------------------------
+            // ------------------  FALL BOX  ------------------
+            // ------------------------------------------------
+            if(plyr_boxFalling)
+            {
+                if(plyr_rb.velocity.z < 5f)
+                    plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 5f);
+
+            }
+
+
+            // ------------------------------------------------
+            // ----------------  BAREER JUMP  -----------------
+            // ------------------------------------------------
+            if(plyr_bareerJumping)
+            {
+                if(plyr_rb.velocity.y < 5f && bareer_j_type == 1)
+                    plyr_rb.velocity = new Vector3( plyr_rb.velocity.x, 5f, plyr_rb.velocity.z );
+
+                if(plyr_rb.velocity.z < 1f && bareer_j_type == 0)
+                    plyr_rb.velocity = new Vector3( plyr_rb.velocity.x, plyr_rb.velocity.y, 1f);
+            }
 
 
             // ------------------------------------------------
             // ------------------ PLAYER SHOOTING -------------
             // ------------------------------------------------
-            if ( (!plyr_obstclJmping && !plyr_jumping && !plyr_animKilling)
+            if ( (!plyr_obstclJmping && !plyr_jumping && !plyr_animKilling && !plyr_boxFalling)
                                 &&
                     (ammo > 0) && (aimed_enemy != null) 
                                 &&
@@ -1227,12 +1293,12 @@ public class PlayerMovement : MonoBehaviour
             // ------------------------------------------------
             if(plyr_rb.velocity.y < -16f && (!_anim.GetBool("falling")) )
             {
-                _anim.SetBool("falling", true);
+                //anim.SetBool("falling", true);
                 // cm_movement.fall_Down(false);
             }
             if (plyr_rb.velocity.y > -16f && _anim.GetBool("falling") )
             {
-                _anim.SetBool("falling", false);
+                //_anim.SetBool("falling", false);
                 // cm_movement.fall_Down(true);
             }
             // ------------------------------------------------
@@ -1417,7 +1483,6 @@ public class PlayerMovement : MonoBehaviour
 
         switch(cls_type)
         {
-            case "landExit":
             case "groundLeave":
                 if(!plyr_sliding && !plyr_tapTapJumping && !plyr_railSliding && !plyr_obstclJmping
                     && (!_anim.GetBool("GroundHit"))
@@ -1428,7 +1493,6 @@ public class PlayerMovement : MonoBehaviour
                     cm_movement.leave_ground(transform.rotation.eulerAngles.y);
                 }
 
-                // if(cls_type == "landExit")
 
                 _anim.SetBool("Flying", true);
                 _anim.SetBool("GroundHit", false);
@@ -1445,7 +1509,7 @@ public class PlayerMovement : MonoBehaviour
                 jumpCnt = 2;
                 dashDownCnt = 1;
 
-                if(plyr_saveClimbing)
+                if(plyr_saveClimbing || plyr_bareerJumping)
                     return;
                 StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(0.6f));
 
@@ -1487,7 +1551,10 @@ public class PlayerMovement : MonoBehaviour
                 break;
 
             case "wallRunHit":
-                if(!_anim.GetBool("GroundHit") && !plyr_saveClimbing)
+                if(!_anim.GetBool("GroundHit") && !plyr_saveClimbing
+                    && !plyr_bareerJumping && !plyr_boxFalling
+                    && !plyr_sideHanging
+                )
                 {
                     if (plyr_animKilling || plyr_hanging) return;
 
@@ -1533,7 +1600,7 @@ public class PlayerMovement : MonoBehaviour
                 break;
 
             case "wallRunExit":
-                if(!plyr_saveClimbing)
+                if(!plyr_saveClimbing && !plyr_bareerJumping && !plyr_boxFalling)
                 {
                     StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(0.5f));
 
@@ -1558,8 +1625,12 @@ public class PlayerMovement : MonoBehaviour
                 if(
                     !plyr_wallRninng && !plyr_saveClimbing && !plyr_climbingLadder
                         && (!plyr_bareerJumping)
+                        && (!front_notRegister_bareer)
+                        && (!plyr_sideHanging)
                 )
-                {
+                {   
+                    Debug.Log(optional_gm);
+
                     // if is a rebord hit
                     bool is_rebord = false;
 
@@ -1680,46 +1751,6 @@ public class PlayerMovement : MonoBehaviour
                 rotate_bck();
                 StartCoroutine(Dly_bool_anm(0.7f, "tapTapJump"));
 
-                break;
-            case "newEnemyAim":
-                horizontal_enemy = optional_gm.GetComponent<AutoTurret>().is_horizontal;
-
-                // Vector3 adjusteBodyAim  = optional_gm.transform.position + (
-                //     horizontal_enemy ?
-                //     new Vector3(1.9f, 0, -2.4f) : new Vector3(2.4f, -1.2f,-2.4f)
-                // );
-                // Vector3 adjusteHeadAim  = (
-                //     horizontal_enemy ?
-                //     new Vector3(-3.5f, 0f, -2.5f) : new Vector3(0, 1f, 0)
-                // );
-
-                head_TARGET.parent = optional_gm.transform;body_TARGET.parent = optional_gm.transform;
-                leftArm_TARGET.parent = optional_gm.transform;
-
-                leftArm_TARGET.localPosition =  (horizontal_enemy ?
-                    new Vector3(0.37f,1.15f,-0.56f) : new Vector3(0, 1.5f, 0) );
-
-
-                saved_WorldPos_armTarget = leftArm_TARGET.position;
-
-                aimed_enemy = optional_gm.transform;
-                if(ammo > 0)
-                    cm_movement.set_aimedTarget = optional_gm.transform;
-
-                g_ui.newEnemy_UI(aimed_enemy);
-                break;
-
-            case "emptyEnemyAim":
-                head_TARGET.parent = transform; body_TARGET.parent = transform; leftArm_TARGET.parent = transform;
-                leftArm_TARGET.localPosition = new Vector3(0, 0, 0);
-
-                int rdm_ = UnityEngine.Random.Range(0, 3);
-                body_TARGET.localPosition = rdm_ == 1 ? new Vector3(1.4f, -5.13f, 4.0f) : new Vector3(1.09f,-5.13f,1.74f);
-
-                head_TARGET.localPosition = new Vector3(6.80f,-10.57f,16.06f);
-
-                aimed_enemy = null;
-                cm_movement.set_aimedTarget = null;
                 break;
 
             case "railSlide":
@@ -1870,14 +1901,15 @@ public class PlayerMovement : MonoBehaviour
                 break;
             case "land":
 
-                if(_anim.GetBool("fallBox"))
+                if(_anim.GetBool("fallBox") || last_landBoxId == optional_gm.GetInstanceID()
+                    || plyr_wallRninng)
                     return;
 
-                StartCoroutine(Dly_bool_anm(0.85f, "fallBox"));
+                last_landBoxId = optional_gm.GetInstanceID();
+                StartCoroutine(Dly_bool_anm(1.2f, "fallBox"));
                 StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(1.7f));
 
                 _anim.SetBool("Flying", false);
-                // rotate_bck();
                 movement_auth = false;
 
                 plyr_boxFalling = true;
@@ -1893,39 +1925,50 @@ public class PlayerMovement : MonoBehaviour
                     0f
                 );
                 cm_movement.fall_box(
-                    false, 
                     (transform.rotation.eulerAngles.y >= 180f ?
                         (-1 * (360 - transform.rotation.eulerAngles.y)): transform.rotation.eulerAngles.y)
-                    * (0.5f)
+                    * (1f)
                 );
 
                 fix_Cldrs_pos(-0.12f, false);
                 plyr_flying = false;
 
                 Vector3 a = Vector3.MoveTowards(transform.position, optional_gm.transform.position, 100f);
+                float x_f = optional_gm.transform.position.x - transform.position.x;
 
-
+    
                 a = new Vector3(
-                    a.x * 0.1f,
+                    x_f * 1.2f,
                     (transform.position.y > optional_gm.transform.GetChild(0).transform.position.y ? 
-                        (4f) : Math.Abs(a.y * 1.4f)
+                        (4f) : (15f)
                     ),
-                    transform.position.z > optional_gm.transform.position.z ? a.z * 0.05f : a.z * 0.08f
+                    transform.position.z > optional_gm.transform.position.z ? a.z * 0.02f : a.z * 0.06f
                 );
-                Debug.Log(a);
+                // Debug.Log("AHHH JUMP " + a);
                 // Debug.Log(Quaternion.RotateTowards(
                 //         transform.rotation, optional_gm.transform.rotation, 100f
                 //     ).eulerAngles.y);
-                plyr_rb.velocity = Vector3.zero;
+                plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0f, 0f);
                 plyr_rb.AddForce(a, ForceMode.VelocityChange);
 
                 break;
 
-            // case "landExit":
-            //     fix_Cldrs_pos(0.12f, true);
-            //     _anim.SetBool("Flying", true);
-            //     plyr_flying = true;
-            //     break;
+            case "landExit":
+                fix_Cldrs_pos(0.12f, true);
+
+
+                if(plyr_boxFalling || optional_gm.GetInstanceID() == last_jumpedOut_landBoxId)
+                    return;
+
+                last_jumpedOut_landBoxId = optional_gm.GetInstanceID();
+
+
+                _anim.SetBool("Flying", true);
+                plyr_flying = true;
+                
+                plyr_rb.AddForce(new Vector3(0f, 10f, 0f), ForceMode.VelocityChange);
+                cm_movement.leave_ground(transform.rotation.eulerAngles.y);
+                break;
 
             case "ladderHit":
                 _anim.SetBool("ladder", true);
@@ -1994,59 +2037,141 @@ public class PlayerMovement : MonoBehaviour
                 cm_movement.under();
                 plyr_underSliding = true;
                 break;
-            case "bareer":
-                if(plyr_bareerJumping)
-                    return;
 
+            case "bareerFrontDelay":
+                front_notRegister_bareer = true;
+                Invoke("bareerFrontDelayFnc", 0.7f);
+                break;
+            case "bareer":
+                if(plyr_bareerJumping && bareer_j_type == 1)
+                {
+                    cm_movement.bareer_jmp(2);
+                    plyr_rb.AddForce(
+                        new Vector3(
+                            0f, 14.5f,
+                        (player_speed + action_momentum + (momentum_ * 3f)) * -0.45f
+                        ), 
+                    ForceMode.VelocityChange);
+                    bareer_j_type = -1;
+                    Invoke("bareer_resetMvmnt", 0.46f);
+                    return;
+                }
+
+                if(plyr_bareerJumping && bareer_j_type != 1)
+                    return;
                 StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(1.5f));
-                StopCoroutine(Dly_bool_anm(0f, "bareerJump"));
 
                 int obj_order = optional_gm.transform.GetSiblingIndex();
 
-                StartCoroutine(Dly_bool_anm(obj_order == 2 ? 2f : 2f, "bareerJump"));
-
                 plyr_bareerJumping = true;
-
                 plyr_rb.velocity = new Vector3(0, 0, 0);
-                // plyr_rb.useGravity = false;
 
                 movement_auth = false;
 
                 Vector3 v3 = (
-                    (optional_gm.transform.position + new Vector3(-1f, 0f, 0f)) - transform.position
+                    (optional_gm.transform.position + new Vector3(-1f, -0.4f, 0f)) - transform.position
                 );
 
+                bareer_j_type = obj_order != 2 ? 1 : 0;
                 plyr_rb.AddForce(new Vector3(
                     v3.x,
-                    v3.y < 0f ?
-                        (v3.y * -3) 
+                    obj_order == 2 ?
+                        (7f) // upper hit
                             : 
-                        (!plyr_flying ? v3.y * 52f :
-                            v3.y <= 1.35f ? (v3.y * 12f) : (v3.y * 7f)
-                        ),
-                    0f //v3.z * 3.7f
+                        (2f) // (v3.y <= 1.35f ? (v3.y * 12f) : (v3.y * 7f) // lowerhit
+                        ,
+                     obj_order == 2 ? (player_speed + action_momentum + (momentum_ * 3f)) * 0.4f : -1f  //v3.z * 3.7f
                 ), ForceMode.VelocityChange);
 
-                Debug.Log(
-                    "BAREER = " +
-                    new Vector3(
-                        v3.x,
-                        v3.y < 0f ?
-                            (v3.y * -3) 
-                                : 
-                            (!plyr_flying ? v3.y * 52f :
-                                v3.y <= 1.35f ? (v3.y * 12f) : (v3.y * 7f)
-                            ),
-                        0f //v3.z * 3.7f
-                    )
-                );
-
+                cm_movement.bareer_jmp(obj_order == 2 ? 0 : 1);
+                // Debug.Log(
+                //     "bareer " +  (obj_order == 2 ? "upper hit" : "lower hit") +
+                //     //" V3.Y > 0F :" +  (v3.y > 0f) +
+                //     " BAREER = " +
+                //     new Vector3(
+                //         v3.x,
+                //         obj_order == 2 ?
+                //             (11f) 
+                //                 : 
+                //             (!plyr_flying ? v3.y * 52f :
+                //                 v3.y <= 1.35f ? (v3.y * 12f) : (v3.y * 7f)
+                //             ),
+                //         obj_order == 2 ? (player_speed + action_momentum + momentum_) * 0.4f : 0f  //v3.z * 3.7f
+                //     )
+                // );
+                rotate_bck();
                 // classic
                 if(obj_order != 2)
+                {
                     _anim.SetInteger("bareerJmpType", 2);
-                else // under
+                }else // under
                     _anim.SetInteger("bareerJmpType", 1);
+                
+                StartCoroutine(Dly_bool_anm(obj_order == 2 ? 1.15f : 1.36f, "bareerJump"));
 
+                break;
+            case "sideHang":
+    
+                _anim.SetBool("sideHang", true);
+                StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(1.5f));
+                movement_auth = false;
+                plyr_sideHanging = true;
+                plyr_rb.velocity = Vector3.zero;
+                plyr_rb.useGravity = false;
+                anim_bool_hang = true;
+                side_hang_obj = optional_gm;
+
+                cm_movement.side_hang(false, 
+                    (optional_gm.transform.position.x < transform.position.x) ? (true) : (false)
+                );
+                pico_character.transform.localRotation = Quaternion.Euler(
+                    0f,
+                    Quaternion.RotateTowards(
+                        pico_character.transform.localRotation , optional_gm.transform.rotation, 200f
+                    ).eulerAngles.y + (180f), 
+                    0f
+                );
+                break;
+
+            case "newEnemyAim":
+                horizontal_enemy = optional_gm.GetComponent<AutoTurret>().is_horizontal;
+
+                // Vector3 adjusteBodyAim  = optional_gm.transform.position + (
+                //     horizontal_enemy ?
+                //     new Vector3(1.9f, 0, -2.4f) : new Vector3(2.4f, -1.2f,-2.4f)
+                // );
+                // Vector3 adjusteHeadAim  = (
+                //     horizontal_enemy ?
+                //     new Vector3(-3.5f, 0f, -2.5f) : new Vector3(0, 1f, 0)
+                // );
+
+                head_TARGET.parent = optional_gm.transform;body_TARGET.parent = optional_gm.transform;
+                leftArm_TARGET.parent = optional_gm.transform;
+
+                leftArm_TARGET.localPosition =  (horizontal_enemy ?
+                    new Vector3(0.37f,1.15f,-0.56f) : new Vector3(0, 1.5f, 0) );
+
+
+                saved_WorldPos_armTarget = leftArm_TARGET.position;
+
+                aimed_enemy = optional_gm.transform;
+                if(ammo > 0)
+                    cm_movement.set_aimedTarget = optional_gm.transform;
+
+                g_ui.newEnemy_UI(aimed_enemy);
+                break;
+
+            case "emptyEnemyAim":
+                head_TARGET.parent = transform; body_TARGET.parent = transform; leftArm_TARGET.parent = transform;
+                leftArm_TARGET.localPosition = new Vector3(0, 0, 0);
+
+                int rdm_ = UnityEngine.Random.Range(0, 3);
+                body_TARGET.localPosition = rdm_ == 1 ? new Vector3(1.4f, -5.13f, 4.0f) : new Vector3(1.09f,-5.13f,1.74f);
+
+                head_TARGET.localPosition = new Vector3(6.80f,-10.57f,16.06f);
+
+                aimed_enemy = null;
+                cm_movement.set_aimedTarget = null;
                 break;
             case "gun":
                 playerEquip_weapon(true);
@@ -2061,6 +2186,12 @@ public class PlayerMovement : MonoBehaviour
             case "void":
                 g_ui.gameOver_ui("void", transform.rotation);
                 break;
+            case "frontTurret_Col_GameOver":
+                g_ui.gameOver_ui("turretCollision", transform.rotation);
+                break;
+            case "frontSpecialGameOver":
+                g_ui.gameOver_ui("front", transform.rotation);
+                break;
             case "sideVoid":
                 g_ui.gameOver_ui("sideVoid", transform.rotation);
                 break;
@@ -2070,8 +2201,18 @@ public class PlayerMovement : MonoBehaviour
     }
 
 
+    // bareer
+    private void bareerFrontDelayFnc()
+    {
+        front_notRegister_bareer = false;
+    }
+    private void bareer_resetMvmnt()
+    {
+        movement_auth = true;
+    }
 
-    // ramp delay
+  
+    // ramp
     private void ramp_bool()
     {
         special_rampDelay = false;
@@ -2197,7 +2338,12 @@ public class PlayerMovement : MonoBehaviour
     // THROW ANIMATION //
     private IEnumerator Dly_bool_anm(float delay, string anim_bool)
     {
+
         _anim.SetBool(anim_bool, true);
+
+        if(anim_bool == "specialHANG")
+            plyr_sideExitHanging = true;
+
         if(anim_bool == "Jump" || anim_bool == "DoubleJump") 
             plyr_jumping = true;
 
@@ -2211,9 +2357,15 @@ public class PlayerMovement : MonoBehaviour
         if(anim_bool == "ladderInputDelay")
             movement_auth = false;
 
+
         //yield on a new YieldInstruction that waits for "delay" seconds.
         yield return new WaitForSeconds(delay);
+        // ----------------------------------------
 
+        if(anim_bool == "specialHANG")
+        {
+            plyr_sideExitHanging = false;
+        }
         if(anim_bool == "Jump" || anim_bool == "DoubleJump") 
             plyr_jumping = false;
 
@@ -2234,7 +2386,7 @@ public class PlayerMovement : MonoBehaviour
         if(anim_bool == "fallBox")
         {
             plyr_boxFalling = false;
-            cm_movement.fall_box(true);
+            // cm_movement.fall_box(true);
         }
 
         if(anim_bool == "climb")
@@ -2701,39 +2853,35 @@ public class PlayerMovement : MonoBehaviour
                     //     optional_wall.transform.position - transform.position, 
                     // Time.deltaTime, 0.0f);
                     // transform.rotation = Quaternion.LookRotation(newDirection);
-                    _anim.SetInteger("deathMode", 0);
+                    //_anim.SetInteger("deathMode", 0);
+                    _anim.SetInteger("deathMode", UnityEngine.Random.Range(-1, 1));
                     plyr_rb.AddForce( new Vector3(0, 35f, -5f + (-1 * plyr_rb.velocity.z) ), ForceMode.VelocityChange);
                 }
                 if(mode == "damage")
                 {
                     plyr_rb.AddForce( new Vector3(0, 10f, 0f), ForceMode.VelocityChange );
-                    _anim.SetInteger("deathMode", UnityEngine.Random.Range(1, 5));
+                    _anim.SetInteger("deathMode", UnityEngine.Random.Range(1, 7));
                 }
-                if (mode == "void")
+                if(mode == "turretCollision")
                 {
-                    _anim.SetInteger("deathMode", -1);
-
+                    plyr_rb.AddForce(new Vector3(0f, 15f, 10f), ForceMode.VelocityChange);
+                    _anim.SetInteger("deathMode", -3);   
                 }
                 if (mode == "sideVoid")
                 {
-                    Debug.Log("sidevoid death");
                     _anim.SetInteger("deathMode", -2);
                     plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y / 2, plyr_rb.velocity.z);
                     plyr_rb.AddForce( new Vector3(plyr_rb.velocity.x, 5f, 10f), ForceMode.VelocityChange );
                 }
+
                 cm_movement.cam_death(mode);
-            }else
-            {
-                    plyr_rb.velocity = ( new Vector3(0, 100f, 100f) );
-                    // plyr_rb.AddTorque( new Vector3(10f, 0f, 10f), ForceMode.VelocityChange );
-
-
             }
             
             ////////////////////////////////////
             //         LOCK-ON RAGDOLL        //
             //        RAGDOLL ACTIVATION      //
-            yield return new WaitForSeconds(mode == "void" ? 0f : 1.32f);
+            yield return new WaitForSeconds(mode == "void" ? 0f : 
+                (mode == "front" ? 1f : 1.5f));
             cm_movement.set_cam_gameOver_mode = 1;
 
             Physics.gravity = new Vector3(0, -7f, 0);

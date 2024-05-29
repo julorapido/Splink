@@ -152,6 +152,9 @@ public class CameraMovement : MonoBehaviour
     [Header ("Ragdoll")]
     [SerializeField] private Transform player_rag;
 
+    [Header ("Special Wall-Run")]
+    private bool special_wallRun = false;
+
     // [Header ("Camera Bob")]
     // [HideInInspector] public bool can_headBob = false;
     // private float[] x_y = new float[2]{ 0.05f, 0.10f };
@@ -393,14 +396,17 @@ public class CameraMovement : MonoBehaviour
         if( (x_ratio * x_offst) != lst_offst_x)
         {
             desired_  = (player.position + offset);
-            desired_.x = desired_.x +  (
-                (x_ratio * ( (tyro_on) ?
-                    (x_offst * 2)
-                        :
-                    (x_offst / 2.5f)
-                ))
-            );
-            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 80f;
+            // if(!special_wallRun)
+            // {
+                desired_.x = desired_.x +  (
+                    (x_ratio * ( (tyro_on) ?
+                        (x_offst * 2)
+                            :
+                        (x_offst / 2.5f)
+                    ))
+                );
+                desired_.z = desired_.z +  (Math.Abs(x_offst)) / 80f;
+            //}
             lst_offst_x = ((x_ratio * x_offst));
         }
 
@@ -446,7 +452,7 @@ public class CameraMovement : MonoBehaviour
 
             transform.localRotation = Quaternion.Slerp
             (
-                gameObject.transform.rotation, desired_rt, (tyro_on) ? 0.020f : 0.13f
+                gameObject.transform.rotation, desired_rt, (tyro_on) ? 0.020f : 0.12f
             );
 
             // Smooth Damp
@@ -549,17 +555,23 @@ public class CameraMovement : MonoBehaviour
         if(is_ext)
         {
             reset_notSmooth();
+
+            StopCoroutine(wall_coroutine());
+            special_wallRun = false;
         }else
         {
             // // //
             reset_smoothDmpfnc();
             // // //
 
+            if(!special_wallRun)
+                StartCoroutine(wall_coroutine());
+
             float sns =  Math.Abs(player.position.x) - Math.Abs(gm_.position.x);
 
             //FovTrans(start_fov, 0.5f);
             new_fov = 93f;
-            pos_dc["wallR_y_offst"] = sns > 0 ? -1.1f : -0.9f;
+            pos_dc["wallR_y_offst"] = -1.3f;
 
             // SPACE UP || CLOSE UP Z OFFSET
             pos_dc["wallR_z_offst"] = (sns < 0) ? 0.8f :  0.4f;
@@ -582,6 +594,33 @@ public class CameraMovement : MonoBehaviour
                 rot_dc["wallR_rot_y_offst"] = -0.35f + 1 * (y_bonuss / 92);
 
             }
+        }
+    }
+
+    // Sidehang
+    public void side_hang(bool is_ext, bool l_side = false)
+    {
+        if(is_ext)
+        {
+            reset_notSmooth();
+        }else
+        {
+            // // //
+            reset_smoothDmpfnc();
+            // // //
+            
+            //FovTrans(start_fov, 0.5f);
+            new_fov = 88f;
+    
+             // CLOSE UP Z OFFSET
+            pos_dc["wallR_x_offst"] = l_side ? 1f : -1f;
+            pos_dc["wallR_y_offst"] = 0.4f;
+
+            // SMOOTH DAMP FOR X ROTATION
+            rot_dc["wallR_rot_x_offst"] = 0.19f;
+            rot_dc["wallR_rot_y_offst"] = l_side ? -0.13f : 0.13f;
+            rot_dc["wallR_rot_z_offst"] =  l_side ? -0.10f : 0.10f;
+
         }
     }
 
@@ -761,7 +800,7 @@ public class CameraMovement : MonoBehaviour
 
         iterator_ = 3;
         List<float> v_flt = new List<float>(new float[6] {
-            is_dblJmp ? -0.26f : -0.30f, is_dblJmp ? -1.9f : -2.1f, is_dblJmp ?  -0.155f : 0.155f,
+            is_dblJmp ? -0.26f : -0.22f, is_dblJmp ? -1.9f : -1.5f, is_dblJmp ?  -0.155f : 0.155f,
             0.0f, 0.0f, 0.0f
         } );
         List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "", "",""} );
@@ -946,27 +985,6 @@ public class CameraMovement : MonoBehaviour
     }
 
 
-    // bareer
-    public void bareerJump(bool first_jumps)
-    {
-        reset_smoothDmpfnc();
-
-        // -15% || +30%
-        smoothTime_prc = first_jumps ? -15f : 30f;
-
-        iterator_ = first_jumps ? 4 : 3;
-        List<float> v_flt = new List<float>(new float[6] {
-            first_jumps ? 0.90f : -1.30f, first_jumps ? 0.1f : -0.1f,
-            first_jumps ? 0.120f : -0.160f, first_jumps ? 0.35f : 0f, 0f, 0f
-        } );
-        List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst", first_jumps ? "wallR_z_offst" : "",  "", ""} );
-
-        values_ref = s_arr; values_flt = v_flt;
-        trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false });
-
-        trns_fnc = use_specialSmooth = true; trns_back = false;
-    }
-
     // ground hit
     public void ground_roll()
     {
@@ -1026,33 +1044,29 @@ public class CameraMovement : MonoBehaviour
     }
     
     // fallbox
-    public void fall_box(bool fov_off, float player_y_rot = 0f)
+    public void fall_box(float player_y_rot = 0f)
     {
         reset_smoothDmpfnc();
 
-        if(!fov_off)
-        {
-            // +10%
-            smoothTime_prc = 13f;
+  
+        // +12%
+        smoothTime_prc = 12f;
 
-            // +22 fov  !!
-            new_fov = 83f;
+        // +5 fov  !!
+        new_fov = 85f;
 
-            iterator_ = 6; 
-            List<float> v_flt = new List<float>(new float[6] {0.45f, player_y_rot < 0 ? -0.09f : 0.09f, 0.14f,
-            0.35f, player_y_rot * -0.012f, player_y_rot * 0.065f } );
+        iterator_ = 6; 
+        List<float> v_flt = new List<float>(new float[6] {1.4f, player_y_rot < 0 ? -0.09f : 0.09f, 0.2f,
+        -0.35f, player_y_rot * -0.012f, player_y_rot * 0.065f } );
 
-            List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
-            "wallR_z_offst", "wallR_rot_y_offst",  "wallR_x_offst"} );
+        List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
+        "wallR_z_offst", "wallR_rot_y_offst",  "wallR_x_offst"} );
 
-            values_ref = s_arr;
-            values_flt = v_flt;
-            trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
-            trns_fnc = use_specialSmooth = true; trns_back = false;
-        }else
-        {
-            new_fov = start_fov;
-        }
+        values_ref = s_arr;
+        values_flt = v_flt;
+        trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
+        trns_fnc = use_specialSmooth = true; trns_back = false;
+        
     }
 
     // dash_down
@@ -1061,7 +1075,7 @@ public class CameraMovement : MonoBehaviour
         reset_smoothDmpfnc();
 
         
-        // +10%
+        // +7%
         smoothTime_prc = 7f;
 
         iterator_ = 3; 
@@ -1070,6 +1084,67 @@ public class CameraMovement : MonoBehaviour
 
         List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
         "wallR_z_offst", "",  ""} );
+
+        values_ref = s_arr;
+        values_flt = v_flt;
+        trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
+        trns_fnc = use_specialSmooth = true; trns_back = false;
+     
+    }
+
+
+    // bareer_
+    public void bareer_jmp(int bareer_mode)
+    {
+        reset_smoothDmpfnc();
+
+        
+        // +15%
+        smoothTime_prc = 12f;
+
+        // +10 fov  !!
+        new_fov = 85f;
+
+        iterator_ = 4; 
+        List<float> v_flt  = new List<float>(new float[6] {0.65f, 0.09f, 0.08f,
+             0.3f, 0f, 0f} );
+        if (bareer_mode == 1)
+        {  
+            new_fov = 90f;
+            v_flt = new List<float>(new float[6] {-1.5f, 0.09f, -0.30f, 0.4f, 0f, 0f} );
+        }
+        if(bareer_mode == 2)
+        {
+            v_flt = new List<float>(new float[6] {0.8f, 0.09f, 0.16f, 0.3f, 0f, 0f} );
+        }
+   
+
+        List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
+        "wallR_z_offst", "",  ""} );
+
+        values_ref = s_arr;
+        values_flt = v_flt;
+        trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
+        trns_fnc = use_specialSmooth = true; trns_back = false;
+     
+    }
+
+    // sidehanf
+    public void side_hang_jumpOut()
+    {
+        reset_smoothDmpfnc();
+
+        // +15%
+        smoothTime_prc = 16f;
+
+        // +10 fov  !!
+        new_fov = 85f;
+
+        iterator_ = 3; 
+        List<float> v_flt  = new List<float>(new float[6] {-1.6f, 0.09f, -0.2f,
+             0f, 0f, 0f} );
+        List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
+        "", "",  ""} );
 
         values_ref = s_arr;
         values_flt = v_flt;
@@ -1129,7 +1204,7 @@ public class CameraMovement : MonoBehaviour
         death_mode = d_mode;
 
 
-        Vector3 pos = transform.position + new Vector3(0f, 4f - transform.position.y , 0f);
+        Vector3 pos = transform.position + new Vector3(0f, 6f - transform.position.y , 0f);
 
         // Lean cam position
         LeanTween.value(gameObject, transform.position, pos , 2f)
@@ -1149,12 +1224,20 @@ public class CameraMovement : MonoBehaviour
 
 
 
+    // jump => slow time
     private IEnumerator time_coroutine()
     {
         yield return new WaitForSeconds(0.2f);
         slow_time = true;
-        yield return new WaitForSeconds(0.15f);
+        yield return new WaitForSeconds(0.25f);
         slow_time = false;
+    }
+
+    private IEnumerator wall_coroutine()
+    {
+        special_wallRun = true;
+        yield return new WaitForSeconds(1f);
+        special_wallRun = false;
     }
 
     // public recoil method

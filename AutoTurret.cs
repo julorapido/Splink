@@ -636,12 +636,13 @@ public class AutoTurret : MonoBehaviour
             turret_explode();
 
             g_ui.kill_ui();
+            g_ui.damage_ui(transform, dmg, is_crit, offset);
             g_ui.gain_money(120);
         }
         else
         {
-            g_ui.damage_ui(transform, dmg, is_crit, offset);
             turret_health = turret_health - dmg;
+            g_ui.damage_ui(transform, dmg, is_crit, offset);
         }
 
     }

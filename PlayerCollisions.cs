@@ -382,6 +382,9 @@ public class PlayerCollisions : MonoBehaviour
             Vector3 _size = collision.bounds.size;
             switch (slcted_clsion)
             {
+                // ==================================================
+                //                      GROUND
+                // ==================================================
                 case "ground":
 
                     // Groundroll
@@ -431,20 +434,49 @@ public class PlayerCollisions : MonoBehaviour
                         else
                             p_movement.animateCollision("sideVoid", _size, collision.gameObject);
                     }
+
+                    // Bareer
+                    if(collision.gameObject.tag == "bareer")
+                    {
+                        p_movement.animateCollision("bareer", _size, collision.gameObject);       
+                    }
                     
                     break;
 
+                // ==================================================
+                //                      FRONT
+                // ==================================================
                 case "frontwall":
+                    // Turret collision
+                    List<string> t_parts = new List<string>(new string[6]
+                    {
+                    "tr_Barrel","tr_Shootp", "tr_BarrelHz", "tr_BarrelHz", "tr_Body", "tr_Stand"
+                    });
+                    if(t_parts.Contains(collision.gameObject.tag))
+                    {
+                        p_movement.animateCollision("frontTurret_Col_GameOver", _size, collision.gameObject);     
+                    }
+
                     // FrontWall Gameover
                     if(collision.gameObject.tag == "ground"){
                         p_movement.animateCollision("frontWallHit", _size, collision.gameObject);
                     }
 
+                    // fallBox front hit Gameover
+                    if(collision.gameObject.tag == "fallBox"){
+                        if( !collision.isTrigger )
+                            p_movement.animateCollision("frontSpecialGameOver", _size, collision.gameObject);
+                    }
 
                     // Ladder
                     if(collision.gameObject.tag == "ladder"){
                         p_movement.animateCollision("ladderHit", _size, collision.gameObject);
                     }
+
+                    if(collision.gameObject.tag == "bareer"){
+                        p_movement.animateCollision("bareerFrontDelay", _size, collision.gameObject);   
+                    }
+
                     break;
 
                 case "sidewall":
@@ -460,6 +492,9 @@ public class PlayerCollisions : MonoBehaviour
                     }
                     break; 
 
+                // ==================================================
+                //                       SLIDER
+                // ==================================================
                 case "slider":
                     // Slider hit
                     if(collision.gameObject.tag == "slider")
@@ -470,7 +505,7 @@ public class PlayerCollisions : MonoBehaviour
                         psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].slide);
                     } 
 
-                    // Slide Rail
+                    // Rail
                     if(collision.gameObject.tag == "slideRail")
                     {
                         p_movement.animateCollision("railSlide", _size, collision.gameObject);
@@ -490,14 +525,19 @@ public class PlayerCollisions : MonoBehaviour
                         p_movement.animateCollision("under", _size, collision.gameObject);
                         
                     }
-                    // Bareer
-                    if(collision.gameObject.tag == "bareer")
+
+                    // SideHang
+                    if(collision.gameObject.tag == "sideHang")
                     {
-                        p_movement.animateCollision("bareer", _size, collision.gameObject);       
+                        p_movement.animateCollision("sideHang", _size, collision.gameObject);
+                        
                     }
                     break;
 
 
+                // ==================================================
+                //                     COLLECTIBLE
+                // ==================================================
                 case "collectibles":
                     // collectible hit
                     switch(collision.gameObject.tag)
@@ -541,7 +581,7 @@ public class PlayerCollisions : MonoBehaviour
             {
                 case "ground":
                     // ground, land
-                    if(collision.gameObject.tag == "ground" || collision.gameObject.tag == "fallBox")
+                    if(collision.gameObject.tag == "ground")
                     {
                         p_movement.animateCollision("groundLeave", _size);
                     }
@@ -556,6 +596,12 @@ public class PlayerCollisions : MonoBehaviour
                     // taptap
                     if(collision.gameObject.tag == "tapTapJump")
                         p_movement.animateCollision("tapTapJumpExit", _size, collision.gameObject);
+
+                    // Land
+                    if(collision.gameObject.tag == "fallBox")
+                    {
+                        p_movement.animateCollision("landExit", _size, collision.gameObject);
+                    }  
 
                     break;
 
