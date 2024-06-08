@@ -44,7 +44,7 @@ public class A_T_Projectile : MonoBehaviour
 
     [Header ("Projectile Speed")]
     private const float turnSpeed = 5f;
-    private float speed = 13f;
+    private float speed = 10f;
     [HideInInspector] public float set_projSpeed {
         set { if(value.GetType() == typeof(float)) speed = value; }
         get { return 0f; }
@@ -63,7 +63,9 @@ public class A_T_Projectile : MonoBehaviour
     [Header ("ExplosionAnimation Position")]
     private const string turret_parts = "tr_Barrel tr_Stand tr_Plate tr_Radar tr_Shootp tr_BarrelHz";
 
-
+    [Header ("Proj Duration")]
+    private const float w_bullet_duration = 5f;
+    private float w_bullet_t = 0f;
 
     // Start
     private void Start()
@@ -108,6 +110,10 @@ public class A_T_Projectile : MonoBehaviour
     // Update
     private void Update()
     {
+        // Bullet auto-destruction
+        w_bullet_t += Time.deltaTime;
+            if(w_bullet_t > w_bullet_duration && !exploded)
+                Destroy(gameObject);
 
 
         // NON-PLAYER BULLET
@@ -174,6 +180,7 @@ public class A_T_Projectile : MonoBehaviour
         // PLAYER BULLET
         else
         {
+
             if(!exploded)
             {
                 try{

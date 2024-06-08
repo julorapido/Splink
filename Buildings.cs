@@ -18,7 +18,8 @@ public class Buildings : MonoBehaviour
     [Header ("Optimization")]
     private GameObject[] activated_go_bfr = new GameObject[30]; // 30 fixed bfr
     private GameObject[] optmized_go_bfr = new GameObject[30]; // 30 fixed bfr
-    
+    private float o_timer = 0f;
+
     [Header ("GameOver")]
     private bool game_over = false;
     [HideInInspector] public bool set_game_over{
@@ -34,12 +35,23 @@ public class Buildings : MonoBehaviour
 
         Gen_PrefabSection();
         Gen_PrefabSection();
-        Gen_PrefabSection();
+        // Gen_PrefabSection();
 
         for(int i = 0; i < 30; i ++)
             optmized_go_bfr[i] = activated_go_bfr[i] = null;
 
-        InvokeRepeating("optimize_sections", 0, 0.50f);
+        optimize_sections();
+        // InvokeRepeating("optimize_sections", 0, 0.50f);
+    }
+
+    private void Update()
+    {
+        o_timer += Time.deltaTime;
+        if(o_timer >= 0.75f)
+        {
+            optimize_sections();
+            o_timer = 0f;
+        }
     }
 
 
@@ -57,7 +69,7 @@ public class Buildings : MonoBehaviour
 
         // infinite game loop
         if(last_sectionSpawned != null && 
-            (last_sectionSpawned.position.z - player_trsf.position.z) < 210
+            (last_sectionSpawned.position.z - player_trsf.position.z) < 180
         )
             Gen_PrefabSection();
     }
@@ -95,7 +107,7 @@ public class Buildings : MonoBehaviour
                 float dst = (active_sections[i].transform.position.z - (135 / 2)) - player_trsf.position.z;
 
                 GameObject s = active_sections[i];
-                if(( dst >= (game_over ? 140 : 90) )
+                if(( dst >= (game_over ? 140 : 75) )
                     || dst <= -160) // optimize [behind and below]
                 {
                     if( !optmized_go_bfr.Contains(active_sections[i]) )

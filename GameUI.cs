@@ -196,7 +196,8 @@ public class GameUI : MonoBehaviour
 
      
 
-
+        // if(false == true)
+        // {
         // floating damages
         for(int i = 0; i < 40; i++)
         {
@@ -233,11 +234,11 @@ public class GameUI : MonoBehaviour
         
                 float distanceToCamera = Vector3.Distance(ui_camera.transform.position, enemies_tr[i].position);
                 float cam_scale = (
-                        2.0f * (distanceToCamera * 0.85f) * 
+                        2.0f * (distanceToCamera * 0.7f) * 
                         Mathf.Tan(Mathf.Deg2Rad * (ui_camera.fieldOfView * 0.5f)
                     )
                 ) * (7f);
-                cam_scale = (cam_scale < 125f) ? 125f : (cam_scale > 200f ? 200f : cam_scale);
+                cam_scale = (cam_scale < 125f) ? 125f : (cam_scale > 150f ? 150f : cam_scale);
 
                 ui_enemies[i].transform.localScale = new Vector3(cam_scale, cam_scale, cam_scale);
 
@@ -251,8 +252,8 @@ public class GameUI : MonoBehaviour
             }
         }
 
-    }   
-
+        //}   
+    }
 
     // -----------
     // FixedUpdate 
@@ -316,6 +317,7 @@ public class GameUI : MonoBehaviour
     // =======================
     public void newEnemy_UI(Transform enemy_)
     {
+        // return;
         if(enemy_ == null)
             return;
 
@@ -344,9 +346,9 @@ public class GameUI : MonoBehaviour
                 enemies_aT[i] = at_turret;
                 enemies_offst[i] = at_turret.is_horizontal ? 
                     (at_turret.is_left ? 
-                        new Vector3(2.45f, 2.4f, -0.3f) : new Vector3(-2.45f, 2.4f, -0.3f)
+                        new Vector3(1.7f, 2f, -0.2f) : new Vector3(-1.7f, 2f, -0.2f)
                     ) 
-                    : (new Vector3(0f, 3.3f, 0f)
+                    : (new Vector3(0f, 3f, 0f)
                 );
 
                 int enemy_health = at_turret.get_health;
@@ -374,6 +376,7 @@ public class GameUI : MonoBehaviour
     // =======================
     public void damage_ui(Transform enemy, int damage_value, bool? is_crit_hit, Vector3 offset)
     {
+        // return;
         if(damage_value.GetType() != typeof(int) || enemy == null)
             return;
 
@@ -473,38 +476,30 @@ public class GameUI : MonoBehaviour
     {
         if(combo_end)   
         {
-            // StartCoroutine(); 
-        }else{
+            fade_ui_obj(combo_obj, 1.4f, false);
+            LeanTween.moveLocal(combo_obj, new Vector3 (0, -300, 0), 1.3f).setEaseInSine();
+        }
+        else
+        {
             combo_v ++;
 
             if(combo_v >= 1)
             {
-                combo_obj.SetActive(true);
+                fade_ui_obj(combo_obj, 1.4f, false);
+                LeanTween.moveLocal(combo_obj, new Vector3 (0, -300, 0), 1.3f).setEaseInSine();
+                // combo_obj.SetActive(true);
                 
                 GameObject combo_bar = combo_obj.transform.GetChild(0).GetChild(0).gameObject;
 
                 // yellow
-                LeanTween.scale(combo_bar.transform.GetChild(1).gameObject, new Vector3( ((float)combo_v / (float)combo_goal), 1, 1), 0.75f).setEaseInSine();
+                LeanTween.scale(combo_bar.transform.GetChild(1).gameObject, 
+                    new Vector3( ((float)combo_v / (float)combo_goal), 1, 1), 0.75f).setEaseInSine();
                 // white
-                LeanTween.scale(combo_bar.transform.GetChild(0).gameObject, new Vector3( ((float)combo_v / (float)combo_goal), 1, 1), 0.3f).setEaseInSine();
-
-                GameObject tris = combo_obj.transform.GetChild(2).gameObject;
+                LeanTween.scale(combo_bar.transform.GetChild(0).gameObject, 
+                    new Vector3( ((float)combo_v / (float)combo_goal), 1, 1), 0.3f).setEaseInSine();
 
                 // x2
                 combo_obj.transform.GetChild(3).GetComponent<TextMeshProUGUI>().text = "X" + combo_v.ToString();
-
-                for(int s = 0; s < 2; s ++)
-                {
-                    // l tris
-                    LeanTween.moveLocal(tris.transform.GetChild(0).GetChild(s).gameObject, 
-                        tris.transform.GetChild(1).GetChild(s).localPosition + new Vector3(-20f, 0f, 0f), 1.4f).setEasePunch();
-                    // r tris
-                    LeanTween.moveLocal(tris.transform.GetChild(1).GetChild(s).gameObject, 
-                        tris.transform.GetChild(1).GetChild(s).localPosition + new Vector3(20f, 0f, 0f), 1.4f).setEasePunch();
-
-                    LeanTween.scale(tris.transform.GetChild(1).GetChild(s).gameObject, tris.transform.GetChild(1).GetChild(s).localScale * 2f, 1.4f).setEasePunch();
-                    LeanTween.scale(tris.transform.GetChild(0).GetChild(s).gameObject, tris.transform.GetChild(1).GetChild(s).localScale * 2f, 1.4f).setEasePunch();
-                }
 
                 if(combo_v == combo_goal) // PERFECT !
                 {
@@ -514,16 +509,14 @@ public class GameUI : MonoBehaviour
                     // reset shine pos
                     combo_x1.transform.GetChild(0).localPosition =  combo_txt_obj.transform.GetChild(0).localPosition = new Vector3(-250, 0, 0);
 
-                    combo_txt_obj.transform.localScale = Vector3.zero;
-                    Vector3 cmbo_pos = combo_txt_obj.transform.localPosition;
-                    combo_txt_obj.transform.localPosition = cmbo_pos + new Vector3(0, -40f, 0);
+                    combo_txt_obj.transform.localPosition = new Vector3(0, -10f, 0);
 
                     TextMeshProUGUI combo_txt = combo_obj.transform.GetChild(1).GetComponent<TextMeshProUGUI>();
                     combo_txt.text = "PERFECT !";
                 
                     // scale and rotate combo_txt
-                    LeanTween.moveLocal(combo_txt_obj, cmbo_pos, 1f).setEaseInSine();
-                    LeanTween.scale(combo_txt_obj, new Vector3(1, 1, 1), 1f).setEaseInSine();
+                    LeanTween.moveLocal(combo_txt_obj, new Vector3(0f, 60f , 0f), 1f).setEaseInSine();
+                    LeanTween.scale(combo_txt_obj, new Vector3(1.2f, 1.2f, 1), 1f).setEasePunch();
                     LeanTween.rotate(combo_txt_obj, new Vector3(15, 0, 0), 1f).setEasePunch();
 
                     // combo_txt shine
@@ -854,6 +847,7 @@ public class GameUI : MonoBehaviour
     // =====================
     private IEnumerator fade_ui_obj(GameObject obj_, float fade_time, bool fadeOut_ = false)
     {
+        // yield break;
         const int refresh_rate = 120;
         // const float fade_time = 1.5f;
    

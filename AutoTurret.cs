@@ -86,6 +86,9 @@ public class AutoTurret : MonoBehaviour
     private ParticleSystem[] fire_ = new ParticleSystem[10];
     private ParticleSystem[] explosions_;
 
+    [Header ("Turret TargetCheck")]
+    private const float check_delay = 0.70f;
+    private float check_timer = 0.00f;
 
     [Header ("Public Turret Informations")]
     [HideInInspector] public string turret_name;
@@ -110,7 +113,7 @@ public class AutoTurret : MonoBehaviour
 
         if(is_left != true) is_left = false;
 
-        InvokeRepeating("target_check", 0, 0.60f);
+        // InvokeRepeating("target_check", 0, 0.60f);
 
 
         // ASSIGNEMENT OF BARRELS AND SHOOTS POINTS
@@ -183,8 +186,16 @@ public class AutoTurret : MonoBehaviour
         assignTurret_attributes();
     }
 
-
-
+    // Update
+    private void Update()
+    {
+        check_timer += Time.deltaTime;
+        if(check_timer >= check_delay)
+        {
+            target_check();
+            check_timer = 0.0f;
+        }
+    }
 
     // FixedUpdate
     private void  FixedUpdate()

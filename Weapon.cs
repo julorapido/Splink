@@ -17,14 +17,14 @@ public class Weapon : MonoBehaviour
     private bool ammo_fixed  = true;
 
     [Header ("Weapon Stats")]
-    private const int damage = 35;
-    private const int precision_ = 55;
+    private const int damage = 70;
+    private const int precision_ = 40;
     private const float fireRate = 0.5f;
     private const int criticalChance = 5; // /100
     private const int range_ = 25; // max range 70-ish
     private const int magSize = 40;
     private const float reloadTime = 1.30f;
-    private const float bullet_speed = 30f;
+    private const float bullet_speed = 15f;
 
     [Header ("Player Movement/Collision/UI/Camera Scripts")]
     private GameUI g_ui;
@@ -302,6 +302,13 @@ public class Weapon : MonoBehaviour
         //     pm.set_recoil = em_recoil;
         //     yield return new WaitForSeconds(  (recoil_time/2) / 30); // 0.15f
         //}
+
+
+
+        // ----------------------------------------
+        //                 RECOIL
+        // ----------------------------------------
+        // Target recoil
         if(!(LeanTween.isTweening(gameObject)))
         {
             switch(weapon_type)
@@ -318,7 +325,7 @@ public class Weapon : MonoBehaviour
                                     + ((target_.position.z - transform.position.z) * 0.1f),
                                 (target_.position.z - transform.position.z) * -0.2f
                             ), 
-                            (fireRate) * (UnityEngine.Random.Range(1.30f, 2.5f))
+                            (fireRate - 0.01f) // * (UnityEngine.Random.Range(1.30f, 2.5f))
                         )
                         .setOnUpdate(
                             (Vector3 val) =>  {recoil_v = val;}
@@ -332,7 +339,7 @@ public class Weapon : MonoBehaviour
                     break;
             }
         }
-
+        // Body and Arm recoil
         if(arm_recoil == Vector3.zero)
         {
             LeanTween.value( gameObject, 
@@ -342,7 +349,7 @@ public class Weapon : MonoBehaviour
                     (UnityEngine.Random.Range(-40f, -60f)) + (damage * 0.1f), 
                     0f
                 ), 
-                (fireRate * 2f)
+                (fireRate - 0.01f)
             ).setOnUpdate(
                 (Vector3 v) =>  {arm_recoil = v;}
             ).setEasePunch();
@@ -350,6 +357,7 @@ public class Weapon : MonoBehaviour
         
     
         yield break;
+
     }
 
 

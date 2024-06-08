@@ -304,12 +304,13 @@ public class PlayerCollisions : MonoBehaviour
             {
                 float minDistance = float.MaxValue;
 
-                DisplayBox(transform.position,  
-                    new Vector3(4f, 10f, player_attackRange), 
-                    wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
-                );
+                // DisplayBox(transform.position,  
+                //     new Vector3(4f, 10f, player_attackRange), 
+                //     wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
+                // );
 
                 int maxColliders = (player_attackRange / 10) * 100;
+                // Debug.Log((player_attackRange / 10) * 100);
                 Collider[] hitColliders = new Collider[maxColliders];
                 int numColliders = Physics.OverlapBoxNonAlloc
                 (
@@ -499,7 +500,7 @@ public class PlayerCollisions : MonoBehaviour
                     // Slider hit
                     if(collision.gameObject.tag == "slider")
                     {
-                        p_movement.animateCollision("sliderHit", _size);
+                        p_movement.animateCollision("sliderHit", _size, collision.gameObject);
                         c_movement.sld_offset(false);
 
                         psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].slide);
@@ -532,6 +533,10 @@ public class PlayerCollisions : MonoBehaviour
                         p_movement.animateCollision("sideHang", _size, collision.gameObject);
                         
                     }
+
+                    // hang
+                    if(collision.gameObject.tag == "hang")
+                        p_movement.animateCollision("hang", _size, collision.gameObject);
                     break;
 
 
