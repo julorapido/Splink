@@ -38,7 +38,7 @@ public class A_T_Projectile : MonoBehaviour
     private float rocket_near_inPrecision = 0.0f;
     
     [Header ("Attached Objects")]
-    private ParticleSystem blt_expl;
+    private ParticleSystem[] blt_expl;
     private Rigidbody bullet_rb;
     private Vector3 bullet_qtrn;
 
@@ -80,11 +80,12 @@ public class A_T_Projectile : MonoBehaviour
 
         bullet_rb = gameObject.GetComponent<Rigidbody>();
         ParticleSystem[] ps_0 = gameObject.GetComponentsInChildren<ParticleSystem>();
-        blt_expl = ps_0.Length > 0 ? ps_0[0] : null;
+        blt_expl = ps_0.Length > 0 ? ps_0 : null;
 
 
         // direct 
         if(bullet_type == Bullet_Type.Direct)
+        {
             bullet_qtrn = Vector3.RotateTowards(
                 transform.forward,
                 (target_.position + 
@@ -97,7 +98,10 @@ public class A_T_Projectile : MonoBehaviour
                     : (Vector3.zero) ) - transform.position
                 ), 
                 Time.deltaTime * 100, 0.0f
-        );
+            );
+            transform.rotation = Quaternion.Euler(bullet_qtrn.x, bullet_qtrn.y, bullet_qtrn.z);
+
+        }
 
         // tracking
         if(bullet_type == Bullet_Type.Tracking)
@@ -185,7 +189,14 @@ public class A_T_Projectile : MonoBehaviour
             {
                 try{
                     if (transform.position.z > target_.position.z)
+                    {
+                        if(!target_passed)
+                        {
+                            //blt_expl[2].Stop();
+                        }
                         target_passed = true;
+                    }
+                    
 
                     Vector3 dir = (target_passed == true) ? 
                         (l_dir) : 
@@ -233,7 +244,7 @@ public class A_T_Projectile : MonoBehaviour
             }
             else
             {
-                transform.position = target_.position + expl_offset;
+                transform.position = expl_offset;
             }
         }
 
@@ -242,7 +253,8 @@ public class A_T_Projectile : MonoBehaviour
 
     private void FixedUpdate()
     {
-       transform.Rotate(0,0,10f, Space.Self);
+        if(!exploded)
+            transform.Rotate(0,0,10f, Space.Self);
     }
 
 
@@ -311,7 +323,7 @@ public class A_T_Projectile : MonoBehaviour
     }
 
 
-    // TURRETS hit
+    // TURRET-BULLET hit
     private void bullet_explode(GameObject go_ = null)
     {
         if(exploded) 
@@ -329,26 +341,32 @@ public class A_T_Projectile : MonoBehaviour
     }
 
 
-    // PLAYER hit
+    // PLAYER-BULLET hit
     private void enemy_hit()
     {
         if(exploded) 
             return;
 
+        expl_offset = transform.position;
         exploded = true;
-        Invoke("destry", 0.75f);
-        if(blt_expl != null) 
-            blt_expl.Play();
+        Invoke("destry", 1f);
+
         TrailRenderer tr = gameObject.GetComponent<TrailRenderer>();
+        MeshRenderer mr = gameObject.GetComponentInChildren<MeshRenderer>();
+        Rigidbody rr = gameObject.GetComponent<Rigidbody>();
+
         if(tr != null) 
             tr.enabled = false;
-            
-        // if(bullet_explosions_.Length > 0)
-        // {
-        //     for (int l = 0; l < bullet_explosions_.Length; l ++)
-        //         bullet_explosions_[l].Play();
-        // }
-
+        if(mr != null)
+            mr.enabled = false;  
+        if(blt_expl[0] != null)
+        {
+            if(is_crticial)
+                blt_expl[1].Play();
+            else
+                blt_expl[0].Play();
+        }
+        rr.isKinematic = true;
         bool is_left =  ((target_.rotation.eulerAngles.y >= 170 ) ? true : false);  
     }
 

@@ -46,11 +46,10 @@ public class Collectible : MonoBehaviour {
     [SerializeField] 
     CollectibleType collectible_type = new CollectibleType();
 
-    [SerializeField] private bool is_weapon;
+    private bool is_weapon;
     
     [Header ("Weapon Objects")]
     private  Weapon.GunLevel last_weapon_EnumValue;
-
     [SerializeField] private List<Material> weapon_rarityMats;
     private Weapon weapon_scrpt;
     private TextMeshPro[] weapon_lvls = new TextMeshPro[]{null, null};
@@ -60,7 +59,7 @@ public class Collectible : MonoBehaviour {
     private Vector3[] prefabs_positionsAndScales = new Vector3[4]{Vector3.zero, Vector3.zero, Vector3.zero, Vector3.zero};
     private Quaternion[] prefabs_rotations = new Quaternion[2]{Quaternion.identity, Quaternion.identity};
     private Transform chld_nOne;
-
+    
     
     [Header ("Weapon Resources")]
     private GameObject[] weaponsPrefabs;
@@ -179,7 +178,8 @@ public class Collectible : MonoBehaviour {
         if((collectible_type == CollectibleType.Weapon) && weapon_scrpt == null)
         {
             weapon_scrpt = FindObjectOfType<Weapon>();
-            if(weapon_scrpt == null) return;
+            if(weapon_scrpt == null) 
+                return;
             weaponsPrefabs = weapon_scrpt.get_weaponsResourcesPrefab_buffer;
             
             last_weapon_EnumValue = weapon_scrpt.get_GunLvl;

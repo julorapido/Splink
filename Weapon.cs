@@ -17,14 +17,14 @@ public class Weapon : MonoBehaviour
     private bool ammo_fixed  = true;
 
     [Header ("Weapon Stats")]
-    private const int damage = 70;
-    private const int precision_ = 40;
-    private const float fireRate = 0.5f;
+    private const int damage = 60;
+    private const int precision_ = 80;
+    private const float fireRate = 0.4f;
     private const int criticalChance = 5; // /100
-    private const int range_ = 25; // max range 70-ish
-    private const int magSize = 40;
+    private const int range_ = 40; // max range 70-ish
+    private const int magSize = 12;
     private const float reloadTime = 1.30f;
-    private const float bullet_speed = 15f;
+    private const float bullet_speed = 10f;
 
     [Header ("Player Movement/Collision/UI/Camera Scripts")]
     private GameUI g_ui;
@@ -269,8 +269,10 @@ public class Weapon : MonoBehaviour
         // ).setEasePunch();
 
         for(int i = 0; i < ps_shots.Length; i ++)
-            ps_shots[i].Play();
-
+        {
+            if(ps_shots[i] != null)
+                ps_shots[i].Play();
+        }
 
         // reload
         if(ammo == 0)
@@ -380,7 +382,7 @@ public class Weapon : MonoBehaviour
         if(pocket_weapon != null)
         {
             // +3 mag && full actual mag
-            ammo_inMagazine += 30 * (magSize);
+            ammo_inMagazine += 3 * (magSize);
             ammo = (magSize);
         }
 
@@ -475,6 +477,66 @@ public class Weapon : MonoBehaviour
 
         pm.player_reload();
         g_ui.ui_reload(reloadTime);
+    }
+
+
+    // ----------------
+    //   THROW WEAPON 
+    //    (LEVEL-UP)
+    // ----------------
+    public IEnumerator throw_weapon(float t_)
+    {
+        yield return new WaitForSeconds(t_);
+        GameObject dropping_gun = Instantiate(
+            pocket_slot[0], transform.localPosition, transform.localRotation,
+            transform.parent
+        );
+        // for(int i = 0; i < dropping_gun.transform.childCount; i++)
+        // {
+        //     GameObject ex_ = pocket_slot[0].transform.GetChild(i).gameObject;
+        //     GameObject gun_part = Instantiate(
+        //         ex_,
+        //         ex_.transform.position, ex_.transform.rotation,
+        //         dropping_gun.transform
+        //     );
+        //     gun_part.transform.localScale = ex_.transform.localScale;
+        // }
+        dropping_gun.transform.localPosition = Vector3.zero;
+        dropping_gun.transform.localScale = Vector3.one;
+        dropping_gun.AddComponent<Rigidbody>();
+        Rigidbody rb = dropping_gun.GetComponent<Rigidbody>();
+        rb.useGravity = true;
+        rb.mass = 0.1f;
+        dropping_gun.transform.parent = null;
+        dropping_gun.transform.position = transform.position + new Vector3(0.3f, -0.35f, 0.65f);
+        dropping_gun.transform.rotation = Quaternion.Euler(-70f, 50f, -70f);
+        dropping_gun.SetActive(true);
+        rb.velocity = new Vector3(0f, 5f, 2f);
+        rb.AddForce(new Vector3(-4f, 0f, 2f), ForceMode.VelocityChange);
+        rb.AddTorque(new Vector3(0f, 
+            UnityEngine.Random.Range(0f, 40f), 
+        0f), ForceMode.VelocityChange);
+
+        // turn off weapon in character's hand
+        equip_Weapon(true);
+    }
+
+
+    // -----------
+    //   UNEQUIP
+    // -----------
+    public IEnumerator weapon_unequip(float t_)
+    {
+        yield return new WaitForSeconds(t_);
+        equip_Weapon(true);
+    }
+
+
+    // -------------------
+    //     AMMO PICKUP
+    // -------------------
+    public void ammo_pickup()
+    {
     }
 
 

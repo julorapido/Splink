@@ -402,7 +402,7 @@ public class CameraMovement : MonoBehaviour
                 (x_ratio * ( (tyro_on) ?
                     (x_offst * 2)
                         :
-                    (x_offst / 2.5f)
+                    (x_offst / 2.6f)
                 ))
             );
             
@@ -1061,7 +1061,7 @@ public class CameraMovement : MonoBehaviour
         smoothTime_prc = 13f;
 
         iterator_ = 3;
-        List<float> v_flt = new List<float>(new float[6] {0.7f, y_rotation < 0 ? 0.16f : -0.16f, 0.13f, 
+        List<float> v_flt = new List<float>(new float[6] {0.4f, y_rotation < 0 ? 0.14f : -0.14f, 0.1f, 
         0f, 0f, 0f } );
         List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
         "", "",  ""} );
@@ -1105,14 +1105,14 @@ public class CameraMovement : MonoBehaviour
 
         
         // +12%
-        smoothTime_prc = 12f;
+        smoothTime_prc = 15f;
 
         // +7 fov  !!
-        new_fov = 82f;
+        new_fov = 85f;
 
         iterator_ = 4; 
-        List<float> v_flt = new List<float>(new float[6] {-0.5f, 0.10f, 0.05f,
-        0.55f, -0.1f, 0f} );
+        List<float> v_flt = new List<float>(new float[6] {0.2f, 0.14f, 0.10f,
+        0.5f, 0f, 0f} );
 
         List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
         "wallR_z_offst", "",  ""} );
@@ -1155,10 +1155,10 @@ public class CameraMovement : MonoBehaviour
          
         if(bareer_mode == 3 || bareer_mode == 4)
         {
-            new_fov = 87f;
-            iterator_ = 3; 
-            v_flt = new List<float>(new float[6] {-1f, bareer_mode == 3 ? -0.15f : 0.15f, -0.12f, 0f, 0f, 0f} );
-            s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst", "", "",  ""} );
+            new_fov = 90f;
+            iterator_ = 4; 
+            v_flt = new List<float>(new float[6] {0.25f, bareer_mode == 3 ? -0.15f : 0.15f, 0.12f, 0.7f, 0f, 0f} );
+            s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst", "wallR_z_offst", "",  ""} );
         }
    
         values_ref = s_arr;

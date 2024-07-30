@@ -6,46 +6,66 @@ using PathCreation.Utility;
 using System;
 using System.Reflection;
 using UnityEditor;
-/*
-[CustomEditor(typeof(PlayerCollisions)), CanEditMultipleObjects]
-public class PlayerCollisionsEditor : Editor 
-{
-    SerializedProperty isMainCollision_bool;
-    SerializedProperty m_part_arrays;
 
-    private void OnEnable()
-    {
-        isMainCollision_bool = serializedObject.FindProperty("isMainCollision");
-        // m_part_arrays = serializedObject.FindProperty("player_particls");
-    }
+// [CustomEditor(typeof(PlayerCollisions)), CanEditMultipleObjects]
+// public class PlayerCollisionsEditor : Editor 
+// {
+//     SerializedProperty isMainCollision_bool;
+//     SerializedProperty m_part_arrays;
 
-    public override void OnInspectorGUI()
-    {
-        // keep default inspector
-        DrawDefaultInspector();
+//     private void OnEnable()
+//     {
+//         isMainCollision_bool = serializedObject.FindProperty("isMainCollision");
+//         // m_part_arrays = serializedObject.FindProperty("player_particls");
+//     }
+
+//     public override void OnInspectorGUI()
+//     {
+//         // keep default inspector
+//         DrawDefaultInspector();
         
-        // logic
-        if (isMainCollision_bool.boolValue)
-        {
-            EditorGUILayout.HelpBox("Main Collision Particles Array", MessageType.Info);
-            // EditorGUILayout.PropertyField(m_part_arrays, GUIContent.none);
-        }
+//         // logic
+//         if (isMainCollision_bool.boolValue)
+//         {
+//             EditorGUILayout.HelpBox("Main Collision Particles Array", MessageType.Info);
+//             EditorGUILayout.PropertyField(m_part_arrays, GUIContent.none);
+//         }
 
-        // serializedObject.ApplyModifiedProperties();
-    }
-}*/
+//         // serializedObject.ApplyModifiedProperties();
+//     }
+// }
+
+// [CustomEditor(typeof(PlayerCollisions))]
+// public class PlayerCollisionsEditor : Editor
+// {
+//   void OnInspectorGUI()
+//   {
+//     var collision_script = target as PlayerCollisions;
+//     SerializedProperty m_part_arrays;
+
+//     m_part_arrays = serializedObject.FindProperty("player_particls");
+//     collision_script.isMainCollision = GUILayout.Toggle(collision_script.isMainCollision, "player_particls");
+
+//     //if(collision_script.flag)
+//     //  collision_script.i = EditorGUILayout.IntSlider("I field:", collision_script.i , 1 , 100);
+//   }
+// }
 public class PlayerCollisions : MonoBehaviour
 {
     // [DrawIf("someFloat", 1f, ComparisonType.GreaterOrEqual)]
-    [SerializeField] private bool isMainCollision;
+    public bool isMainCollision;
     [Serializable] public class Particl_List { 
         public ParticleSystem[] jump; 
         public ParticleSystem[] doubleJump; 
         public ParticleSystem[] slide; 
         public ParticleSystem[] kill; 
-        public ParticleSystem[] coin; 
+        // public ParticleSystem[] coin; 
         public ParticleSystem[] health; 
         public ParticleSystem[] armor; 
+        public ParticleSystem[] deaths; 
+        public ParticleSystem[] interacts_; 
+        public ParticleSystem[] combo; 
+        public ParticleSystem[] ammo; 
     } 
     [SerializeField] private Particl_List[] player_particls; 
 
@@ -548,15 +568,20 @@ public class PlayerCollisions : MonoBehaviour
                     switch(collision.gameObject.tag)
                     {
                         case "coin":
-                            psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].coin);
-
-                            ParticleSystem ps = collision.gameObject.GetComponentInChildren<ParticleSystem>();
-                            MeshRenderer[] mr_ = collision.gameObject.GetComponentsInChildren<MeshRenderer>();
+                            // psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].coin);
+                            GameObject gm = collision.gameObject;
+                            ParticleSystem[] ps = new ParticleSystem[2]{
+                                gm.transform.GetChild(2).GetComponent<ParticleSystem>(),
+                                gm.transform.GetChild(3).GetComponent<ParticleSystem>(),
+                            };
+                            MeshRenderer[] mr_ = gm.GetComponentsInChildren<MeshRenderer>();
                             for(int i = 0; i < mr_.Length; i++)
                                 mr_[i].enabled = false;
                                 
                             game_ui.gain_money(4);
-                            ps.Play();
+                            ps[0].Stop();
+                            if(ps[1] != null)
+                                ps[1].Play();
                             break;
 
                         case "gun":
@@ -565,6 +590,32 @@ public class PlayerCollisions : MonoBehaviour
 
                             p_movement.animateCollision("gun", _size);
                             FindObjectOfType<Weapon>().GunLevelUp();
+                            break;
+
+                        case "healthSmall":
+                            psCollisions_movement.player_paricleArray(
+                                    psCollisions_movement.player_particls[0].health, false, "healthSmall");
+                            collision.gameObject.SetActive(false);
+                            game_ui.gain_health(100);
+                            Destroy(collision.gameObject);
+                            break;
+                        case "healthBig":
+                            psCollisions_movement.player_paricleArray(
+                                    psCollisions_movement.player_particls[0].health, false, "healthBig");
+                            collision.gameObject.SetActive(false);
+                            game_ui.gain_health(500);
+                            Destroy(collision.gameObject);
+                            break;
+
+                        case "ammoSmall":
+                            psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].ammo, false, "ammo");
+                            game_ui.gain_ammo(3);
+                            Destroy(collision.gameObject);
+                            break;
+                        case "ammoBig":
+                            psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].ammo, false, "ammo");
+                            game_ui.gain_ammo(6);
+                            Destroy(collision.gameObject);
                             break;
                     }
                     break;
@@ -658,9 +709,7 @@ public class PlayerCollisions : MonoBehaviour
             }
         }
     }
-
     private void clearLastWall() { lst_wall  = 0; }
-
     private IEnumerator delay_trgrs(float dl)
     {
         yield return new WaitForSeconds(dl);
@@ -668,9 +717,15 @@ public class PlayerCollisions : MonoBehaviour
     }
 
 
+
+
+    // ---------------------------------
+    //          PLAY PARTICLES
+    // ---------------------------------
     public void player_paricleArray( ParticleSystem[]? ps = null, bool fromPlyrMovement_Invoke = false, 
-        string invoke_paremeter = "", bool is_leave = false)
+        string invoke_paremeter = "", bool is_leave = false, int optional_param = -1)
     {
+        int limit_ps = 0;
 
         if(fromPlyrMovement_Invoke)
         {
@@ -683,21 +738,53 @@ public class PlayerCollisions : MonoBehaviour
                     ps = player_particls[0].jump;
                     break;
                 case "animKill":
+                case "killstreak":
                     ps = player_particls[0].kill;
+                    break;
+                case "combo":
+                    ps = player_particls[0].combo;
+                    break;
+                case "coin":
+                    return;
+                    // ps = player_particls[0].coin;
+                    break;
+                case "healthBig":
+                case "healthSmall":
+                    ps = player_particls[0].health;
+                    break;
+                case "bigAmmo":
+                case "lightAmmo":
+                    ps = player_particls[0].ammo;
+                    break;
+                case "death_FrontSmash":
+                case "death_Damage":
+                case "death_SideVoid":
+                    ps = player_particls[0].deaths;
                     break;
             }
         }
+        if(invoke_paremeter == "healthSmall" || invoke_paremeter == "animKill")
+            limit_ps = 1;
 
-        for(int i = 0; i < ps.Length; i ++)
+        for(int i = 0; i < ((limit_ps != 0 ) ? limit_ps : ps.Length); i ++)
         {
             ParticleSystem p = ps[i];
 
-            if(is_leave) p.Stop();
-            else p.Play();
+            if(p != null)
+            {
+                if(is_leave)
+                    p.Stop();
+                else
+                    p.Play();
+            }
         }
     }
 
 
+
+    // ---------------------------------
+    //          PLAYER RAGDOLL
+    // ---------------------------------
     public void set_playerRagdoll(bool v_)
     {
         if(slcted_clsion == "boxAutoAim")

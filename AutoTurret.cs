@@ -567,7 +567,7 @@ public class AutoTurret : MonoBehaviour
                 };
             }
 
-            float x_ =  UnityEngine.Random.Range(-10f, 10f); float y_ =  UnityEngine.Random.Range(9f, 24f);
+            float x_ =  UnityEngine.Random.Range(-10f, 10f); float y_ =  UnityEngine.Random.Range(4f, 18f);
             float z_ =  UnityEngine.Random.Range(-7f, 7f);
             turret_part.AddForce(x_, y_, z_, ForceMode.Impulse);
             turret_part.AddTorque(-x_, -y_, -z_, ForceMode.Impulse);
@@ -685,6 +685,10 @@ public class AutoTurret : MonoBehaviour
                 case turret_Type.Robot:
                     h += 90;
                     turret_name = "ROBOT TURRET";
+                    break;
+                case turret_Type.Mortar:
+                    h += 90;
+                    turret_name = "MORTAR TURRET";
                     break;
             }
         }catch(Exception err){

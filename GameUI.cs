@@ -15,7 +15,7 @@ public class GameUI : MonoBehaviour
     [Header ("PLAYER HEALTH")]
     [SerializeField] private GameObject healh_ui;
     private TextMeshProUGUI healh_text;
-    private int max_health = 4000;
+    private int max_health = 10000;
     private int player_health = 0; // = 200;
     private int set_health
     {
@@ -100,7 +100,7 @@ public class GameUI : MonoBehaviour
     [SerializeField] private Sprite[] combo_masks;
     [SerializeField] private GameObject combo_obj;
     private string combo_text = "Good";
-    private int combo_v = 0, combo_goal = 3;
+    private int combo_v = 0, combo_goal = 3, last_combo_s = 0;
     private LTDescr combo_lt;
 
 
@@ -108,6 +108,7 @@ public class GameUI : MonoBehaviour
     private void Awake()
     {
         player_health = max_health;
+
     }
 
     // Start
@@ -234,11 +235,11 @@ public class GameUI : MonoBehaviour
         
                 float distanceToCamera = Vector3.Distance(ui_camera.transform.position, enemies_tr[i].position);
                 float cam_scale = (
-                        2.0f * (distanceToCamera * 0.7f) * 
+                        2.0f * (distanceToCamera * 0.55f) * 
                         Mathf.Tan(Mathf.Deg2Rad * (ui_camera.fieldOfView * 0.5f)
                     )
                 ) * (7f);
-                cam_scale = (cam_scale < 125f) ? 125f : (cam_scale > 150f ? 150f : cam_scale);
+                cam_scale = (cam_scale < 105f) ? 105f : (cam_scale > 150f ? 150f : cam_scale);
 
                 ui_enemies[i].transform.localScale = new Vector3(cam_scale, cam_scale, cam_scale);
 
@@ -472,96 +473,129 @@ public class GameUI : MonoBehaviour
     // =======================
     //          COMBO
     // =======================
-    public void combo_hit(bool combo_end)
+    public int combo_hit(bool combo_end)
     {
+        GameObject combo_bar = combo_obj.transform.GetChild(0).GetChild(0).gameObject;
+        TextMeshProUGUI combo_txt = combo_obj.transform.GetChild(1).GetComponent<TextMeshProUGUI>();
+        GameObject combo_txt_obj = combo_obj.transform.GetChild(1).gameObject;
+
         if(combo_end)   
         {
-            fade_ui_obj(combo_obj, 1.4f, false);
-            LeanTween.moveLocal(combo_obj, new Vector3 (0, -300, 0), 1.3f).setEaseInSine();
+            combo_v = last_combo_s = combo_goal = 0;
+            StartCoroutine(fade_ui_obj(combo_obj, 1.5f, true));
+            LeanTween.moveLocal(combo_obj,
+                combo_obj.transform.localPosition +  new Vector3 (0, -350, 0), 
+            1.3f).setEaseInSine();
+            LeanTween.scale(combo_bar.transform.GetChild(1).gameObject, 
+                new Vector3( 0, 1, 1), 0.65f).setEaseInSine();
+            LeanTween.scale(combo_bar.transform.GetChild(0).gameObject, 
+                    new Vector3(0, 1, 1), 0.3f).setEaseInSine();
+
+            return (0);
         }
         else
         {
             combo_v ++;
+            last_combo_s ++;
+            combo_obj.transform.GetChild(3).GetComponent<TextMeshProUGUI>().text = "X" + combo_v.ToString() + "/" + combo_goal.ToString();
 
-            if(combo_v >= 1)
+
+            // COMBO Initalization
+            if(combo_v == 1)
             {
-                fade_ui_obj(combo_obj, 1.4f, false);
-                LeanTween.moveLocal(combo_obj, new Vector3 (0, -300, 0), 1.3f).setEaseInSine();
-                // combo_obj.SetActive(true);
-                
-                GameObject combo_bar = combo_obj.transform.GetChild(0).GetChild(0).gameObject;
+                Image combo_msk = combo_obj.transform.GetChild(0).GetComponent<Image>();
+                int randm_flt_vrt =  UnityEngine.Random.Range(0, 3);
 
+                combo_obj.transform.GetChild(3).GetComponent<TextMeshProUGUI>().text = "X" + combo_v.ToString() + "/" + combo_goal.ToString();
+                combo_goal = (randm_flt_vrt + 1);
+                combo_msk.sprite = combo_masks[randm_flt_vrt > 0 ? (randm_flt_vrt - 1) : 0];
+                combo_txt.text = "";
+
+                StartCoroutine(fade_ui_obj(combo_obj, 1.5f, false));
+                LeanTween.moveLocal(combo_obj, (combo_obj.transform.localPosition) + new Vector3 (0, 350, 0), 1.3f).setEaseInSine();
+            }
+
+            // COMBO Hit
+            if(combo_v > 1)
+            {
                 // yellow
                 LeanTween.scale(combo_bar.transform.GetChild(1).gameObject, 
-                    new Vector3( ((float)combo_v / (float)combo_goal), 1, 1), 0.75f).setEaseInSine();
+                    new Vector3( (
+                        (float)last_combo_s / (float)(combo_goal - (combo_v - last_combo_s))
+                    ), 1, 1), 0.65f).setEaseInSine();
                 // white
                 LeanTween.scale(combo_bar.transform.GetChild(0).gameObject, 
-                    new Vector3( ((float)combo_v / (float)combo_goal), 1, 1), 0.3f).setEaseInSine();
+                    new Vector3( (
+                        (float)last_combo_s / (float)combo_goal - (combo_v - last_combo_s))
+                    , 1, 1), 0.3f).setEaseInSine();
 
-                // x2
-                combo_obj.transform.GetChild(3).GetComponent<TextMeshProUGUI>().text = "X" + combo_v.ToString();
-
-                if(combo_v == combo_goal) // PERFECT !
+                // tick
+                GameObject tick = combo_obj.transform.GetChild(2).gameObject;
+                Image[] im = tick.transform.GetComponentsInChildren<Image>();
+                LeanTween.value( tick, tick_f, 0f, 1f, 2.4f).setEasePunch();
+                void tick_f( float val )
                 {
-                    GameObject combo_txt_obj = combo_obj.transform.GetChild(1).gameObject;
-                    GameObject combo_x1 = combo_obj.transform.GetChild(3).gameObject;
+                    im[0].color = im[1].color = new Color(im[0].color.r, im[0].color.g, im[0].color.b, val);
 
-                    // reset shine pos
-                    combo_x1.transform.GetChild(0).localPosition =  combo_txt_obj.transform.GetChild(0).localPosition = new Vector3(-250, 0, 0);
+                }
+            }
 
-                    combo_txt_obj.transform.localPosition = new Vector3(0, -10f, 0);
+            // COMBO GoalHit
+            if(combo_v == combo_goal) // PERFECT !
+            {
+                GameObject combo_x1 = combo_obj.transform.GetChild(3).gameObject;
 
-                    TextMeshProUGUI combo_txt = combo_obj.transform.GetChild(1).GetComponent<TextMeshProUGUI>();
-                    combo_txt.text = "PERFECT !";
+                // Reset Shine Position [x2 and text]
+                combo_x1.transform.GetChild(0).localPosition = combo_txt_obj.transform.GetChild(0).localPosition = new Vector3(-250, 0, 0);
+
+                combo_txt_obj.transform.localPosition = new Vector3(0, 0f, 0);
+                combo_txt_obj.transform.localScale = Vector3.one * 0.8f;
+                combo_txt.text = "PERFECT";
+
+                // combo_txt [MoveLocal, Fade]
+                StartCoroutine(fade_ui_obj(combo_txt_obj, 1f));
+                LeanTween.moveLocal(combo_txt_obj, combo_txt_obj.transform.localPosition + new Vector3(0f, 57f , 0f), 1f).setEaseInSine();
+                LeanTween.scale(combo_txt_obj, new Vector3(1.05f, 1.05f, 1), 0.8f).setEaseInSine();
+
+                // [x2, combo_txt] shine
+                LeanTween.moveLocal(combo_txt_obj.transform.GetChild(0).gameObject, combo_txt_obj.transform.GetChild(0).transform.localPosition + new Vector3(500, 0, 0), 1.8f).setEaseInSine();
+                LeanTween.moveLocal(combo_x1.transform.GetChild(0).gameObject, combo_x1.transform.GetChild(0).transform.localPosition + new Vector3(700, 0, 0), 1.5f).setEaseInSine();
                 
-                    // scale and rotate combo_txt
-                    LeanTween.moveLocal(combo_txt_obj, new Vector3(0f, 60f , 0f), 1f).setEaseInSine();
-                    LeanTween.scale(combo_txt_obj, new Vector3(1.2f, 1.2f, 1), 1f).setEasePunch();
-                    LeanTween.rotate(combo_txt_obj, new Vector3(15, 0, 0), 1f).setEasePunch();
+                StartCoroutine(combo_next());
 
-                    // combo_txt shine
-                    LeanTween.moveLocal(combo_txt_obj.transform.GetChild(0).gameObject, 
-                        combo_txt_obj.transform.GetChild(0).transform.localPosition + new Vector3(500, 0, 0),
-                    1.5f).setEaseInSine();
-
-    
-                    // x2 shine
-                    LeanTween.moveLocal(combo_x1.transform.GetChild(0).gameObject, 
-                        combo_x1.transform.GetChild(0).transform.localPosition + new Vector3(700, 0, 0),
-                    1.5f).setEaseInSine();
-                    
-
-                    //
-                    GameObject p_100 = combo_obj.transform.GetChild(4).gameObject; 
-
-
-                    StartCoroutine(combo_next());
-                }   
+                return (1);
+            }else
+            {
+                return (0);
             }
         }
     }
     private IEnumerator combo_next()
     {
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(1.7f);
         GameObject combo_bar = combo_obj.transform.GetChild(0).GetChild(0).gameObject;
         GameObject combo_txt_obj = combo_obj.transform.GetChild(1).gameObject;
 
+        LeanTween.cancel(combo_bar);
+        LeanTween.cancel(combo_txt_obj);
         // scale down
         // yellow
         LeanTween.scale(combo_bar.transform.GetChild(1).gameObject, new Vector3(0f, 1f, 1f), 0.45f).setEaseInSine();
         // white 
         LeanTween.scale(combo_bar.transform.GetChild(0).gameObject, new Vector3(0f, 1f, 1f), 0.30f).setEaseInSine();
 
-        LeanTween.scale(combo_txt_obj, new Vector3(0, 0, 0), 0.4f).setEaseInSine();
+        StartCoroutine(fade_ui_obj(combo_txt_obj, 0.5f, true));
 
         // new combo goal
         int randm_flt_vrt =  UnityEngine.Random.Range(0, 3);
 
-        combo_goal += (randm_flt_vrt + 1);
-
+        combo_goal +=(randm_flt_vrt + 1);
+        last_combo_s = 0;
 
         Image combo_msk = combo_obj.transform.GetChild(0).GetComponent<Image>();
-        combo_msk.sprite = combo_masks[randm_flt_vrt];
+        combo_msk.sprite = combo_masks[randm_flt_vrt > 0 ? (randm_flt_vrt - 1) : 0];
+
+        combo_obj.transform.GetChild(3).GetComponent<TextMeshProUGUI>().text = "X" + combo_v.ToString() + "/" + combo_goal.ToString();
     }
 
 
@@ -839,16 +873,32 @@ public class GameUI : MonoBehaviour
 
 
 
+    // =====================
+    //        GAIN_HEALTH
+    // =====================
+    public void gain_health(int health_v)
+    {
+        set_health = player_health + health_v;
+    }
 
 
+
+    // =====================
+    //        GAIN_AMMO
+    // =====================
+    public void gain_ammo(int ammo_v)
+    {
+        
+    }
 
     // =====================
     //        FADE_UI
     // =====================
-    private IEnumerator fade_ui_obj(GameObject obj_, float fade_time, bool fadeOut_ = false)
+    private IEnumerator fade_ui_obj(GameObject obj_, float fade_time, bool fadeOut_ = false, bool fadeIntAndOut_ = false)
     {
         // yield break;
         const int refresh_rate = 120;
+        float tick  = (fade_time) / (refresh_rate);
         // const float fade_time = 1.5f;
    
         TextMeshProUGUI[] texts = obj_.transform.GetComponentsInChildren<TextMeshProUGUI>();
@@ -862,22 +912,22 @@ public class GameUI : MonoBehaviour
         if(!fadeOut_)
         {
             for(int x = r_ = 0; x < texts.Length; x++){
-                alpha_refs[0][r_] = texts[x].color.a;
+                alpha_refs[0][r_] = texts[x].color.a > 10f ? texts[x].color.a  : 1;
                 texts[x].color = new Color(texts[x].color.r, texts[x].color.g, texts[x].color.b, 0);
                 r_++;
             }
             for(int y = r_ = 0; y < sprites.Length; y++){
-                alpha_refs[1][r_] = sprites[y].color.a;
+                alpha_refs[1][r_] = sprites[y].color.a > 10f ? sprites[y].color.a: 1;
                 sprites[y].color = new Color(sprites[y].color.r, sprites[y].color.g, sprites[y].color.b, 0);
                 r_++;
             }
             for(int z = r_ = 0; z < images.Length; z++){
-                alpha_refs[2][r_] = images[z].color.a;
+                alpha_refs[2][r_] = images[z].color.a > 10f ? images[z].color.a : 1;
                 images[z].color = new Color(images[z].color.r, images[z].color.g, images[z].color.b, 0);
                 r_++;
             }
             for(int a = r_ = 0; a < texts_3D.Length; a++){
-                alpha_refs[3][r_] = texts_3D[a].color.a;
+                alpha_refs[3][r_] = texts_3D[a].color.a > 10f ? texts_3D[a].color.a : 1;
                 texts_3D[a].color = new Color(texts_3D[a].color.r, texts_3D[a].color.g, texts_3D[a].color.b, 0);
                 r_++;
             }
@@ -886,31 +936,31 @@ public class GameUI : MonoBehaviour
         int i = 1;
         while(i < refresh_rate)
         {
-            float tick = (fade_time) / (refresh_rate);
             float fade_outV =  1f - ((tick * i) / fade_time);
-            
+            float fade_inV =  (tick * i) / fade_time;
+
             for(int j = 0; j < (texts.Length); j ++)
             {
                 texts[j].color = new Color( texts[j].color.r, texts[j].color.g, texts[j].color.b,
-                    fadeOut_ ? (fade_outV): ((tick * i) / fade_time) * alpha_refs[0][j]
+                    fadeOut_ ? (fade_outV): (fade_inV * alpha_refs[0][j])
                 );
             }
             for(int k = 0; k < (sprites.Length); k ++)
             {
                 (sprites[k]).color = new Color( sprites[k].color.r, sprites[k].color.g, sprites[k].color.b,
-                    fadeOut_ ? (fade_outV) : ((tick * i) / fade_time) * alpha_refs[1][k]
+                    fadeOut_ ? (fade_outV) : (fade_inV * alpha_refs[1][k])
                 );
             }
             for(int l = 0; l < (images.Length); l ++)
             {
                 (images[l]).color = new Color( images[l].color.r, images[l].color.g, images[l].color.b,
-                    fadeOut_ ? (fade_outV) : ((tick * i) / fade_time) * alpha_refs[2][l]
+                    fadeOut_ ? (fade_outV) : (fade_inV * alpha_refs[2][l])
                 );
             }
             for(int l = 0; l < (texts_3D.Length); l ++)
             {
                 (texts_3D[l]).color = new Color( texts_3D[l].color.r, texts_3D[l].color.g, texts_3D[l].color.b,
-                    fadeOut_ ? (fade_outV) : ((tick * i) / fade_time) * alpha_refs[3][l]
+                    fadeOut_ ? (fade_outV) : (fade_inV * alpha_refs[3][l])
                 );
             }
 
@@ -918,6 +968,12 @@ public class GameUI : MonoBehaviour
             i++;
         }
 
+        if(i == refresh_rate && fadeIntAndOut_)
+        {
+            StartCoroutine(fade_ui_obj(obj_, 0.1f, true));
+            yield break;
+        }else
+            yield break;
     }
 
 
