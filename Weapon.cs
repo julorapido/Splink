@@ -516,7 +516,8 @@ public class Weapon : MonoBehaviour
         rb.AddTorque(new Vector3(0f, 
             UnityEngine.Random.Range(0f, 40f), 
         0f), ForceMode.VelocityChange);
-
+    
+        LeanTween.scale(dropping_gun, new Vector3(10f, 10f, 10f), 2f).setEaseInOutCubic();
         // turn off weapon in character's hand
         equip_Weapon(true);
     }

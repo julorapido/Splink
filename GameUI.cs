@@ -12,6 +12,21 @@ public class GameUI : MonoBehaviour
     [Header ("CAMERA")]
     [SerializeField] private Camera ui_camera;
 
+    [Header ("RARITY COLORS")]
+    [SerializeField] private GameObject[] weapon_rarity_partSys;
+    private Color common = new Color((float)(200f/255f), (float)(227f/255f), (float)(255f/255f), 1f),
+        rare = new Color((float)(40f/255f), (float)(255f/255f), 0f, 1f),
+        super_rare = new Color(0f, (float)(155f/255f), (float)(255f/255f), 1f), 
+        epic = new Color((float)(150f/255f), 0f, (float)(255f/255f), 1f),
+        legendary = new Color((float)(255f/255f), (float)(187f/255f), 0f, 1f), 
+        mythic = new Color((float)(255f/255f), (float)(20f/255f), 0f, 1f),
+        eternal = new Color((float)(255f/255f), 0f, (float)(150f/255f), 1f);
+        
+
+    [Header ("ANNOUNCER")]
+    [SerializeField] private GameObject ui_announcer_;
+    [SerializeField] private GameObject _3d_ui_announcer;
+
     [Header ("PLAYER HEALTH")]
     [SerializeField] private GameObject healh_ui;
     private TextMeshProUGUI healh_text;
@@ -29,7 +44,7 @@ public class GameUI : MonoBehaviour
     private TextMeshPro[] weapon_ammoTxts;
     private GameObject weapon_reload;
     private float reload_timerFloat = 0f;
-
+    private int weapon_level = 0;
 
     [Header ("MONEY")]
     [SerializeField] private GameObject money_ui;
@@ -406,7 +421,7 @@ public class GameUI : MonoBehaviour
                     .setEaseOutCubic()
                     .setOnUpdate( (Vector3 value) => {
                         damage_hits_offst[i] = value; 
-                    });
+                    }); 
             
                 TMPro.TextMeshPro txt = damage_hits[i].GetComponent<TMPro.TextMeshPro>();
                 if(is_crit_hit == null) 
@@ -739,9 +754,6 @@ public class GameUI : MonoBehaviour
 
 
 
-
-
-
     // =======================
     //       PLAYER_DAMAGE
     // =======================
@@ -890,6 +902,110 @@ public class GameUI : MonoBehaviour
     {
         
     }
+    
+
+    // =====================
+    //       ANNOUNCER
+    // =====================
+    public void ui_announcer(string s)
+    {
+        if(s.Length == 0)
+            return ;
+
+        switch(s)
+        {
+            case "weapon_levelUp":
+                for(int i = 0; i < ui_announcer_.transform.childCount; i++)
+                {
+                    GameObject go = ui_announcer_.transform.GetChild(i).gameObject;
+                    if(go.activeSelf && (go.ToString()).Contains("GUN_LEVELUP"))
+                        Destroy(go);
+                }
+                GameObject g = ui_announcer_.transform.GetChild(0).gameObject;
+                string[] rarity_names = new string[7] 
+                    { "COMMON", "RARE", "SUPER RARE", "EPIC", "LEGENDARY", "MYTHIC", "ETERNAL"};
+                Color[] rarity_colors_c = new Color[7]
+                    { common, rare, super_rare, epic, legendary, mythic, eternal };
+
+
+                // 2D-UI [WEAPON LEVEL UP]
+                GameObject new_g = Instantiate(g, Vector3.zero, Quaternion.identity, ui_announcer_.transform);
+                new_g.transform.localPosition = new Vector3(0f, -120f, 0f);
+                new_g.transform.localScale = new Vector3(0.6f, 0.6f, 0.6f);
+                new_g.SetActive(true);
+                TextMeshProUGUI txt = new_g.transform.GetChild(2).GetComponent<TextMeshProUGUI>();
+                txt.text = rarity_names[weapon_level]; txt.color = rarity_colors_c[weapon_level];
+                LeanTween.moveLocal(new_g, new_g.transform.localPosition + new Vector3(0f, 120f, 0f), 2.3f).setEaseInOutCubic();
+                LeanTween.moveLocal(new_g.transform.GetChild(0).gameObject, new_g.transform.GetChild(0).localPosition + new Vector3(0f, 100f, 0f), 3f).setEaseInOutCubic();
+                LeanTween.scale(new_g, Vector3.one, 0.5f).setEaseInOutCubic();
+                StartCoroutine(fade_ui_obj(new_g, 1.4f));
+
+
+                // 3D-GUN [WEAPON LEVEL UP]
+                GameObject gun_3D = Instantiate (
+                    gun_fetchedPrefabs[weapon_level],
+                    Vector3.zero, Quaternion.Euler(100f, 0f, 40f), 
+                    _3d_ui_announcer.transform.GetChild(0)
+                );
+                GameObject shine_p_Sys = Instantiate(
+                    weapon_rarity_partSys[weapon_level], 
+                    Vector3.zero, Quaternion.identity, _3d_ui_announcer.transform.GetChild(0) 
+                );
+                shine_p_Sys.transform.localPosition = gun_3D.transform.localPosition = (
+                        Vector3.zero + new Vector3(0f, -600f, 0f)
+                );
+                shine_p_Sys.transform.localScale = gun_3D.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
+                shine_p_Sys.layer = gun_3D.layer = 5; // UI Layer
+                Transform[] trs_ = gun_3D.GetComponentsInChildren<Transform>(), 
+                        trs_p = shine_p_Sys.GetComponentsInChildren<Transform>();
+                for(int i = 0; i < trs_.Length; i ++)
+                    trs_[i].gameObject.layer = 5;
+                for(int j = 0; j < trs_p.Length; j ++)
+                    trs_p[j].gameObject.layer = 5;
+
+                LeanTween.scale(gun_3D, Vector3.one * 38f, 1.7f).setEaseInOutCubic();
+                LeanTween.scale(shine_p_Sys, Vector3.one * 1000f, 1.7f).setEaseInOutCubic();
+
+                LeanTween.moveLocal(gun_3D, new Vector3(0f, 50f, 0f), 2f).setEaseInOutCubic();
+                LeanTween.moveLocal(shine_p_Sys, new Vector3(0f, 50f, 300f), 2f).setEaseInOutCubic();
+
+                LeanTween.rotateY(gun_3D, -90f, 3.5f).setEaseInOutCubic();
+                LeanTween.rotateZ(gun_3D, 30f, 2f).setEasePunch();
+                shine_p_Sys.SetActive(true);
+                (shine_p_Sys.GetComponent<ParticleSystem>()).Play();
+
+                // run fade out routines
+                StartCoroutine(ui_announcer_out(shine_p_Sys, 3.2f, "3d_weapon_levelUp"));
+                StartCoroutine(ui_announcer_out(gun_3D, 3.2f, "3d_weapon_levelUp"));
+                StartCoroutine(ui_announcer_out(new_g, 2.5f, s));
+
+                weapon_level ++;
+                for(int i = 0; i < 7; i++) // stars
+                {
+                    Transform stars_l = new_g.transform.GetChild(5), stars_r = new_g.transform.GetChild(6);
+                    stars_l.GetChild(6 - i).gameObject.SetActive((i < weapon_level) ? (true) : (false));
+                    stars_r.GetChild(i).gameObject.SetActive((i < weapon_level) ? (true) : (false));
+                }
+                break;
+        }
+    }
+    private IEnumerator ui_announcer_out(GameObject obj_to_fadeOut, float t_, string m_)
+    {
+        yield return new WaitForSeconds(t_);
+        switch(m_)
+        {
+            case "3d_weapon_levelUp":
+                // Destroy(obj_to_fadeOut);
+                LeanTween.scale(obj_to_fadeOut, new Vector3(0.001f, 0.001f, 0.001f), 0.2f).setEaseOutCubic();
+                break;
+            case "weapon_levelUp":
+                StartCoroutine(fade_ui_obj(obj_to_fadeOut, 0.65f, true));
+                break;
+        }
+    }
+
+
+
 
     // =====================
     //        FADE_UI

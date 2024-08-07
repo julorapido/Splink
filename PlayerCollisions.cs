@@ -590,6 +590,7 @@ public class PlayerCollisions : MonoBehaviour
 
                             p_movement.animateCollision("gun", _size);
                             FindObjectOfType<Weapon>().GunLevelUp();
+                            game_ui.ui_announcer("weapon_levelUp");
                             break;
 
                         case "healthSmall":

@@ -2334,6 +2334,8 @@ public class PlayerMovement : MonoBehaviour
                 _anim.SetBool("gunEquipped", true);
                 _anim_controller.layers[0].avatarMask = lower_body_mask;
 
+                if(plyr_shooting)
+                    setAimSettings(false);
                 animateCollision("emptyEnemyAim", Vector3.zero);
                 StartCoroutine(Dly_bool_anm(1.6f, "pickUpWeapon"));
                 StartCoroutine(player_weaponScrpt.throw_weapon(0.6f));
@@ -2530,7 +2532,10 @@ public class PlayerMovement : MonoBehaviour
                 plyr_equiping = false;
 
         if(anim_bool == "gunUnEquipping" || anim_bool == "gunEquipping")
+        {
             weapon_equipped = !(weapon_equipped);
+            _anim.SetBool("gunEquipped", (weapon_equipped));
+        }
 
         if(anim_bool == "pickUpWeapon")
             playerEquip_weapon(true);
@@ -2945,6 +2950,7 @@ public class PlayerMovement : MonoBehaviour
                 
         if(!v_) // UN-EQUIP
         {
+            setAimSettings(false);
             animateCollision("emptyEnemyAim", Vector3.zero);
             StartCoroutine(Dly_bool_anm(0.8f, "gunUnEquipping"));
             StartCoroutine(player_weaponScrpt.weapon_unequip(0.4f));
