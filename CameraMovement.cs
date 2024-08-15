@@ -394,7 +394,8 @@ public class CameraMovement : MonoBehaviour
 
 
         // Lerp Position
-        if( (x_ratio * x_offst) != lst_offst_x)
+        if( ((x_ratio * x_offst) != lst_offst_x)
+            || (x_ratio * x_offst == 0))
         {
             desired_  = (player.position + offset);
            
@@ -412,7 +413,6 @@ public class CameraMovement : MonoBehaviour
         }
         if(hanging)
             desired_ = (player.position + offset);
-
 
 
         // time
@@ -1226,6 +1226,40 @@ public class CameraMovement : MonoBehaviour
         trns_fnc = use_specialSmooth = true; trns_back = false;
      
     }
+
+
+
+    // start_jump
+    public void start_jump(int m_)
+    {
+        reset_smoothDmpfnc();
+
+        
+        // +25%
+        smoothTime_prc = m_ == 1 ? 35f : 20f;
+
+        // +12 fov  !!
+        new_fov = 90f;
+
+        iterator_ = 4; 
+
+        List<float> v_flt;
+        
+        if(m_ == 1)
+            v_flt = new List<float>(new float[6] {0.5f, 0.07f, 0.090f, 0.35f, 0f, 0f} );
+        else
+            v_flt = new List<float>(new float[6] {-0.75f, -0.07f, -0.12f,  0.70f, 0f, 0f} );
+
+        List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
+        "wallR_z_offst", "",  ""} );
+
+        values_ref = s_arr;
+        values_flt = v_flt;
+        trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
+        trns_fnc = use_specialSmooth = true; trns_back = false;
+     
+    }
+
 
     // -------------------------------
     //       CAM DEATH_ANIMATION

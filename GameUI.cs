@@ -952,7 +952,7 @@ public class GameUI : MonoBehaviour
                     Vector3.zero, Quaternion.identity, _3d_ui_announcer.transform.GetChild(0) 
                 );
                 shine_p_Sys.transform.localPosition = gun_3D.transform.localPosition = (
-                        Vector3.zero + new Vector3(0f, -600f, 0f)
+                        Vector3.zero + new Vector3(0f, -600f, 150f)
                 );
                 shine_p_Sys.transform.localScale = gun_3D.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
                 shine_p_Sys.layer = gun_3D.layer = 5; // UI Layer
@@ -964,9 +964,9 @@ public class GameUI : MonoBehaviour
                     trs_p[j].gameObject.layer = 5;
 
                 LeanTween.scale(gun_3D, Vector3.one * 38f, 1.7f).setEaseInOutCubic();
-                LeanTween.scale(shine_p_Sys, Vector3.one * 1000f, 1.7f).setEaseInOutCubic();
+                LeanTween.scale(shine_p_Sys, Vector3.one * 460f, 1.7f).setEaseInOutCubic();
 
-                LeanTween.moveLocal(gun_3D, new Vector3(0f, 50f, 0f), 2f).setEaseInOutCubic();
+                LeanTween.moveLocal(gun_3D, new Vector3(0f, 50f, 150f), 2f).setEaseInOutCubic();
                 LeanTween.moveLocal(shine_p_Sys, new Vector3(0f, 50f, 300f), 2f).setEaseInOutCubic();
 
                 LeanTween.rotateY(gun_3D, -90f, 3.5f).setEaseInOutCubic();
@@ -987,6 +987,17 @@ public class GameUI : MonoBehaviour
                     stars_r.GetChild(i).gameObject.SetActive((i < weapon_level) ? (true) : (false));
                 }
                 break;
+
+            case "start_":
+                GameObject go_ = ui_announcer_.transform.GetChild(1).gameObject;
+                go_.transform.localPosition = go_.transform.localPosition + new Vector3(0f, -100f, 0f);
+
+                go_.SetActive(true);
+                LeanTween.moveLocal(go_, go_.transform.localPosition + new Vector3(0f, 100f, 0f), 1.2f).setEaseInOutCubic();
+
+                StartCoroutine(fade_ui_obj(go_, 0.75f));
+                StartCoroutine(ui_announcer_out(go_, 2.5f, "3d_weapon_levelUp"));
+                break;
         }
     }
     private IEnumerator ui_announcer_out(GameObject obj_to_fadeOut, float t_, string m_)
@@ -1000,6 +1011,8 @@ public class GameUI : MonoBehaviour
                 break;
             case "weapon_levelUp":
                 StartCoroutine(fade_ui_obj(obj_to_fadeOut, 0.65f, true));
+                break;
+            case "start_":
                 break;
         }
     }

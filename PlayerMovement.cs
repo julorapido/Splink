@@ -239,6 +239,19 @@ public class PlayerMovement : MonoBehaviour
 
     private bool FLYYY = false;
 
+    // [Start] [Routine]
+    private IEnumerator start_game()
+    {
+        cm_movement.start_jump(1);
+        plyr_rb.AddForce(new Vector3(0f, 17f, 5f), ForceMode.VelocityChange);
+        g_ui.ui_announcer("start_");
+
+        yield return new WaitForSeconds(1f);
+        cm_movement.start_jump(2);
+
+        yield return new WaitForSeconds(1.3f);
+        movement_auth = true;
+    }
 
     // Awake
     private void Awake()
@@ -248,6 +261,8 @@ public class PlayerMovement : MonoBehaviour
         g_ui = FindObjectOfType<GameUI>();
         _anim = GetComponentInChildren<Animator>();
         cm_movement = FindObjectOfType<CameraMovement>();
+
+        movement_auth = false;
     }
 
     // Start
@@ -285,8 +300,9 @@ public class PlayerMovement : MonoBehaviour
         psCollisions_movement = ar;
 
         dragDistance = Screen.width * 4 / 100; //dragDistance is 5% width of the screen
-    }
 
+        StartCoroutine(start_game());
+    }
 
 
 
