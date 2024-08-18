@@ -11,7 +11,9 @@ public class PlayerVectors : MonoBehaviour
     public Transform plyr_trsnfm;
 
     [Header ("Player Side Htboxs")]
-    public Collider side_plyr_cldr;
+    [SerializeField] private Collider solid_side_plyr_cldr;
+    [SerializeField] private Collider side_plyr_cldr;
+    private GameObject notSolid_cldr_gm;
 
     // Slippery Inspector Mat
     [Header ("Slippery Material")]
@@ -27,10 +29,17 @@ public class PlayerVectors : MonoBehaviour
     private GameObject last_gm;
 
     private int i = 0;
-    private void Start(){
+
+    
+    private void Start()
+    {
         g_v = new GameObject[60];
     }
 
+    private void Awake()
+    {
+        notSolid_cldr_gm = side_plyr_cldr.gameObject;
+    }
 
     private void FixedUpdate()
     {
@@ -56,6 +65,20 @@ public class PlayerVectors : MonoBehaviour
         //     //apply_vector();
         //     i = 0;
         // }
+
+        // important
+        // fix wallRun hitbox rotation
+        // to prevent side collision glitches (climb, default wallrun camera bugs, etc..)
+        notSolid_cldr_gm.transform.rotation = Quaternion.Euler(
+            0f,
+            (
+                (plyr_trsnfm.rotation.eulerAngles.y > 180f ? 
+                    (360f - plyr_trsnfm.rotation.eulerAngles.y) 
+                    :
+                    (plyr_trsnfm.rotation.eulerAngles.y)
+                ) * -1) * 0.17f,
+            0f
+        );
     }
 
     // Update and Replace slippery
@@ -67,9 +90,9 @@ public class PlayerVectors : MonoBehaviour
 
         // Htbox I/O
         //StartCoroutine(cld_reactivate(0.6f));
-        side_plyr_cldr.enabled = true;
+        solid_side_plyr_cldr.enabled = true;
 
-        if(is_exit) side_plyr_cldr.enabled = false;
+        if(is_exit) solid_side_plyr_cldr.enabled = false;
         else
         {
             // make plyr rotate 
@@ -156,7 +179,7 @@ public class PlayerVectors : MonoBehaviour
     {
         yield return new WaitForSeconds(t_);
         Debug.Log("solid activation");
-        side_plyr_cldr.enabled = true;
+        solid_side_plyr_cldr.enabled = true;
     }
 
 

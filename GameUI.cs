@@ -990,12 +990,12 @@ public class GameUI : MonoBehaviour
 
             case "start_":
                 GameObject go_ = ui_announcer_.transform.GetChild(1).gameObject;
-                go_.transform.localPosition = go_.transform.localPosition + new Vector3(0f, -100f, 0f);
+                go_.transform.localPosition = go_.transform.localPosition + new Vector3(0f, -50f, 0f);
 
                 go_.SetActive(true);
-                LeanTween.moveLocal(go_, go_.transform.localPosition + new Vector3(0f, 100f, 0f), 1.2f).setEaseInOutCubic();
+                LeanTween.moveLocal(go_, go_.transform.localPosition + new Vector3(0f, 50f, 0f), 0.6f).setEaseInOutCubic();
 
-                StartCoroutine(fade_ui_obj(go_, 0.75f));
+                StartCoroutine(fade_ui_obj(go_, 0.6f));
                 StartCoroutine(ui_announcer_out(go_, 2.5f, "3d_weapon_levelUp"));
                 break;
         }

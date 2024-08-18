@@ -11,7 +11,7 @@ public class CameraMovement : MonoBehaviour
     private const float divisor = 55f;
 
     [Header ("Camera Main Rotation Ratio")]
-    private const float x_ratio = -0.0640f;
+    private const float x_ratio = -0.075f;
 
     [Header ("Player Animator")]
     public GameObject p_gm;
@@ -1246,9 +1246,11 @@ public class CameraMovement : MonoBehaviour
         List<float> v_flt;
         
         if(m_ == 1)
-            v_flt = new List<float>(new float[6] {0.5f, 0.07f, 0.090f, 0.35f, 0f, 0f} );
+            v_flt = new List<float>(new float[6] {0.5f, 0.07f, 0.090f, 
+                0f, 0f, 0f} );
         else
-            v_flt = new List<float>(new float[6] {-0.75f, -0.07f, -0.12f,  0.70f, 0f, 0f} );
+            v_flt = new List<float>(new float[6] {-0.75f, -0.07f, -0.12f,  
+                0.70f, 0f, 0f} );
 
         List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
         "wallR_z_offst", "",  ""} );
