@@ -153,8 +153,6 @@ public class CameraMovement : MonoBehaviour
     [Header ("Ragdoll")]
     [SerializeField] private Transform player_rag;
 
-    [Header ("Special Wall-Run")]
-    private bool special_wallRun = false;
 
     // [Header ("Camera Bob")]
     // [HideInInspector] public bool can_headBob = false;
@@ -560,43 +558,39 @@ public class CameraMovement : MonoBehaviour
         {
             reset_notSmooth();
 
-            StopCoroutine(wall_coroutine());
-            special_wallRun = false;
         }else
         {
             // // //
             reset_smoothDmpfnc();
             // // //
 
-            if(!special_wallRun)
-                StartCoroutine(wall_coroutine());
-
             float sns =  Math.Abs(player.position.x) - Math.Abs(gm_.position.x);
 
-            //FovTrans(start_fov, 0.5f);
-            new_fov = 93f;
-            pos_dc["wallR_y_offst"] = -1.3f;
+            new_fov = 90f;
+            pos_dc["wallR_y_offst"] = -1.2f;
 
-            // SPACE UP || CLOSE UP Z OFFSET
-            pos_dc["wallR_z_offst"] = (sns < 0) ? 0.8f :  0.4f;
+            // CLOSE UP Z OFFSET
+            pos_dc["wallR_z_offst"] = 0.75f;
 
             // ROTATE TOP
-            rot_dc["wallR_rot_x_offst"] = -0.135f;
+            rot_dc["wallR_rot_x_offst"] = -0.090f;
 
             rot_dc["wallR_rot_z_offst"] = sns > 0 ? 0.13f : -0.13f;
 
             if(sns > 0 )
             {
                 // right wall hit
-                pos_dc["wallR_x_offst"] = 0.2f + (y_bonuss / 22);
-                rot_dc["wallR_rot_y_offst"] = -0.210f + (-1 * (y_bonuss / 92));
-
+                // pos_dc["wallR_x_offst"] = -1.5f + (y_bonuss / 22);
+                // rot_dc["wallR_rot_y_offst"] = 0.2f + (-1 * (y_bonuss / 92));
+                pos_dc["wallR_x_offst"] = -1.1f;
+                rot_dc["wallR_rot_y_offst"] = 0.085f;
             }else
             {
                 // left wall hit
-                pos_dc["wallR_x_offst"] = 2f + ( -1 * (y_bonuss / 22) );
-                rot_dc["wallR_rot_y_offst"] = -0.35f + 1 * (y_bonuss / 92);
-
+                // pos_dc["wallR_x_offst"] = 1.2f + ( -1 * (y_bonuss / 22) );
+                // rot_dc["wallR_rot_y_offst"] = -0.15f + 1 * (y_bonuss / 92);
+                pos_dc["wallR_x_offst"] = 1.1f;
+                rot_dc["wallR_rot_y_offst"] = -0.085f;
             }
         }
     }
@@ -1041,7 +1035,7 @@ public class CameraMovement : MonoBehaviour
         smoothTime_prc = 15f;
 
         iterator_ = 3;
-        List<float> v_flt = new List<float>(new float[6] {-1.15f, y_rot > 0 ? -0.12f : 0.12f, -0.075f,
+        List<float> v_flt = new List<float>(new float[6] {-1.15f, y_rot > 0 ? -0.12f : 0.12f, -0.085f,
         0f, 0f, 0f } );
         List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
         "", "",  ""} );
@@ -1228,6 +1222,32 @@ public class CameraMovement : MonoBehaviour
     }
 
 
+    // wall_out
+    public void wall_out(int wall_side)
+    {
+        reset_smoothDmpfnc();
+
+        
+        // +15%
+        smoothTime_prc = 15f;
+
+        // +12 fov  !!
+        new_fov = 90f;
+
+        iterator_ = 2;
+
+        List<float> v_flt;
+        v_flt = new List<float>(new float[6] {-0.12f, -0.1f, -0.12f, 0f, 0f, 0f} );
+
+        List<string> s_arr = new List<string>(new string[6] {"wallR_rot_z_offst", "wallR_rot_x_offst",
+        "", "", "",  ""} );
+
+        values_ref = s_arr;
+        values_flt = v_flt;
+        trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
+        trns_fnc = use_specialSmooth = true; trns_back = false;
+    }
+
 
     // start_jump
     public void start_jump(int m_)
@@ -1261,6 +1281,8 @@ public class CameraMovement : MonoBehaviour
         trns_fnc = use_specialSmooth = true; trns_back = false;
      
     }
+
+
 
 
     // -------------------------------
@@ -1342,12 +1364,7 @@ public class CameraMovement : MonoBehaviour
         slow_time = false;
     }
 
-    private IEnumerator wall_coroutine()
-    {
-        special_wallRun = true;
-        yield return new WaitForSeconds(1f);
-        special_wallRun = false;
-    }
+
 
     // public recoil method
     public void shoot_recoil(bool r_side)

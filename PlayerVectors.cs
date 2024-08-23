@@ -69,16 +69,17 @@ public class PlayerVectors : MonoBehaviour
         // important
         // fix wallRun hitbox rotation
         // to prevent side collision glitches (climb, default wallrun camera bugs, etc..)
-        notSolid_cldr_gm.transform.rotation = Quaternion.Euler(
-            0f,
-            (
-                (plyr_trsnfm.rotation.eulerAngles.y > 180f ? 
-                    (360f - plyr_trsnfm.rotation.eulerAngles.y) 
-                    :
-                    (plyr_trsnfm.rotation.eulerAngles.y)
-                ) * -1) * 0.17f,
-            0f
-        );
+        notSolid_cldr_gm.transform.rotation = solid_side_plyr_cldr.gameObject.transform.rotation = 
+            Quaternion.Euler(
+                0f,
+                (
+                    (plyr_trsnfm.rotation.eulerAngles.y > 180f ? 
+                        (360f - plyr_trsnfm.rotation.eulerAngles.y) 
+                        :
+                        (plyr_trsnfm.rotation.eulerAngles.y)
+                    ) * -1) * 0.17f,
+                0f
+            );
     }
 
     // Update and Replace slippery

@@ -76,7 +76,7 @@ public class PlayerCollisions : MonoBehaviour
     private string[] subcolsions_values = new string[5]{"obstacleHit", "launcherHit","tyro", "bumper", "tapTapJump"};
 
     [Header ("-> Selected Collision <-")]
-    public string slcted_clsion;
+    [SerializeField] private string slcted_clsion;
 
     [Header ("Ground Physical Mat")]
     [HideInInspector] public PhysicMaterial grnd_mat;
@@ -117,14 +117,11 @@ public class PlayerCollisions : MonoBehaviour
     [HideInInspector] public bool wallRun_aimBox = false;
     [HideInInspector] public float z_wallRun_aimRotation = 0.0f;
 
-    [Header ("PlayerMovement/")]
+    [Header ("Attached Scrtips PlayerMovement/CameraMovement/GameUi")]
     private PlayerMovement p_movement;
-
-    [Header ("CameraMovement/")]
     private CameraMovement c_movement;
-
-    [Header ("GameUi/")]
     private GameUI game_ui;
+    private PlayerVectors p_vectors;
 
     [Header ("Main PlayerCollisions")]
     private PlayerCollisions psCollisions_movement;
@@ -141,6 +138,14 @@ public class PlayerCollisions : MonoBehaviour
         {
             set_playerRagdoll(false);
         }
+
+        p_movement =  FindObjectOfType<PlayerMovement>();
+        c_movement = FindObjectOfType<CameraMovement>();
+        p_weapon = FindObjectOfType<Weapon>();
+        game_ui = FindObjectOfType<GameUI>();
+
+        if(slcted_clsion == "sidewall")
+            p_vectors = FindObjectOfType<PlayerVectors>();
     }
 
 
@@ -150,11 +155,7 @@ public class PlayerCollisions : MonoBehaviour
         m_Collider = gameObject.GetComponent<Collider>();
         StartCoroutine(delay_trgrs(strt_delay));
 
-        p_movement =  FindObjectOfType<PlayerMovement>();
-        c_movement = FindObjectOfType<CameraMovement>();
-        p_weapon = FindObjectOfType<Weapon>();
-        game_ui = FindObjectOfType<GameUI>();
-
+  
         PlayerCollisions ar =  GameObject.FindGameObjectsWithTag("mainHitbox")[0].GetComponent<PlayerCollisions>();
         psCollisions_movement = ar;
     }
@@ -337,7 +338,9 @@ public class PlayerCollisions : MonoBehaviour
                     transform.position,
                     new Vector3(4f, 10f, player_attackRange), 
                     hitColliders,
-                    transform.rotation
+                    //transform.rotation
+                    (wallRun_aimBox) ? 
+                        (Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0)) : (transform.rotation)
                 );
 
                 if(numColliders > 0)
@@ -508,7 +511,8 @@ public class PlayerCollisions : MonoBehaviour
                         // {
                             lst_wall = (collision.gameObject.GetInstanceID());
                             p_movement.animateCollision("wallRunHit", _size, collision.gameObject);
-                            FindObjectOfType<PlayerVectors>().slippery_trigr(false, collision.gameObject);
+                            // FindObjectOfType<PlayerVectors>().slippery_trigr(false, collision.gameObject);
+                            p_vectors.slippery_trigr(false, collision.gameObject);
                         // }
                     }
                     break; 
@@ -666,8 +670,9 @@ public class PlayerCollisions : MonoBehaviour
                     // Wall run exit
                     if(collision.gameObject.tag == "ground" || collision.gameObject.tag == "ramp")
                     {
-                        p_movement.animateCollision("wallRunExit", _size);
-                        FindObjectOfType<PlayerVectors>().slippery_trigr(true, collision.gameObject);
+                        p_movement.animateCollision("wallRunExit", _size, collision.gameObject);
+                        // FindObjectOfType<PlayerVectors>().slippery_trigr(true, collision.gameObject);
+                        p_vectors.slippery_trigr(true, collision.gameObject);
                         c_movement.wal_rn_offset(true, collision.gameObject.transform);
                     }
                     break; 

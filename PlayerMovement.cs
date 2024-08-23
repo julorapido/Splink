@@ -1248,6 +1248,9 @@ public class PlayerMovement : MonoBehaviour
                         if(plyr_rb.velocity.y < -10f)
                             plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, -10f, plyr_rb.velocity.z);
                     }
+
+                    if(plyr_wallRninng)
+                        transform.rotation = Quaternion.identity;
                 }
 
 
@@ -1681,7 +1684,7 @@ public class PlayerMovement : MonoBehaviour
                         h_y : 0
                     );
 
-                    cm_movement.wal_rn_offset(false, hitWall.transform, y_bonus);
+                    cm_movement.wal_rn_offset(false, hitWall.transform, 0f/* y_bonus */);
 
                     if(sns < 0){
                         StartCoroutine(force_wallRn(true));
@@ -1695,8 +1698,8 @@ public class PlayerMovement : MonoBehaviour
 
                     plyr_flying = true;
 
-                    Vector3 p_ = new Vector3( sns < 0 ? -0.30f : 0.4f, 0, 0);
-                    Quaternion q_ = Quaternion.Euler(0,  (sns <  0 ? -30f : -41f) + y_bonus, sns <  0 ? -47f : 47f);
+                    Vector3 p_ = new Vector3( sns < 0 ? -0.45f : 0.45f, 0, 0);
+                    Quaternion q_ = Quaternion.Euler(0,  /*(sns <  0 ? -30f : -41f) + */ y_bonus, sns <  0 ? -47f : 47f);
 
                     pico_character.transform.localRotation = q_;
                     pico_character.transform.localPosition = p_;
@@ -1726,6 +1729,7 @@ public class PlayerMovement : MonoBehaviour
                     psCollisions_movement.wallRun_aimBox = false;
 
                     StartCoroutine(wall_exit());
+                    // cm_movement.wall_out()
 
                     lft_Straf = rght_Straf = false;
                 }
@@ -2630,7 +2634,7 @@ public class PlayerMovement : MonoBehaviour
             plyr_saveClimbing = false;
             movement_auth = true;
             plyr_rb.useGravity = true;
-            plyr_rb.AddForce( new Vector3(0f, 15f, 0f), ForceMode.VelocityChange);
+            plyr_rb.AddForce( new Vector3(0f, 15f, -10f), ForceMode.VelocityChange);
         }
 
 
