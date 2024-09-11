@@ -7,11 +7,14 @@ using System.Linq;
 public class Buildings : MonoBehaviour
 {
     [Header ("SECTIONS")]
-    private GameObject[] buildngs_prefb;
     [SerializeField] private GameObject[] sections_prefabs;
+    private GameObject[] buildngs_prefb;
     private Transform last_sectionSpawned = null;
 
-    [Header ("Player")]
+    [Header ("SETTINGS")]
+    [SerializeField] private float sections_scale;
+
+    [Header ("TRANSFORMS")]
     [SerializeField] private Transform player_trsf;
     [SerializeField] private Transform bldg_parent;
 
@@ -35,25 +38,24 @@ public class Buildings : MonoBehaviour
 
         Gen_PrefabSection();
         Gen_PrefabSection();
-        // Gen_PrefabSection();
 
         for(int i = 0; i < 30; i ++)
             optmized_go_bfr[i] = activated_go_bfr[i] = null;
 
         optimize_sections();
-        // InvokeRepeating("optimize_sections", 0, 0.50f);
     }
 
+
+    // Update
     private void Update()
     {
         o_timer += Time.deltaTime;
-        if(o_timer >= 0.75f)
+        if(o_timer >= 10f)
         {
             optimize_sections();
             o_timer = 0f;
         }
     }
-
 
 
     // FixedUpdate
@@ -65,13 +67,14 @@ public class Buildings : MonoBehaviour
         
         RenderSettings.skybox.SetFloat("_Rotation", p + (Time.deltaTime * 0.20f) );
 
-        // optimize_sections(); //
 
         // infinite game loop
         if(last_sectionSpawned != null && 
             (last_sectionSpawned.position.z - player_trsf.position.z) < 180
         )
+        {
             Gen_PrefabSection();
+        }
     }
 
 
@@ -84,9 +87,7 @@ public class Buildings : MonoBehaviour
 
         for(int i = 0; i < active_sections.Length; i++)
         {
-                // if(player_trsf.position.z > active_sections[i].transform.position.z)
-                //     continue;
-                // focus
+                // Focus
                 List<string> focus_objs = new List<string>(new string[12]
                 {
                     "obstacle", // obst
@@ -94,12 +95,12 @@ public class Buildings : MonoBehaviour
                     "slider", "slideRail", "fallBox",// modules
                     "tapTapJump", "bumper", "launcher", "hang", "ladder", "underSlide", "bareer", // interacts
                 } );
-                //collectibles
+                // Collectibles
                 List<string> collectibles_objs = new List<string>(new string[3]
                 {
                     "coin", "gun", "health", 
                 } );
-                //turrets
+                // Turrets
                 List<string> turret_objs = new List<string>(new string[1]{
                     "TURRET"
                 } );
@@ -107,12 +108,10 @@ public class Buildings : MonoBehaviour
                 float dst = (active_sections[i].transform.position.z - (135 / 2)) - player_trsf.position.z;
 
                 GameObject s = active_sections[i];
-                if(( dst >= (game_over ? 140 : 75) )
-                    || dst <= -160) // optimize [behind and below]
+                if( dst >= (game_over ? 140 : 75) || dst <= -160) // optimize [behind and below]
                 {
                     if( !optmized_go_bfr.Contains(active_sections[i]) )
                     {
-                        //Debug.Log("OPTIMIZE" + active_sections[i]);
                         Transform[] gm_t = active_sections[i].GetComponentsInChildren<Transform>();
                         for(int j = 0; j < gm_t.Length; j++)
                         {
@@ -127,14 +126,17 @@ public class Buildings : MonoBehaviour
                         }
 
                         // add optimized GO to arr
-                        for(int k = 0; k < optmized_go_bfr.Length; k++){
-                            if(optmized_go_bfr[k] == null){
+                        for(int k = 0; k < optmized_go_bfr.Length; k++)
+                        {
+                            if(optmized_go_bfr[k] == null)
+                            {
                                 optmized_go_bfr[k] = active_sections[i];
                                 break;
                             }
                         }
-                    }else{ /*Debug.Log("optimize but wtd ??");*/ }
-                }else // cancel optimization
+                    }
+                }
+                else // cancel optimization
                 {
                     if( !activated_go_bfr.Contains(active_sections[i]) 
                         && (dst > -5)
@@ -156,14 +158,15 @@ public class Buildings : MonoBehaviour
                         }
 
                         // add activated GO to arr
-                        for(int k = 0; k < activated_go_bfr.Length; k++){
-                
-                            if(activated_go_bfr[k] == null){
+                        for(int k = 0; k < activated_go_bfr.Length; k++)
+                        {
+                            if(activated_go_bfr[k] == null)
+                            {
                                 activated_go_bfr[k] = active_sections[i];
                                 break;
                             }
                         }
-                    }else{ /* Debug.Log("ACTIVATE but wtf ??"); */ }
+                    }
                 }
         }
 
@@ -188,6 +191,10 @@ public class Buildings : MonoBehaviour
     }
 
 
+
+
+    // ** ** ** ** ** ** ** **
+    // Outdated buildings generation function
     private void Gen_Bldngs(int z_len)
     {
         int ln_ = buildngs_prefb.Length;
@@ -298,6 +305,9 @@ public class Buildings : MonoBehaviour
             //z_pos += 40.0f;
         }
     }
+    // ** ** ** ** ** **
+
+
 
 
 
@@ -310,12 +320,10 @@ public class Buildings : MonoBehaviour
         float z = 0f;
 
         GameObject[] active_sections = GameObject.FindGameObjectsWithTag("Section");
-        // Debug.Log("Section gen " + active_sections.Length);
         for(int i = 0; i < active_sections.Length; i ++)
         {
             BoxCollider bx = active_sections[i].GetComponent<BoxCollider>();
-            float z_size = bx.size.z; //+ bx.center.z;
-            // Debug.Log(z_size + " : " + bx.size.z + " + " + bx.center.z);
+            float z_size = (bx.size.z) * (active_sections[i].transform.localScale.z);
             z += z_size;
         }
 
@@ -324,14 +332,28 @@ public class Buildings : MonoBehaviour
         GameObject sl = sections_prefabs[UnityEngine.Random.Range(1, 3) == 1 ? rdm_ : rdm_2];
 
         // BoxCldr Size as whole Sect Size
+        // (135) Section Z-Size
         Vector3 sl_size = sl.GetComponent<BoxCollider>().size;
 
-        GameObject buffer_sect = Instantiate(sl, 
+        if(sections_scale != 1f)
+        {
+            sl_size.z *= sections_scale;
+            // sl_size.x *= sections_scale;
+        }
+
+        GameObject buffer_sect = Instantiate(
+            sl, 
             new Vector3(
-                -1 * (sl_size.x / 2), 0f, z + (sl_size.z / 2) // + 1f
+                -1 * (sl_size.x / 2), 
+                0f,
+                z + (sl_size.z / 2) // + 1f
             ), 
             new Quaternion(0f, 0f, 0f, 1), 
-        bldg_parent);
+            bldg_parent
+        );
+
+        if(sections_scale != 1f)
+            buffer_sect.transform.localScale = new Vector3(sections_scale, sections_scale, sections_scale);
 
         last_sectionSpawned = buffer_sect.transform;
 
