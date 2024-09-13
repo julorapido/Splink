@@ -311,6 +311,7 @@ public class Buildings : MonoBehaviour
 
 
 
+
     // ========================================
     //             SPAWN NEW SECTION
     // ========================================
@@ -318,6 +319,12 @@ public class Buildings : MonoBehaviour
     {
         int ln_ = sections_prefabs.Length;
         float z = 0f;
+        // Ignored-Scale gameobjects
+        const int ign_ln = 1;
+        List<string> ignored_scale_tags = new List<string>(new string[ign_ln]
+        {
+            "TURRET", // Turrets
+        } );
 
         GameObject[] active_sections = GameObject.FindGameObjectsWithTag("Section");
         for(int i = 0; i < active_sections.Length; i ++)
@@ -351,9 +358,20 @@ public class Buildings : MonoBehaviour
             new Quaternion(0f, 0f, 0f, 1), 
             bldg_parent
         );
-
-        if(sections_scale != 1f)
-            buffer_sect.transform.localScale = new Vector3(sections_scale, sections_scale, sections_scale);
+        
+        buffer_sect.transform.localScale = new Vector3(sections_scale, sections_scale, sections_scale);
+        for(int i = 0; i < ign_ln; i++)
+        {
+            Transform[] selected_t = ((buffer_sect.transform.GetComponentsInChildren<Transform>()).Where(
+                t => t.gameObject.tag == ignored_scale_tags[i]
+            ).ToArray()) as Transform[];
+            float r = 1f + (1f - sections_scale);
+            for(int j = 0; j < selected_t.Length; j ++)
+            {
+                float s =  selected_t[j].localScale.x * (r);
+                selected_t[j].localScale = new Vector3(s, s, s);
+            }
+        }
 
         last_sectionSpawned = buffer_sect.transform;
 
@@ -364,6 +382,7 @@ public class Buildings : MonoBehaviour
             // generateBounds(buffer_sect);
         }
     }
+
 
 
 

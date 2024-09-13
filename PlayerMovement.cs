@@ -17,6 +17,9 @@ using PathCreation;
 
 public class PlayerMovement : MonoBehaviour
 {
+    [Header ("Game State")]
+    private bool gameOver_ = false;
+
     [Header ("Transforms & Rb")]
     [SerializeField] private GameObject plyr_;
     [SerializeField] private Rigidbody plyr_rb;
@@ -110,7 +113,7 @@ public class PlayerMovement : MonoBehaviour
     private GameObject moving_camTraveler; // ladder
 
 
-    [Header ("TapTap, SideHang, Fallbox, Bareer, SaveClimbing, Obstacle && Hang Vars")]
+    [Header ("TapTap, SideHang, Fallbox, Bareer, SaveClimbing, WallRun, Obstacle && Hang Vars")]
     /////////////////////   vars     //////////////////////////
     ///// Hang
     private bool sHng_leftSide = false;
@@ -131,13 +134,9 @@ public class PlayerMovement : MonoBehaviour
     private GameObject last_ObstJumped;
     ///// SaveClimbing
     private float rot_y_saveClimbing = 0f;
-
-    [Header ("Game State")]
-    private bool gameOver_ = false;
-
-    [Header ("WallRun Forced Strafes")]
-    private bool lft_Straf = false;
-    private bool rght_Straf = false;
+    ///// WallRun
+    private GameObject wall_running_wall = null;
+    private bool lft_Straf = false, rght_Straf = false;
 
 
     [Header ("WEAPON")]
@@ -739,6 +738,15 @@ public class PlayerMovement : MonoBehaviour
             {
                 _anim.SetBool("is_enemy_aimed", false);
             }
+        }
+
+        // anim Y_ROT
+        bool y_r = transform.rotation.eulerAngles.y > 180f;
+        if((_anim.GetBool("Y_ROT") && !y_r)
+            || (!_anim.GetBool("Y_ROT") && y_r)
+        )
+        {
+            _anim.SetBool("is_enemy_aimed", y_r);
         }
 
 
@@ -1657,7 +1665,9 @@ public class PlayerMovement : MonoBehaviour
                 break;
 
             case "wallRunHit":
-                if(!_anim.GetBool("GroundHit") && !plyr_saveClimbing
+                if(
+                    // !_anim.GetBool("GroundHit") && 
+                    !plyr_saveClimbing
                     && !plyr_bareerJumping && !plyr_boxFalling
                     && !plyr_sideHanging
                 )
@@ -1687,13 +1697,15 @@ public class PlayerMovement : MonoBehaviour
 
                     cm_movement.wal_rn_offset(false, hitWall.transform, 0f/* y_bonus */);
 
-                    if(sns < 0){
+                    if(sns < 0)
+                    {
                         StartCoroutine(force_wallRn(true));
-                        plyr_rb.AddForce(Vector3.left * 5, ForceMode.VelocityChange);
+                        plyr_rb.AddForce(Vector3.left * 3, ForceMode.VelocityChange);
                         _anim.SetBool("wallRunSide", false);
-                    }else{
+                    }else
+                    {
                         StartCoroutine(force_wallRn(false));
-                        plyr_rb.AddForce(Vector3.right * 5, ForceMode.VelocityChange);
+                        plyr_rb.AddForce(Vector3.right * 3, ForceMode.VelocityChange);
                         _anim.SetBool("wallRunSide", true);
                     }
 
@@ -1707,6 +1719,8 @@ public class PlayerMovement : MonoBehaviour
 
                     psCollisions_movement.wallRun_aimBox = true;
                     psCollisions_movement.z_wallRun_aimRotation = ( (sns <  0) ? -47f : 47f );
+
+                    wall_running_wall = optional_gm;
                 }
                 break;
 
@@ -1736,19 +1750,22 @@ public class PlayerMovement : MonoBehaviour
                     cm_movement.wall_outttt(sns);
 
                     lft_Straf = rght_Straf = false;
+                    wall_running_wall = null;
                 }
                 break;
 
             case "frontWallHit":
-                if(
-                    // !plyr_wallRninng && 
-                    !plyr_saveClimbing && !plyr_climbingLadder
-                        && (!plyr_bareerJumping)
-                        && (!front_notRegister_bareer)
-                        && (!plyr_sideHanging)
+                if( !plyr_saveClimbing && !plyr_climbingLadder
+                    && (!plyr_bareerJumping)
+                    && (!front_notRegister_bareer)
+                    && (!plyr_sideHanging)
                 )
                 {   
+                    // prevent from front smashing it while wallruning
+                    if( (plyr_wallRninng && optional_gm == wall_running_wall))
+                        return ;
 
+                    // Matrix4x4 p = optional_gm.transform.localToWorldMatrix;
                     // if is a rebord hit
                     bool is_rebord = false;
 
@@ -1757,16 +1774,29 @@ public class PlayerMovement : MonoBehaviour
                     float msh_y2 = (m_contact.bounds.size.y/2)* (
                         optional_gm.transform.lossyScale.y
                     ); // good
-                    Matrix4x4 p = optional_gm.transform.localToWorldMatrix;
 
-                    float top_y2 = ((optional_gm.transform.position.y)
-                        + (msh_y2) +
-                        ((float) (m_contact.bounds.center.y * optional_gm.transform.lossyScale.y))
-                    ); // good
+                    // float top_y2 = ((optional_gm.transform.position.y)
+                    //     + (msh_y2) +
+                    //     ((float) (m_contact.bounds.center.y * optional_gm.transform.lossyScale.y))
+                    // ); // good
 
-                    is_rebord = (((top_y2 - transform.position.y) <= 3f ? (true) : (false))
-                        // && (optional_gm.transform.GetSiblingIndex() )
+                    Vector3 topVertex = new Vector3(0,float.NegativeInfinity,0);
+                    Vector3[] verts = m_contact.vertices;
+                    for(int i = 0; i < m_contact.vertices.Length; i ++)
+                    {
+                        if(verts[i].y > topVertex.y)
+                        {
+                            topVertex = verts[i];
+                        }
+                    }
+                    Vector3 l = optional_gm.transform.TransformPoint(topVertex);
+                    Debug.Log("FRONT SMASH  [vertices : " + m_contact.vertices.Length + 
+                            "]  [local topVertex " + topVertex + "]" +
+                            "]  [world topVertex " +  l + "]"
                     );
+                    float top_y2 = l.y;
+                    
+                    is_rebord = ( ((top_y2 - transform.position.y) <= 3f ? (true) : (false)) );
 
                     if(plyr_wallRninng)
                     {
@@ -1775,13 +1805,16 @@ public class PlayerMovement : MonoBehaviour
                         pico_character.transform.localPosition = Vector3.zero;   
                     }
 
+                
                     if(is_rebord)
                     {
                         _anim.SetBool("climb", true);
+                        // _anim.SetBool("Flying", true);
 
                         movement_auth = false;
                         plyr_rb.useGravity = false;
                         plyr_saveClimbing = true;
+                        plyr_flying = true;
 
 
                         float r_y = optional_gm.transform.rotation.eulerAngles.y;
@@ -1798,19 +1831,16 @@ public class PlayerMovement : MonoBehaviour
                         transform.rotation = Quaternion.Euler(0, y_bonus, 0f);
                         plyr_rb.velocity = new Vector3(0, 0, 0);
 
+                        // throw animation
                         cm_movement.climbUp();
-
-                        // rotate_bck();
-                        StartCoroutine(Dly_bool_anm(1.3f, "climb"));
+                        StartCoroutine(Dly_bool_anm(1.2f, "climb"));
                         
 
                         LeanTween.move(gameObject,
-                            new Vector3(transform.position.x, top_y2 - 0.55f , transform.position.z - 0.02f),
-                        0.7f).setEaseInOutCubic();
-
-                        plyr_flying = true;
-                        _anim.SetBool("Flying", true);
-                    }else
+                            new Vector3(transform.position.x, top_y2 + (0.15f), transform.position.z - 0.02f),
+                        1.2f).setEaseInOutCubic();
+                    }
+                    else
                     {
                         g_ui.gameOver_ui("front", transform.rotation);
                     }
@@ -2637,7 +2667,7 @@ public class PlayerMovement : MonoBehaviour
             plyr_saveClimbing = false;
             movement_auth = true;
             plyr_rb.useGravity = true;
-            plyr_rb.AddForce( new Vector3(0f, 15f, -10f), ForceMode.VelocityChange);
+            plyr_rb.AddForce( new Vector3(0f, 4f, -4f), ForceMode.VelocityChange);
         }
 
 

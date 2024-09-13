@@ -64,7 +64,7 @@ public class A_T_Projectile : MonoBehaviour
     private const string turret_parts = "tr_Barrel tr_Stand tr_Plate tr_Radar tr_Shootp tr_BarrelHz";
 
     [Header ("Proj Duration")]
-    private const float w_bullet_duration = 5f;
+    private const float w_bullet_duration = 4f;
     private float w_bullet_t = 0f;
 
     // Start
@@ -136,7 +136,7 @@ public class A_T_Projectile : MonoBehaviour
             ){
                 target_passed = true; 
                 speed *= 1.30f;
-                Invoke("bullet_explode", 2.25f);
+                // Invoke("bullet_explode", 2.25f);
             }
 
             if(!exploded)
@@ -329,7 +329,7 @@ public class A_T_Projectile : MonoBehaviour
         if(exploded) 
             return;
 
-        CancelInvoke("bullet_explode");
+        // CancelInvoke("bullet_explode");
         exploded = true;
         
         if(go_ != null)
