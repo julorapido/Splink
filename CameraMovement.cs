@@ -566,14 +566,14 @@ public class CameraMovement : MonoBehaviour
 
             float sns =  Math.Abs(player.position.x) - Math.Abs(gm_.position.x);
 
-            new_fov = 90f;
-            pos_dc["wallR_y_offst"] = -1.2f;
+            new_fov = 87f;
+            pos_dc["wallR_y_offst"] = -1.3f;
 
             // CLOSE UP Z OFFSET
             pos_dc["wallR_z_offst"] = 0.75f;
 
             // ROTATE TOP
-            rot_dc["wallR_rot_x_offst"] = -0.090f;
+            rot_dc["wallR_rot_x_offst"] = -0.110f;
 
             rot_dc["wallR_rot_z_offst"] = sns > 0 ? 0.13f : -0.13f;
 
@@ -591,6 +591,44 @@ public class CameraMovement : MonoBehaviour
                 // rot_dc["wallR_rot_y_offst"] = -0.15f + 1 * (y_bonuss / 92);
                 pos_dc["wallR_x_offst"] = 1.1f;
                 rot_dc["wallR_rot_y_offst"] = -0.085f;
+            }
+        }
+    }
+
+    // Wall Slide
+    public void wal_slide_offset(bool is_ext, Transform gm_)
+    {
+        if(is_ext)
+        {
+            reset_notSmooth();
+        }else
+        {
+            // reset_smoothDmpfnc();
+
+            float sns =  Math.Abs(player.position.x) - Math.Abs(gm_.position.x);
+
+            new_fov = 92f;
+            pos_dc["wallR_y_offst"] = -1.2f;
+
+            // CLOSE UP Z OFFSET
+            pos_dc["wallR_z_offst"] = 0.75f;
+
+            // ROTATE TOP
+            rot_dc["wallR_rot_x_offst"] = -0.015f;
+
+            rot_dc["wallR_rot_z_offst"] = sns > 0 ? 0.35f : -0.35f;
+
+            if(sns > 0 )
+            {
+                // right wall hit
+                pos_dc["wallR_x_offst"] = -1f;
+                rot_dc["wallR_rot_y_offst"] = 0.10f;
+            }else
+            {
+                // left wall hit
+
+                pos_dc["wallR_x_offst"] = 1f;
+                rot_dc["wallR_rot_y_offst"] = -0.10f;
             }
         }
     }
@@ -663,7 +701,7 @@ public class CameraMovement : MonoBehaviour
 
             // CLOSE UP Z OFFSET
             pos_dc["wallR_z_offst"] = 1.75f;
-            pos_dc["wallR_y_offst"] = -0.1f;
+            pos_dc["wallR_y_offst"] = -0.4f;
 
             // SMOOTH DAMP FOR X ROTATION
             rot_dc["wallR_rot_x_offst"] = 0.16f;
@@ -1015,7 +1053,7 @@ public class CameraMovement : MonoBehaviour
         smoothTime_prc = 10f;
 
         iterator_ = 4;
-        List<float> v_flt = new List<float>(new float[6] {0.17f, 0.45f,  -0.125f, 0.5f, 0f, 0f } );
+        List<float> v_flt = new List<float>(new float[6] {0.19f, 0.45f,  -0.125f, 0.5f, 0f, 0f } );
         List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "wallR_z_offst", "",  ""} );
 
         values_ref = s_arr;

@@ -87,24 +87,21 @@ public class PlayerVectors : MonoBehaviour
     public void slippery_trigr(bool is_exit, GameObject init_gmbj)
     {
  
-        
-
         // Htbox I/O
         //StartCoroutine(cld_reactivate(0.6f));
         solid_side_plyr_cldr.enabled = true;
 
-        if(is_exit) solid_side_plyr_cldr.enabled = false;
+        if(is_exit)
+            solid_side_plyr_cldr.enabled = false;
         else
         {
             // make plyr rotate 
             float y_rt = init_gmbj.transform.rotation.eulerAngles.y;
+            Quaternion n_ = Quaternion.Euler(new Vector3(0, y_rt < 0f ? -37.0f : 37.0f, 0));
+            // plyr_trsnfm.rotation = n_;
 
             // if(  (y_rt < -43.0f) ||  (y_rt > 43.0f) )
             // {
-                Quaternion n_ = Quaternion.identity;
-                n_.eulerAngles = new Vector3(0, y_rt < 0f ? -37.0f : 37.0f, 0);
-                // Debug.Log("regular");
-                plyr_trsnfm.rotation = n_;
             // }else
             // {
                 // Quaternion p_  = Quaternion.identity;
@@ -112,7 +109,6 @@ public class PlayerVectors : MonoBehaviour
                 // Debug.Log("goofy");
                 // plyr_trsnfm.rotation = p_;
             // }
-
         }
 
         if(init_gmbj == last_gm) 
@@ -132,7 +128,8 @@ public class PlayerVectors : MonoBehaviour
             }
         }
  
-        if(init_gmbj == null) return;
+        if(init_gmbj == null) 
+            return;
         Collider pr_col_ = init_gmbj.transform.parent?.gameObject?.GetComponent<Collider>();
         GameObject prnt_gmbj =  (
             (pr_col_ != null) &&  (pr_col_?.tag == "ground" || pr_col_?.tag == "ramp")

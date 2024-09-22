@@ -503,8 +503,11 @@ public class PlayerCollisions : MonoBehaviour
 
                     break;
 
+                // ==================================================
+                //                      SIDEWALL
+                // ==================================================
                 case "sidewall":
-                    // Sidewall hit
+                    // WallRun hit
                     if(collision.gameObject.tag == "ground" || collision.gameObject.tag == "ramp" )
                     {
                         // if(lst_wall != collision.gameObject.GetInstanceID())
@@ -514,6 +517,12 @@ public class PlayerCollisions : MonoBehaviour
                             // FindObjectOfType<PlayerVectors>().slippery_trigr(false, collision.gameObject);
                             p_vectors.slippery_trigr(false, collision.gameObject);
                         // }
+                    }
+
+                    // SlideWall hit
+                    if(collision.gameObject.tag == "slider")
+                    {
+                        p_movement.animateCollision("sliderHit", _size, collision.gameObject);
                     }
                     break; 
 
@@ -525,7 +534,6 @@ public class PlayerCollisions : MonoBehaviour
                     if(collision.gameObject.tag == "slider")
                     {
                         p_movement.animateCollision("sliderHit", _size, collision.gameObject);
-                        c_movement.sld_offset(false);
 
                         psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].slide);
                     } 
@@ -674,6 +682,12 @@ public class PlayerCollisions : MonoBehaviour
                         // FindObjectOfType<PlayerVectors>().slippery_trigr(true, collision.gameObject);
                         p_vectors.slippery_trigr(true, collision.gameObject);
                         c_movement.wal_rn_offset(true, collision.gameObject.transform);
+                    }
+
+                    // SlideWall exit
+                    if(collision.gameObject.tag == "slider")
+                    {
+                        p_movement.animateCollision("sliderLeave", _size, collision.gameObject);
                     }
                     break; 
 
