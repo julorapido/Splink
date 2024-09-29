@@ -422,6 +422,7 @@ public class PlayerCollisions : MonoBehaviour
                         }
                     }
 
+
                     // Obstacle
                     if(collision.gameObject.tag == "obstacle")
                     {
@@ -459,12 +460,10 @@ public class PlayerCollisions : MonoBehaviour
                             p_movement.animateCollision("sideVoid", _size, collision.gameObject);
                     }
 
-                    // Bareer
                     if(collision.gameObject.tag == "bareer")
                     {
-                        p_movement.animateCollision("bareer", _size, collision.gameObject);       
+                        p_movement.animateCollision("bareerG", _size, collision.gameObject);       
                     }
-                    
                     break;
 
                 // ==================================================
@@ -534,7 +533,6 @@ public class PlayerCollisions : MonoBehaviour
                     if(collision.gameObject.tag == "slider")
                     {
                         p_movement.animateCollision("sliderHit", _size, collision.gameObject);
-
                         psCollisions_movement.player_paricleArray(psCollisions_movement.player_particls[0].slide);
                     } 
 
@@ -569,6 +567,12 @@ public class PlayerCollisions : MonoBehaviour
                     // hang
                     if(collision.gameObject.tag == "hang")
                         p_movement.animateCollision("hang", _size, collision.gameObject);
+
+                    // Bareer
+                    if(collision.gameObject.tag == "bareer")
+                    {
+                        p_movement.animateCollision("bareerW", _size, collision.gameObject);       
+                    }
                     break;
 
 

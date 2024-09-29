@@ -700,11 +700,11 @@ public class CameraMovement : MonoBehaviour
             float s_ = UnityEngine.Random.Range(1, 3);
 
             // CLOSE UP Z OFFSET
-            pos_dc["wallR_z_offst"] = 1.75f;
-            pos_dc["wallR_y_offst"] = -0.4f;
+            pos_dc["wallR_z_offst"] = 1.5f;
+            pos_dc["wallR_y_offst"] = -0.6f;
 
             // SMOOTH DAMP FOR X ROTATION
-            rot_dc["wallR_rot_x_offst"] = 0.16f;
+            rot_dc["wallR_rot_x_offst"] = 0.13f;
             rot_dc["wallR_rot_z_offst"] =  s_ == 1 ? -0.10f : 0.10f;
 
         }
@@ -1158,70 +1158,39 @@ public class CameraMovement : MonoBehaviour
 
 
     // bareer_
-    public void bareer_jmp(int bareer_mode)
+    public void bareer_jmp(bool horizontal, bool lft_rgt = false, bool lat = false)
     {
         reset_smoothDmpfnc();
 
-        // +15%
-        smoothTime_prc = 12f;
-
         // +10 fov  !!
-        new_fov = 85f;
+        new_fov = 82f;
+        List<float> v_flt;
+        List<string> s_arr;
 
-        iterator_ = 4; 
-        List<float> v_flt  = new List<float>(new float[6] {0.65f, 0.09f, 0.08f,
-             0.3f, 0f, 0f} );
-        if (bareer_mode == 1)
-        {  
-            new_fov = 90f;
-            v_flt = new List<float>(new float[6] {-1.5f, 0.09f, -0.30f, 0.4f, 0f, 0f} );
-        }
-        if(bareer_mode == 2)
+        if(!horizontal)
         {
-            new_fov = 85f;
-            v_flt = new List<float>(new float[6] {0.8f, 0.09f, 0.16f, 0.3f, 0f, 0f} );
-        }
-        List<string> s_arr = new List<string>(new string[6] {
-            "wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst", "wallR_z_offst", "",  ""
-        } );
-         
-        if(bareer_mode == 3 || bareer_mode == 4)
+            smoothTime_prc = 10f;
+            iterator_ = 3;
+            s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst", "", "",  ""} );
+            if(lat)
+                v_flt = new List<float>(new float[6] {-0.35f, !lft_rgt ? 0.2f : -0.2f, 0.07f, 0f, 0f, 0f} );
+            else
+                v_flt = new List<float>(new float[6] {-2.3f, 0.1f, -0.2f, 0f, 0f, 0f} );
+        }else
         {
-            new_fov = 90f;
-            iterator_ = 4; 
-            v_flt = new List<float>(new float[6] {0.25f, bareer_mode == 3 ? -0.15f : 0.15f, 0.12f, 0.7f, 0f, 0f} );
-            s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst", "wallR_z_offst", "",  ""} );
+            smoothTime_prc = 0f;
+            iterator_ = 4;
+            v_flt = new List<float>(new float[6] {-2.7f, -0.2f, 
+                lft_rgt ? (0.05f) : (-0.05f), lft_rgt ? (-0.25f) : (0.25f), 0f, 0f} );
+            s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_x_offst", 
+                    "wallR_rot_y_offst", "wallR_rot_z_offst", "",  ""} );
         }
+ 
    
         values_ref = s_arr;
         values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
         trns_fnc = use_specialSmooth = true; trns_back = false;
-     
-    }
-
-    // sidehang out
-    public void side_hang_jumpOut()
-    {
-        reset_smoothDmpfnc();
-
-        // +15%
-        smoothTime_prc = 10f;
-
-        // +10 fov  !!
-        new_fov = 80f;
-
-        iterator_ = 3; 
-        List<float> v_flt  = new List<float>(new float[6] {-1.2f, 0.09f, -0.2f,
-             0f, 0f, 0f} );
-        List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
-        "", "",  ""} );
-
-        values_ref = s_arr;
-        values_flt = v_flt;
-        trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
-        trns_fnc = use_specialSmooth = true; trns_back = false;
-     
     }
 
 
