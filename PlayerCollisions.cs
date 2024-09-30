@@ -447,7 +447,8 @@ public class PlayerCollisions : MonoBehaviour
                         p_movement.animateCollision("tapTapJump", _size, collision.gameObject);
                     
                     // Land
-                    if(collision.gameObject.tag == "fallBox"){
+                    if(collision.gameObject.tag == "fallBox")
+                    {
                         p_movement.animateCollision("land", _size, collision.gameObject);
                     }  
 

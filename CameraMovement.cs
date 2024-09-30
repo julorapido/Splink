@@ -1105,23 +1105,23 @@ public class CameraMovement : MonoBehaviour
     }
     
     // fallbox
-    public void fall_box(float player_y_rot = 0f)
+    public void fall_box(bool y)
     {
         reset_smoothDmpfnc();
 
   
         // +12%
-        smoothTime_prc = 12f;
+        smoothTime_prc = 15f;
 
         // +5 fov  !!
-        new_fov = 85f;
+        new_fov = 90f;
 
-        iterator_ = 6; 
-        List<float> v_flt = new List<float>(new float[6] {1.4f, player_y_rot < 0 ? -0.09f : 0.09f, 0.2f,
-        -0.35f, player_y_rot * -0.012f, player_y_rot * 0.065f } );
+        iterator_ = 3;
+        List<float> v_flt = new List<float>(new float[6] {-0.4f, 0.11f,
+        0.3f, y ? -0.15f : 0.15f, 0f, 0f } );
 
-        List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
-        "wallR_z_offst", "wallR_rot_y_offst",  "wallR_x_offst"} );
+        List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_x_offst",
+        "wallR_z_offst", "wallR_rot_z_offst", "",  ""} );
 
         values_ref = s_arr;
         values_flt = v_flt;

@@ -320,10 +320,11 @@ public class Buildings : MonoBehaviour
         int ln_ = sections_prefabs.Length;
         float z = 0f;
         // Ignored-Scale gameobjects
-        const int ign_ln = 1;
+        const int ign_ln = 2;
         List<string> ignored_scale_tags = new List<string>(new string[ign_ln]
         {
             "TURRET", // Turrets
+            "ignoreTYRO"// Turrets
         } );
 
         GameObject[] active_sections = GameObject.FindGameObjectsWithTag("Section");
