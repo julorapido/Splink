@@ -51,7 +51,7 @@ public class Collectible : MonoBehaviour {
     [Header ("Weapon Objects")]
     private  Weapon.GunLevel last_weapon_EnumValue;
     [SerializeField] private List<Material> weapon_rarityMats;
-    private Weapon weapon_scrpt;
+    private Weapon weapon_scrpt = null;
     private TextMeshPro[] weapon_lvls = new TextMeshPro[]{null, null};
     private GameObject gun_prefab;
     private Transform[] rectangles_;

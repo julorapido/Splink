@@ -101,14 +101,13 @@ public class CameraMovement : MonoBehaviour
     private float xRot;
     private float lst_offst_x;
     private float x_offst = 0.0f;
-    private Vector3 currentVelocity;
+    private Vector3 currentVelocity_pos, currentVelocity_rot;
 
     [Header ("Player Actions Informations")]
     private float tyro_z = 0f;
     private bool tyro_on = false;
     private bool slideRail_on = false;
     private bool sliding_on = false;
-    private bool rotate_back = false;
     private bool hanging = false;
 
     [Header ("Grapple Point Position")]
@@ -168,12 +167,13 @@ public class CameraMovement : MonoBehaviour
     // }
     // private double coef = 0;
 
-
+    private void Awake()
+    {
+        plyr_mv = FindObjectOfType<PlayerMovement>();
+    }
 
     private void Start()
     {
-        plyr_mv = FindObjectOfType<PlayerMovement>();
-
         p_anim = p_gm.GetComponentInChildren<Animator>();
 
         xRot = gameObject.transform.rotation.x;
@@ -191,13 +191,6 @@ public class CameraMovement : MonoBehaviour
 
     private void Update()
     {
-        if (!Input.GetKeyDown("q") && !Input.GetKeyDown("d") )
-        {
-            rotate_back = true;
-        }else
-        {
-            rotate_back = false;
-        }
 
         // field of view
         if(c_.fieldOfView != (new_fov + plyr_Momentum))
@@ -205,13 +198,13 @@ public class CameraMovement : MonoBehaviour
             c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, (new_fov + plyr_Momentum), 0.10f);
         }
 
-
+        /*
         if(smthDmp_grpl)
             rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], 0.12f, ref mathfRef_grpl, 0.295f);
 
         if(smthDmp_grpl_end)
             rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], -0.325f, ref mathfRef_grpl, 0.650f);
-
+        */
 
 
         // recoil
@@ -226,9 +219,11 @@ public class CameraMovement : MonoBehaviour
 
 
         // aim effect
-        Vector3 player_target_relativePos =  aimed_target != null ? ((aimed_target.position - player.position)) : Vector3.zero;
+        Vector3 player_target_relativePos =  (
+            aimed_target != null ? ((aimed_target.position - player.position)) : (Vector3.zero)
+        );
         Quaternion aiming_rotation = (
-            aimed_target != null ? (Quaternion.LookRotation(player_target_relativePos)) : Quaternion.identity
+            aimed_target != null ? (Quaternion.LookRotation(player_target_relativePos)) : (Quaternion.identity)
         );
 
 
@@ -275,11 +270,41 @@ public class CameraMovement : MonoBehaviour
             perc);
         }
 
+        
+        
+        // x_offst Assignation
+        x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ?
+                -1 *  (60 - (player_rb.rotation.eulerAngles.y - 300.0f))
+            :  player_rb.rotation.eulerAngles.y
+        );
+
+        // Lerp [Position] and [Rotation]
+        if( ((x_ratio * x_offst) != lst_offst_x)
+            || (x_ratio * x_offst == 0))
+        {
+            desired_  = (player.position + offset);
+           
+            desired_.x = desired_.x +  (
+                (x_ratio * ( (tyro_on) ?
+                    (x_offst * 2)
+                        :
+                    (x_offst / 2.6f)
+                ))
+            );
+            
+            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 80f;
+
+            lst_offst_x = ((x_ratio * x_offst));
+        }
+
+        
+
     }
 
 
 
 
+	private float smoothSpeed = 0.75f;
 
     private void FixedUpdate()
     {
@@ -288,6 +313,7 @@ public class CameraMovement : MonoBehaviour
         plyr_Momentum = plyr_mv.get_Momentum;
         tyro_on = plyr_mv.plyr_tyro;
         sliding_on =  plyr_mv.plyr_sliding;
+
 
 
         if(tyro_on != plyr_mv.plyr_tyro)
@@ -383,6 +409,7 @@ public class CameraMovement : MonoBehaviour
 
 
 
+        /*
 
         // x_offst definition
         x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ?
@@ -409,8 +436,12 @@ public class CameraMovement : MonoBehaviour
 
             lst_offst_x = ((x_ratio * x_offst));
         }
+
+        */
+
         if(hanging)
             desired_ = (player.position + offset);
+
 
 
         // time
@@ -423,17 +454,18 @@ public class CameraMovement : MonoBehaviour
     }
 
 
-
     // cam smoothdamps & lerps
     private void LateUpdate()
     {
+        
         if (!game_Over_)
         {
-            float xy_ratio = 0.0590f;
+            // float xy_ratio = 0.0590f;
 
-            // Dampen towards target rotation
             bool aim_off =  (aimed_target == null || tyro_on ) ? true : false;
 
+            // Smooth Damp (rotation)
+            // Dampen towards target rotation
             Quaternion desired_rt  = new Quaternion(
                 xRot + supl_xRot
                 + (!use_specialSmooth ? lerp_v_rot.x : rot_dc["wallR_rot_x_offst"])
@@ -446,17 +478,28 @@ public class CameraMovement : MonoBehaviour
                 (!use_specialSmooth ? lerp_v_rot.z : rot_dc["wallR_rot_z_offst"])
                 + (hanging ? 0f : (-1 * (x_offst / 360.0f)))
                 + (tyro_on ? (tyro_z) : 0f)
-                // + cam_recoil
                 ,
                 1f
             );
 
-            transform.localRotation = Quaternion.Slerp
-            (
+            
+            transform.localRotation = Quaternion.Slerp(
                 gameObject.transform.rotation, desired_rt, (tyro_on) ? 0.020f : 0.13f
             );
+            
+            // --------------------------------------------------------------------
 
-            // Smooth Damp
+            // Smooth Damp (position)
+            // Dampen towards offset position
+            desired_  = (player.position + offset); // <----------------------
+            desired_.x = desired_.x +  (// <----------------------
+                (x_ratio * ( (tyro_on) ?// <----------------------
+                    (x_offst * 2)// <----------------------
+                        :// <----------------------
+                    (x_offst / 2.6f)// <----------------------
+                ))// <----------------------
+            );// <----------------------
+            
             Vector3 smoothFollow = Vector3.SmoothDamp(
                 transform.position,
                 (
@@ -467,16 +510,17 @@ public class CameraMovement : MonoBehaviour
                         (lerp_v_pos) : (new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"]))
                     )
                     + new Vector3(0f, ( (player_velocity.y < -2) ? ((player_velocity.y * Time.fixedDeltaTime) * 2f) : 0f), 0f) // y neg velocity compensation
-                    + new Vector3(0, 0, (player_rb.velocity.z > 8 ) ? (player_rb.velocity.z - 8) * 0.05f : 0f ) // z speed compensation
+                    + new Vector3(0, 0, (player_rb.velocity.z > 8 ) ? (player_rb.velocity.z - 8) * 0.03f : 0f ) // z speed compensation
                     // + (aim_v * 0.005f) // aiming vector
                 ),
-                ref currentVelocity,
+                ref currentVelocity_pos,
                 (
                     (tyro_on) ? 0.080f : 0.05f
                 )
             );
-
             transform.position = smoothFollow;
+            // --------------------------------------------------------------------
+
 
             if(tyro_on)
                 transform.LookAt( player.position + new Vector3(0, 1.25f, 0) );
@@ -956,8 +1000,8 @@ public class CameraMovement : MonoBehaviour
         rot_dc["wallR_rot_x_offst"] = 0.0f; rot_dc["wallR_rot_z_offst"] = 0.0f; rot_dc["wallR_rot_y_offst"] = 0.0f;
         reset_smoothDmpfnc();
 
-        // unique currentVelocity reset
-        // currentVelocity = Vector3.zero;
+        // unique currentVelocity_pos reset
+        // currentVelocity_pos = Vector3.zero;
 
         // +30% smoothTime !!
         smoothTime_prc = 30f;

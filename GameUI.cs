@@ -146,6 +146,14 @@ public class GameUI : MonoBehaviour
         saved_prefabScale_ = gun_ui.transform.GetChild(l_prefb).GetChild(0).transform.localScale;
         saved_prefabRotation_ = gun_ui.transform.GetChild(l_prefb).GetChild(0).transform.localRotation;
 
+        Debug.Log(Application.platform);
+        if (Application.platform == RuntimePlatform.Android || (Application.platform == RuntimePlatform.IPhonePlayer))
+        {
+            QualitySettings.vSyncCount = 0; // Set vSyncCount to 0 so that using .targetFrameRate is enabled.
+            // Application.targetFrameRate = 60;
+            Application.targetFrameRate = Screen.currentResolution.refreshRate;
+        } 
+
 
     
         // money txt
@@ -172,12 +180,11 @@ public class GameUI : MonoBehaviour
     private void countScore(){ countScore_ = true; }
 
 
-
+    
     // Update
     private void Update()
     {
         timer_ += Time.deltaTime;
-
 
         // values attribution
         timer_txt.text = timer_.ToString();
@@ -276,7 +283,6 @@ public class GameUI : MonoBehaviour
     // -----------
     private void FixedUpdate()
     {
-
         // ammo
         if( ammo_txt.text.ToString() != weapon_scrpt.get_ammo.ToString())
         {
@@ -857,9 +863,9 @@ public class GameUI : MonoBehaviour
                 restart_slice, 
                 (is_aGameOver) ? (
                         (transform.GetChild(4 + i).transform.localPosition)
-                        + new Vector3(0f, 1700f, 0f)
+                        + new Vector3(0f, 2000f, 0f)
                     ) : (
-                        new Vector3(0f, -1700, 0f)
+                        new Vector3(0f, -2000f, 0f)
                     ), 
                 2f
             ).setEaseInOutCubic();

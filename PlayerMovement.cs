@@ -7,10 +7,13 @@
 //
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Immutable;
+// using System.Collections.Immutable;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 using UnityEngine.Animations;
+#if UNITY_EDITOR
+    using UnityEditor.Animations;
+#endif
 using System;
 using PathCreation.Utility;
 using PathCreation;
@@ -27,10 +30,12 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private Transform plyr_cam;
 
 
-    [Header ("Attached Scripts")]
+    [Header ("Attached Scripts/Camera")]
     private CameraMovement cm_movement;
     private PlayerCollisions psCollisions_movement;
     private GameUI g_ui;
+    private GameObject game_cam;
+
 
     [Header ("Combo System")]
     private float combo_timer = 0f, combo_reset = 1.5f;
@@ -178,7 +183,8 @@ public class PlayerMovement : MonoBehaviour
 
     [Header ("Player Animator, Rigs & Constraints")]
     [SerializeField] private Animator rig_animController;
-    [SerializeField] private UnityEditor.Animations.AnimatorController _anim_controller;
+    // [SerializeField] private RuntimeAnimatorController _anim_controller = null;
+    // [SerializeField] private AnimatorController _anim_controller;
     [SerializeField] private AvatarMask lower_body_mask;
     [SerializeField] private RigBuilder player_Rig;
     [SerializeField] private MultiAimConstraint[] player_aims;
@@ -220,19 +226,18 @@ public class PlayerMovement : MonoBehaviour
     private Transform lastAimed_enemy;
     private Vector3 saved_WorldPos_armTarget;
 
-    [Header ("Aim Setting Called")]
+    [Header ("Aim Setting Called")] 
     private bool aimSettingCalled = false;
 
 
 
-    [Header ("Touch Variables")]
+    [Header ("TACTILE-INPUT Touch Variables")]
     private Vector3 fp;   //First touch position
     private Vector3 lp;   //Last touch position
-    private float dragDistance;  //minimum distance for a swipe to be registered [5% width of the screen]
+    private const float horizontal_dragDistance = 2f;  // minimum distance for a horizontal drag to be registered [5% width of the screen]
+    private float vertical_dragDistance = 15f; // min dist for a vert drag to be registered [5% width of the screen]
+    private bool can_registerJump = true;
 
-
-    [Header ("Camera")]
-    private GameObject game_cam;
 
     private bool FLYYY = false;
 
@@ -260,12 +265,36 @@ public class PlayerMovement : MonoBehaviour
         cm_movement = FindObjectOfType<CameraMovement>();
 
         movement_auth = false;
-    }
 
+        // var runtimeController = _anim.runtimeAnimatorController;
+        // if(runtimeController == null)
+        // {
+        //     Debug.LogErrorFormat("RuntimeAnimatorController must not be null.");
+        //     return;
+        // }else{
+        //     // Debug.Log(runtimeController);
+        //     _anim_controller = runtimeController;
+        // }
+
+        //
+        // AnimatorController _anim_controller = _anim.runtimeAnimatorController as AnimatorController;
+        //
+
+        // var controller = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEditor.Animations.AnimatorController>(UnityEditor.AssetDatabase.GetAssetPath(runtimeController));
+        // if(controller == null)
+        // {
+        //     Debug.LogErrorFormat("AnimatorController must not be null.");
+        //     return;
+        // }else
+        // {
+        //     _anim_controller = controller;
+        //     // Debug.Log(controller);
+        //     // Debug.Log(controller.layers);
+        // }
+    }
     // Start
     private void Start()
     {
-
         if (_anim == null)
             Debug.Log("nul animtor");
 
@@ -296,7 +325,9 @@ public class PlayerMovement : MonoBehaviour
         PlayerCollisions ar =  GameObject.FindGameObjectsWithTag("mainHitbox")[0].GetComponent<PlayerCollisions>();
         psCollisions_movement = ar;
 
-        dragDistance = Screen.width * 4 / 100; //dragDistance is 5% width of the screen
+        // dragDistance = Screen.width * 4 / 100; //dragDistance is 5% width of the screen
+        // dragDistance = (Screen.width / 100) * 3; //dragDistance is 3% width of the screen
+        vertical_dragDistance = (Screen.height / 100) * 15;
 
         StartCoroutine(start_game());
     }
@@ -1072,19 +1103,22 @@ public class PlayerMovement : MonoBehaviour
             //                                             RT_AUTH
             // ---------------------------------------------------------------------------------------------------------
             // rotate back [Quaternion Slerp]
-            if(!plyr_tyro && !plyr_intro_tyro && !plyr_wallRninng && !plyr_railSliding &&
-                !plyr_hanging && !plyr_saveClimbing && !plyr_bareerJumping && !plyr_climbingLadder
-                && !plyr_boxFalling
-            ) 
+            if(true == false)
             {
-                if (!Input.GetKey("q") && !Input.GetKey("d"))  rotate_bck();
-                if(Input.GetKey("q") || Input.GetKey("d"))  rt_auth = false;
-
-                if(rt_auth)
+                if(!plyr_tyro && !plyr_intro_tyro && !plyr_wallRninng && !plyr_railSliding &&
+                    !plyr_hanging && !plyr_saveClimbing && !plyr_bareerJumping && !plyr_climbingLadder
+                    && !plyr_boxFalling
+                ) 
                 {
-                    if(plyr_trsnfm.rotation.eulerAngles.y >= 0.1f || plyr_trsnfm.rotation.eulerAngles.y <= -0.1f)
+                    if (!Input.GetKey("q") && !Input.GetKey("d"))  rotate_bck();
+                    if(Input.GetKey("q") || Input.GetKey("d"))  rt_auth = false;
+
+                    if(rt_auth)
                     {
-                        transform.localRotation = Quaternion.Slerp(plyr_trsnfm.rotation, new Quaternion(0,0,0,1), 3.0f * Time.deltaTime);
+                        if(plyr_trsnfm.rotation.eulerAngles.y >= 0.1f || plyr_trsnfm.rotation.eulerAngles.y <= -0.1f)
+                        {
+                            transform.localRotation = Quaternion.Slerp(plyr_trsnfm.rotation, new Quaternion(0,0,0,1), 3.0f * Time.deltaTime);
+                        }
                     }
                 }
             }
@@ -1475,34 +1509,37 @@ public class PlayerMovement : MonoBehaviour
             // ---------------------------------------------------------------------------------------------------------
             //                                              TACTILE INPUTS
             // ---------------------------------------------------------------------------------------------------------
-            if (Input.touchCount == 1 && (true == false)) // user is touching the screen with a single touch
+            if (Input.touchCount == 1) // user is touching the screen with a single touch
             {
                 Touch touch = Input.GetTouch(0); // get the touch
+                
+                
+                // Debug.Log(touch.position);
+                // 1ST - TOUCH
                 if (touch.phase == TouchPhase.Began) //check for the first touch
                 {
                     fp = touch.position;
                     lp = touch.position;
                 }
-                else if (touch.phase == TouchPhase.Moved) // update the last position based on where they moved
-                {
-                    lp = touch.position;
-                }
-                else if (touch.phase == TouchPhase.Ended) //check if the finger is removed from the screen
+                
+                // MOVED - TOUCH
+                if (touch.phase == TouchPhase.Moved) // update the last position based on where they moved
                 {
                     lp = touch.position;  //last touch position. Ommitted if you use list
 
-                    //Check if drag distance is greater than 20% of the screen height
-                    if (Mathf.Abs(lp.x - fp.x) > dragDistance || Mathf.Abs(lp.y - fp.y) > dragDistance)
-                    {//It's a drag
-
-                        //check if the drag is vertical or horizontal
-                        if (Mathf.Abs(lp.x - fp.x) > Mathf.Abs(lp.y - fp.y))
-                        {
-                            //If the horizontal movement is greater than the vertical movement...
+                    // HORIZONTAL DRAG
+                    // Check if drag distance is greater than 5% of the screen height
+                    if (Mathf.Abs(lp.x - fp.x) > horizontal_dragDistance)
+                    {
+                        // fp = touch.position;
+                        // Debug.Log("Horizontal Drag");
+                        // if (Mathf.Abs(lp.x - fp.x) > Mathf.Abs(lp.y - fp.y))
+                        // {
+                            // If the horizontal movement is greater than the vertical movement...
                             if ((lp.x > fp.x))  //If the movement was to the right)
                             {
-                                 //Right swipe
-                                Debug.Log("Right Swipe");
+                                // Right swipe
+                                // Debug.Log("Right Swipe");
                                 if(!plyr_wallRninng){
                                    if ( (plyr_trsnfm.rotation.eulerAngles.y >= 309.0f) || ( Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) >= 0.0f && Math.Abs(plyr_trsnfm.rotation.eulerAngles.y) <= 41.0f) )
                                    {
@@ -1518,8 +1555,8 @@ public class PlayerMovement : MonoBehaviour
                                 }
                             }
                             else
-                            {   //Left swipe
-                                Debug.Log("Left Swipe");
+                            {   // Left swipe
+                                // Debug.Log("Left Swipe");
                                 if(!plyr_wallRninng){
                                     if ( (plyr_trsnfm.rotation.eulerAngles.y >= 311.0f && plyr_trsnfm.rotation.eulerAngles.y <= 360.0f) || (plyr_trsnfm.rotation.eulerAngles.y <= 43.0f) )
                                     {
@@ -1534,64 +1571,123 @@ public class PlayerMovement : MonoBehaviour
                                     else  plyr_rb.velocity = new Vector3(max_leftX, plyr_rb.velocity.y, plyr_rb.velocity.z);
                                 }
                             }
-                        }
+                        // }
+                    }
 
-                        else
-                        {
-                            //the vertical movement is greater than the horizontal movement
-                            if (lp.y > fp.y)  //If the movement was up
-                            {   //Up swipe
-                                Debug.Log("Up Swipe");
-                                // movement auth && jump auth
-                                if(movement_auth && jump_auth)
+                    // VERTICAL DRAG
+                    if(Mathf.Abs(lp.y - fp.y) > vertical_dragDistance && (can_registerJump))
+                    {
+                        can_registerJump = false;
+
+                        // movement was up
+                        if (lp.y > fp.y) 
+                        {   // Up swipe
+                            // Debug.Log("Up Swipe");
+                            // movement auth && jump auth
+                            if(movement_auth && jump_auth)
+                            {
+                                if ((jumpCnt > 0) )
                                 {
-                                    if ( Input.GetKeyDown(KeyCode.Space) && (jumpCnt > 0) )
+
+                                    // JUMP
+                                    if(jumpCnt == 2)
                                     {
+                                        StopCoroutine(delay_jumpInput( 0f ) );  StartCoroutine(delay_jumpInput( 0.55f ) );
 
-                                        // JUMP
-                                        if(jumpCnt == 2)
-                                        {
-                                            StopCoroutine(delay_jumpInput( 0f ) );  StartCoroutine(delay_jumpInput( 0.55f ) );
-
-                                            StartCoroutine(Dly_bool_anm(0.52f, "Jump"));
-                                            cm_movement.jmp(false);
-                                            psCollisions_movement.player_paricleArray(null, true, "jump") ;
-                                        }
-
-                                        // DOUBLE JUMP
-                                        if(jumpCnt == 1)
-                                        {
-                                            int randFlip =  UnityEngine.Random.Range(1, 3);
-                                            _anim.SetInteger("dblJmp", randFlip);
-                                            _anim.SetBool("Flying", false);
-
-                                            StopCoroutine(delay_jumpInput( 0f ) );  StartCoroutine(delay_jumpInput( 0.70f ) );
-
-                                            StartCoroutine(Dly_bool_anm(0.65f, "DoubleJump"));
-                                            cm_movement.jmp(true);
-                                            psCollisions_movement.player_paricleArray(null, true, "dblJump");
-                                        }
-
-                                        // ForceMode.VelocityChange
-                                        plyr_rb.AddForce( new Vector3(0, (jumpCnt == 1 ? (jumpAmount * 1.30f) :
-                                            (plyr_flying ? jumpAmount : jumpAmount/1.5f )),
-                                            0),
-                                        ForceMode.VelocityChange);
-
-
-                                        jumpCnt--;
+                                        StartCoroutine(Dly_bool_anm(0.52f, "Jump"));
+                                        cm_movement.jmp(false);
+                                        psCollisions_movement.player_paricleArray(null, true, "jump") ;
                                     }
+
+                                    // DOUBLE JUMP
+                                    if(jumpCnt == 1)
+                                    {
+                                        int randFlip =  UnityEngine.Random.Range(1, 3);
+                                        _anim.SetInteger("dblJmp", randFlip);
+                                        _anim.SetBool("Flying", false);
+
+                                        StopCoroutine(delay_jumpInput( 0f ) );  StartCoroutine(delay_jumpInput( 0.67f ) );
+
+                                        StartCoroutine(Dly_bool_anm(0.65f, "DoubleJump"));
+                                        cm_movement.jmp(true);
+                                        psCollisions_movement.player_paricleArray(null, true, "dblJump");
+                                    }
+
+                                    plyr_rb.AddForce( new Vector3(
+                                            0, 
+                                            (jumpCnt == 1 ? 
+                                                (jumpAmount * 1.1f) 
+                                                :
+                                                (plyr_flying ? jumpAmount : jumpAmount / 1.65f)
+                                            ),
+                                            0),
+                                        ForceMode.VelocityChange
+                                    );
+
+                                    jumpCnt--;
                                 }
                             }
-                            else
-                            {   //Down swipe
-                                Debug.Log("Down Swipe");
+                        }
+                        else
+                        {   
+                            // Down swipe
+                            // Debug.Log("Down Swipe");
+
+                            if(movement_auth && jump_auth)
+                            {
+                                // DASH DOWN
+                                if( (dashDownCnt > 0) )
+                                {
+                                    StopCoroutine(delay_jumpInput( 0f ) );  StartCoroutine(delay_jumpInput( 0.5f ) );
+
+                                    plyr_downDashing = true;
+                                    StopCoroutine(Dly_bool_anm(0.44f, "dashDown"));
+                                    StartCoroutine(Dly_bool_anm(0.44f, "dashDown"));
+                                    cm_movement.dash_down();
+
+                                    plyr_rb.AddForce( new Vector3(
+                                            0f, 
+                                            (jumpAmount * -1f), 
+                                            0f), 
+                                        ForceMode.VelocityChange
+                                    );
+
+                                    //dashDownCnt --;
+                                }
                             }
                         }
                     }
-                    else
-                    {   //It's a tap as the drag distance is less than 5% of the screen width
-                        Debug.Log("Tap");
+
+                    // TAP
+                    //else
+                    //{   //It's a tap as the drag distance is less than 5% of the screen width
+                        // Debug.Log("Tap");
+                    //}
+                }
+                
+                if (touch.phase == TouchPhase.Ended) //check if the finger is removed from the screen
+                {
+                    lp = touch.position;
+                }
+            }else
+            {
+                can_registerJump = true;
+               if(false == false)
+                {
+                    if(!plyr_tyro && !plyr_intro_tyro && !plyr_wallRninng && !plyr_railSliding &&
+                        !plyr_hanging && !plyr_saveClimbing && !plyr_bareerJumping && !plyr_climbingLadder
+                        && !plyr_boxFalling
+                    ) 
+                    {
+                        rotate_bck();
+
+                        if(rt_auth)
+                        {
+                            if(plyr_trsnfm.rotation.eulerAngles.y >= 0.1f || plyr_trsnfm.rotation.eulerAngles.y <= -0.1f)
+                            {
+                                transform.localRotation = Quaternion.Slerp(plyr_trsnfm.rotation, new Quaternion(0,0,0,1), 3.0f * Time.deltaTime);
+                            }
+                        }
                     }
                 }
             }
@@ -1986,6 +2082,7 @@ public class PlayerMovement : MonoBehaviour
 
                 plyr_launchJumping = true;
 
+                // Debug.Log(optional_gm.transform.rotation.eulerAngles);
                 // FindObjectOfType<CameraMovement>().special_jmp();
                 cm_movement.special_jmp();
                 action_momentum += 10f;
@@ -2193,6 +2290,9 @@ public class PlayerMovement : MonoBehaviour
 
                 special_rampDelay = true;
                 break;
+
+                
+        
             case "land":
 
                 if(_anim.GetBool("fallBox") || last_landBoxId == optional_gm.GetInstanceID() 
@@ -2250,6 +2350,8 @@ public class PlayerMovement : MonoBehaviour
                 cm_movement.leave_ground(transform.rotation.eulerAngles.y);
                 break;
 
+
+
             case "ladderHit":
                 _anim.SetBool("ladder", true);
 
@@ -2288,6 +2390,7 @@ public class PlayerMovement : MonoBehaviour
                 cm_movement.ladderClimb_offst(true);
                 cm_movement.special_jmp();
                 break;
+                
             // case "bumper":
 
             //     float y_ = ( Math.Abs(optional_gm.transform.rotation.eulerAngles.y) > 42f ?
@@ -2567,8 +2670,9 @@ public class PlayerMovement : MonoBehaviour
                 weapon_equipped = false;
                 aimed_enemy = null;
 
+                // AnimatorController _anim_controller = _anim.runtimeAnimatorController as AnimatorController;
                 _anim.SetBool("gunEquipped", true);
-                _anim_controller.layers[0].avatarMask = lower_body_mask;
+                // _anim_controller.layers[0].avatarMask = lower_body_mask;
 
                 if(plyr_shooting)
                     setAimSettings(false);
@@ -2851,10 +2955,11 @@ public class PlayerMovement : MonoBehaviour
             // reset upper layer weight
             // _anim.SetLayerWeight(1, 0f);
 
-            UnityEditor.Animations.AnimatorControllerLayer[] anim_layers = _anim_controller.layers;
+            //AnimatorController _anim_controller = _anim.runtimeAnimatorController as AnimatorController;
+            //UnityEditor.Animations.AnimatorControllerLayer[] anim_layers = _anim_controller.layers;
             // remove lowerBoddy mask layer
             // 0-index lower body layer
-            _anim_controller.layers[0].avatarMask = null;
+            //_anim_controller.layers[0].avatarMask = null;
 
             plyr_reloading = false;
         }
@@ -3145,10 +3250,15 @@ public class PlayerMovement : MonoBehaviour
 
         // _anim.SetLayerWeight(1, 1f);
         plyr_reloading = true;
+        
+        // AnimatorController _anim_controller = _anim.runtimeAnimatorController as AnimatorController;
+        // UnityEditor.Animations.AnimatorControllerLayer[] anim_layers = _anim_controller.layers;
+        // RuntimeAnimatorController _anim_controller =  _anim.runtimeAnimatorController;
 
-        UnityEditor.Animations.AnimatorControllerLayer[] anim_layers = _anim_controller.layers;
         // 0-index lower body layer
-        _anim_controller.layers[0].avatarMask = lower_body_mask;
+
+        //_anim_controller.layers[0].avatarMask = lower_body_mask;
+        // s_anim_controller["UpperBody"].avatarMask = lower_body_mask;
 
         _anim.SetFloat("reload_Speed", anim_time); // 1s * reloadTime
         _anim.SetInteger("reload_Type", weapon_reloadType);

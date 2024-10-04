@@ -50,7 +50,7 @@ public class Buildings : MonoBehaviour
     private void Update()
     {
         o_timer += Time.deltaTime;
-        if(o_timer >= 10f)
+        if(o_timer >= 7f)
         {
             optimize_sections();
             o_timer = 0f;
@@ -96,19 +96,21 @@ public class Buildings : MonoBehaviour
                     "tapTapJump", "bumper", "launcher", "hang", "ladder", "underSlide", "bareer", // interacts
                 } );
                 // Collectibles
-                List<string> collectibles_objs = new List<string>(new string[3]
+                List<string> collectibles_objs = new List<string>(new string[5]
                 {
-                    "coin", "gun", "health", 
+                    "coin", "gun", "healthBig", "healthSmall", "ammoSmall"
                 } );
                 // Turrets
                 List<string> turret_objs = new List<string>(new string[1]{
                     "TURRET"
                 } );
 
-                float dst = (active_sections[i].transform.position.z - (135 / 2)) - player_trsf.position.z;
+                float dst = (active_sections[i].transform.position.z - 
+                    ((135f * active_sections[i].transform.localScale.x) / 2)
+                ) - (player_trsf.position.z);
 
                 GameObject s = active_sections[i];
-                if( dst >= (game_over ? 140 : 75) || dst <= -160) // optimize [behind and below]
+                if( dst >= (game_over ? 160 : 70) || dst <= -160) // optimize [behind and below]
                 {
                     if( !optmized_go_bfr.Contains(active_sections[i]) )
                     {
@@ -320,11 +322,12 @@ public class Buildings : MonoBehaviour
         int ln_ = sections_prefabs.Length;
         float z = 0f;
         // Ignored-Scale gameobjects
-        const int ign_ln = 2;
+        const int ign_ln = 3;
         List<string> ignored_scale_tags = new List<string>(new string[ign_ln]
         {
             "TURRET", // Turrets
-            "ignoreTYRO"// Turrets
+            "ignoreTYRO", // Tyro things
+            "coin"
         } );
 
         GameObject[] active_sections = GameObject.FindGameObjectsWithTag("Section");
@@ -378,7 +381,7 @@ public class Buildings : MonoBehaviour
 
         if(buffer_sect.transform.childCount >= 2)
         {
-            combine_Meshes(buffer_sect, buffer_sect.transform.childCount);
+            // combine_Meshes(buffer_sect, buffer_sect.transform.childCount);
             // generate_SubTerrain(buffer_sect);
             // generateBounds(buffer_sect);
         }
