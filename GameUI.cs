@@ -147,12 +147,22 @@ public class GameUI : MonoBehaviour
         saved_prefabRotation_ = gun_ui.transform.GetChild(l_prefb).GetChild(0).transform.localRotation;
 
         Debug.Log(Application.platform);
-        if (Application.platform == RuntimePlatform.Android || (Application.platform == RuntimePlatform.IPhonePlayer))
-        {
-            QualitySettings.vSyncCount = 0; // Set vSyncCount to 0 so that using .targetFrameRate is enabled.
+
+        QualitySettings.vSyncCount = 0;
+        if (Application.platform == RuntimePlatform.Android 
+            || (Application.platform == RuntimePlatform.IPhonePlayer)
+            || (Application.platform == RuntimePlatform.OSXPlayer)
+        ){
+            
+            QualitySettings.vSyncCount = 0;
             // Application.targetFrameRate = 60;
             Application.targetFrameRate = Screen.currentResolution.refreshRate;
-        } 
+
+            p_movement.set_build_mode = true;
+        }else
+        {
+            p_movement.set_build_mode = false;
+        }
 
 
     
@@ -218,6 +228,8 @@ public class GameUI : MonoBehaviour
 
 
      
+        return; // < < <----------------------------------------------
+
 
         // if(false == true)
         // {
@@ -339,7 +351,7 @@ public class GameUI : MonoBehaviour
     // =======================
     public void newEnemy_UI(Transform enemy_)
     {
-        // return;
+        return;// < < <----------------------------------------------
         if(enemy_ == null)
             return;
 
@@ -398,7 +410,7 @@ public class GameUI : MonoBehaviour
     // =======================
     public void damage_ui(Transform enemy, int damage_value, bool? is_crit_hit, Vector3 offset)
     {
-        // return;
+        return; // < < <----------------------------------------------
         if(damage_value.GetType() != typeof(int) || enemy == null)
             return;
 

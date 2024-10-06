@@ -110,7 +110,7 @@ public class Buildings : MonoBehaviour
                 ) - (player_trsf.position.z);
 
                 GameObject s = active_sections[i];
-                if( dst >= (game_over ? 160 : 70) || dst <= -160) // optimize [behind and below]
+                if( dst >= (game_over ? 160 : 50) || dst <= -160) // optimize [behind and below]
                 {
                     if( !optmized_go_bfr.Contains(active_sections[i]) )
                     {
