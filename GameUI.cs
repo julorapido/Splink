@@ -163,8 +163,6 @@ public class GameUI : MonoBehaviour
         {
             p_movement.set_build_mode = false;
         }
-
-
     
         // money txt
         money_txt = money_ui.transform.GetChild(1).GetComponent<TextMeshProUGUI>();

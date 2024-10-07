@@ -14,7 +14,7 @@ public class CameraMovement : MonoBehaviour
     private const float x_ratio = -0.075f;
 
     [Header ("Camera Dash/Movements settings")]
-    private const float Camera_Movement_Ratio = 1.5f;
+    private const float Camera_Movement_Ratio = 1.25f;
 
     [Header ("Player Animator")]
     public GameObject p_gm;
@@ -155,6 +155,9 @@ public class CameraMovement : MonoBehaviour
     [Header ("Ragdoll")]
     [SerializeField] private Transform player_rag;
 
+    [Header ("IS BUILD")]
+    [HideInInspector] public bool is_build = false;
+
 
     // [Header ("Camera Bob")]
     // [HideInInspector] public bool can_headBob = false;
@@ -276,11 +279,17 @@ public class CameraMovement : MonoBehaviour
         
         
         // x_offst Assignation
-        x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ?
-                -1 *  (60 - (player_rb.rotation.eulerAngles.y - 300.0f))
-            :  player_rb.rotation.eulerAngles.y
-        );
+        // x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ?
+        //         -1 *  (60 - (player_rb.rotation.eulerAngles.y - 300.0f))
+        //     :  player_rb.rotation.eulerAngles.y
+        // );
 
+        /*
+        x_offst = (player.rotation.eulerAngles.y > 298.0f ?
+                -1 *  (60 - (player.rotation.eulerAngles.y - 300.0f))
+            :  player.rotation.eulerAngles.y
+        );
+        */
         /*
 
         // Lerp [Position] and [Rotation]
@@ -448,7 +457,6 @@ public class CameraMovement : MonoBehaviour
             desired_ = (player.position + offset);
 
 
-
         // time
         if(slow_time)
         {
@@ -474,6 +482,11 @@ public class CameraMovement : MonoBehaviour
 
             // Smooth Damp (rotation)
             // Dampen towards target rotation
+            x_offst = (player.rotation.eulerAngles.y > 298.0f ?
+                    -1 *  (60 - (player.rotation.eulerAngles.y - 300.0f))
+                :  player.rotation.eulerAngles.y
+            );
+        
             Quaternion desired_rt  = new Quaternion(
                 xRot + supl_xRot
                 + (!use_specialSmooth ? lerp_v_rot.x : rot_dc["wallR_rot_x_offst"])
@@ -492,7 +505,11 @@ public class CameraMovement : MonoBehaviour
 
             
             transform.localRotation = Quaternion.Slerp(
-                gameObject.transform.rotation, desired_rt, (tyro_on) ? 0.020f : 0.13f
+                gameObject.transform.rotation, desired_rt,
+                (!(is_build)) ? 
+                    ((tyro_on) ? 0.020f : 0.08f) // PC = a constant (0.08f)
+                    :
+                    (15f * Time.deltaTime )  // Mobile = fixed deltaTime            
             );
             // --------------------------------------------------------------------
 
@@ -508,28 +525,49 @@ public class CameraMovement : MonoBehaviour
                     (x_offst / 2.6f)// <----------------------
                 ))// <----------------------
             );// <----------------------
-            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 60f;// <----------------------
+            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 75f;// <----------------------
+            
 
-
-            Vector3 smoothFollow = Vector3.SmoothDamp(
-                transform.position,
-                (
-                    desired_ +
-                        (tyro_on ? new Vector3(0f, 0.5f, 0.5f) : new Vector3(0f,0f,0f))
-                    +
-                    (!use_specialSmooth ?
-                        (lerp_v_pos) : (new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"]))
+            if( !(is_build) ) // PC = SmoothDamp
+            {
+                Vector3 smoothFollow = Vector3.SmoothDamp(
+                    transform.position,
+                    (
+                        desired_ +
+                            (tyro_on ? new Vector3(0f, 0.5f, 0.5f) : new Vector3(0f,0f,0f))
+                        +
+                        (!use_specialSmooth ?
+                            (lerp_v_pos) : (new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"]))
+                        )
+                        + new Vector3(0f, ( (player_velocity.y < -4) ? ((player_velocity.y * Time.fixedDeltaTime) * 1.6f) : 0f), 0f) // y neg velocity compensation
+                        + new Vector3(0, 0, (player_rb.velocity.z > 8 ) ? (player_rb.velocity.z - 8) * 0.03f : 0f ) // z speed compensation
+                        // + (aim_v * 0.005f) // aiming vector
+                    ),
+                    ref currentVelocity_pos,
+                    (
+                        (tyro_on) ? 0.080f : 0.04f
                     )
-                    + new Vector3(0f, ( (player_velocity.y < -2) ? ((player_velocity.y * Time.fixedDeltaTime) * 2f) : 0f), 0f) // y neg velocity compensation
-                    + new Vector3(0, 0, (player_rb.velocity.z > 8 ) ? (player_rb.velocity.z - 8) * 0.03f : 0f ) // z speed compensation
-                    // + (aim_v * 0.005f) // aiming vector
-                ),
-                ref currentVelocity_pos,
-                (
-                    (tyro_on) ? 0.080f : 0.05f
-                )
-            );
-            transform.position = smoothFollow;
+                );
+                transform.position = smoothFollow;
+            }
+            else // MOBILE = Lerp
+            {
+                transform.position = Vector3.Lerp(
+                    transform.position,
+                    (
+                        desired_ +
+                            (tyro_on ? new Vector3(0f, 0.5f, 0.5f) : new Vector3(0f,0f,0f))
+                        +
+                        (!use_specialSmooth ?
+                            (lerp_v_pos) : (new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"]))
+                        )
+                        + new Vector3(0f, ( (player_velocity.y < -4) ? ((player_velocity.y * Time.fixedDeltaTime) * 1.6f) : 0f), 0f) // y neg velocity compensation
+                    ),
+                    (
+                        30f * Time.deltaTime 
+                    )
+                );
+            }
             // --------------------------------------------------------------------
 
 
@@ -611,7 +649,7 @@ public class CameraMovement : MonoBehaviour
     // -----------------------------------------------
     private void apply_movementRatio(bool is_for_smoothDamps)
     {
-        return; 
+        // return; 
         if(is_for_smoothDamps)
         {
             List<float> temp_flt = values_flt;
