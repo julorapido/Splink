@@ -19,7 +19,7 @@ public class Weapon : MonoBehaviour
     [Header ("Weapon Stats")]
     private const int damage = 60;
     private const int precision_ = 80;
-    private const float fireRate = 0.4f;
+    private const float fireRate = 0.2f;
     private const int criticalChance = 5; // /100
     private const int range_ = 40; // max range 70-ish
     private const int magSize = 12;

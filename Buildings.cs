@@ -11,12 +11,22 @@ public class Buildings : MonoBehaviour
     private GameObject[] buildngs_prefb;
     private Transform last_sectionSpawned = null;
 
+    [Header ("SECTIONS-POOL")]
+    [SerializeField] private GameObject[] sections_pool;
+    [SerializeField] private Transform s_pool;
+    private Transform[][] pool_snapshots = new Transform[100][];
+
+
     [Header ("SETTINGS")]
     [SerializeField] private float sections_scale;
 
     [Header ("TRANSFORMS")]
     [SerializeField] private Transform player_trsf;
     [SerializeField] private Transform bldg_parent;
+
+    [Header ("Z")]
+    private float _z_= 0f;
+
 
     [Header ("Optimization")]
     private GameObject[] activated_go_bfr = new GameObject[30]; // 30 fixed bfr
@@ -30,6 +40,75 @@ public class Buildings : MonoBehaviour
         set {if(value.GetType() == typeof(bool)) game_over = value;}
     }
 
+    // Awake 
+    private void Awake()
+    {
+
+
+        // APPLY IGNORED_SCALE to [Pool Sections]
+        const int ign_ln = 3;
+        List<string> ignored_scale_tags = new List<string>(new string[ign_ln]
+        {
+            "TURRET", // Turrets
+            "ignoreTYRO", // Tyro things
+            "coin"
+        } );
+        for(int k = 0; k < sections_pool.Length; k++)
+        {
+            Transform buffer_sect = sections_pool[k].transform;
+            for(int i = 0; i < ign_ln; i++)
+            {
+                Transform[] selected_t = ((buffer_sect.GetComponentsInChildren<Transform>()).Where(
+                    t => t.gameObject.tag == ignored_scale_tags[i]
+                ).ToArray()) as Transform[];
+                float r = 1f + (1f - sections_scale);
+                for(int j = 0; j < selected_t.Length; j ++)
+                {
+                    float s =  selected_t[j].localScale.x * (r);
+                    selected_t[j].localScale = new Vector3(s, s, s);
+                }
+            }
+            buffer_sect.transform.localScale = new Vector3(
+                sections_scale, sections_scale, sections_scale
+            );
+        }
+
+        // SAVE SNAPSHOTS of [Respawnable Objects in Pool Sections]
+        List<string> respawnable_objs = new List<string>(new string[9]
+        {
+            "TURRET", // Turrets
+            "tyro", // Tyro_handler
+            "coin", // coins
+            "healthSmall", // Health-Small
+            "healthBig", // Health-Big
+            "armor", // Armor
+            "gun", // Weapon Pickups
+            "ammoSmall", // Ammo-Small
+            "ammoBig" // Ammo-Big
+        } );
+        for(int a = 0; a < sections_pool.Length; a++)
+        {
+            Transform buffer_sect = sections_pool[a].transform;
+            Transform[] respawnables_t = (
+                (buffer_sect.GetComponentsInChildren<Transform>())
+                .Where(t => 
+                    respawnable_objs.Contains(t.gameObject.tag) == true
+                ).ToArray()) as Transform[];
+            pool_snapshots[a] = respawnables_t;
+        }
+
+        // for(int i = 0; i < sections_pool.Length; i++)
+        // {
+        //     Debug.Log("SECTION " + i);
+        //     for(int j = 0; j < pool_snapshots[i].Length; j++)
+        //     {
+        //         Debug.Log(pool_snapshots[i][j]);
+        //     }
+        //     Debug.Log("========================");
+        // }
+    }
+
+
 
     // Start
     private void Start()
@@ -37,7 +116,7 @@ public class Buildings : MonoBehaviour
         RenderSettings.skybox.SetFloat("_Rotation", 0f);
 
         Gen_PrefabSection();
-        Gen_PrefabSection();
+        // Gen_PrefabSection();
 
         for(int i = 0; i < 30; i ++)
             optmized_go_bfr[i] = activated_go_bfr[i] = null;
@@ -46,14 +125,15 @@ public class Buildings : MonoBehaviour
     }
 
 
+
     // Update
     private void Update()
     {
         o_timer += Time.deltaTime;
-        if(o_timer >= 12f)
+        if(o_timer >= 7f)
         {
-            optimize_sections();
             o_timer = 0f;
+            optimize_sections();
         }
     }
 
@@ -68,12 +148,14 @@ public class Buildings : MonoBehaviour
         RenderSettings.skybox.SetFloat("_Rotation", p + (Time.deltaTime * 0.20f) );
 
 
-        // infinite game loop
+        // "infinite" game loop
         if(last_sectionSpawned != null && 
-            (last_sectionSpawned.position.z - player_trsf.position.z) < 180
+            (last_sectionSpawned.position.z - player_trsf.position.z) < 70f
         )
         {
             Gen_PrefabSection();
+            optimize_sections();
+            o_timer = 0f;
         }
     }
 
@@ -87,6 +169,7 @@ public class Buildings : MonoBehaviour
 
         for(int i = 0; i < active_sections.Length; i++)
         {
+
                 // Focus
                 List<string> focus_objs = new List<string>(new string[12]
                 {
@@ -109,8 +192,10 @@ public class Buildings : MonoBehaviour
                     ((135f * active_sections[i].transform.localScale.x) / 2)
                 ) - (player_trsf.position.z);
 
-                GameObject s = active_sections[i];
-                if( dst >= (game_over ? 160 : 70) || dst <= -160) // optimize [behind and below]
+
+
+                // [optimize [behind and below]]
+                if( dst >= (game_over ? 160f : 70f) || dst <= -100f) 
                 {
                     if( !optmized_go_bfr.Contains(active_sections[i]) )
                     {
@@ -137,8 +222,20 @@ public class Buildings : MonoBehaviour
                             }
                         }
                     }
+
+                    // if section is behind
+                    // put back section in the pool
+                    if(dst <= -100f)
+                    {
+                        if(active_sections[i].transform.parent == transform)
+                        {
+                            active_sections[i].transform.parent = s_pool;
+                            active_sections[i].transform.localPosition = new Vector3(200 * i, 0f, 0f);
+                        }
+                    }
                 }
-                else // cancel optimization
+                // [activate back-on (cancel optimize)]
+                else
                 {
                     if( !activated_go_bfr.Contains(active_sections[i]) 
                         && (dst > -5)
@@ -146,7 +243,6 @@ public class Buildings : MonoBehaviour
                     {
                         // Include inactive <GetCompInChild<T>(bool includeInactive)>
                         Transform[] gm_t = active_sections[i].GetComponentsInChildren<Transform>(true);
-                        // Debug.Log("ACTIVATE BACK-ON " + active_sections[i] + " TRANSFORMS ?" + gm_t.Length);
 
                         for(int j = 0; j < gm_t.Length; j++)
                         {
@@ -195,123 +291,6 @@ public class Buildings : MonoBehaviour
 
 
 
-    // ** ** ** ** ** ** ** **
-    // Outdated buildings generation function
-    private void Gen_Bldngs(int z_len)
-    {
-        int ln_ = buildngs_prefb.Length;
-        float x_pos, space_t_fill, z_pos;
-        // Z 
-        for(int p = 0; p < z_len; p++)
-        {
-            x_pos = 0.0f;
-            space_t_fill = 0.0f;
-            // X 
-            for(int i = 0; i < ln_; i ++)
-            {
-                const float fnc_gn_w = 50.0f;
-                if(x_pos > fnc_gn_w){break;}
-
-                int rdm_ = UnityEngine.Random.Range(0, ln_);/// RAND bat indx
-                GameObject sl = buildngs_prefb[rdm_];
-                Vector2 bld_sze = new Vector2(0, 0); // Type of => Vect2 [width(x-axis), profondeur(z-axis)]
-                
-                float bld_wdth = 0.0f; // Actual Width of BLDG
-                bool prnt_passed = false; bool is_prnt_cldr = false;
-                int indx_scale = 0;
-
-                //////////////////// BLDG SIZE ////////////////////
-                Collider[] sl_coldrs = sl.transform.GetComponentsInChildren<Collider>();
-                for (int j = 0; j < sl_coldrs.Length; j ++)
-                {
-
-                    string[] coldr_type = sl_coldrs[j].GetType().ToString().Split('.');
-                    //  //  //  //  //  //
-                    Collider parent_cldr_ = sl.transform.GetComponent<Collider>();
-                    
-                    if(j == 0 && parent_cldr_ && !prnt_passed)
-                    {
-                        prnt_passed = true;
-                        coldr_type = parent_cldr_.GetType().ToString().Split('.');
-                        is_prnt_cldr = true;
-                        j--;
-                    }
-                    //  //  //  //  //  // 
-                    BoxCollider b_cldr; SphereCollider s_cldr; MeshCollider m_cldr;
-
-                    Vector3 _sze = new Vector3(0, 0, 0); // Box => Vect3
-                    float _rds = 0.0f; // Sphere => Radius
-                    Vector2 _msh_wdt = new Vector2(0, 0); // Mesh => Vect2 [width(x-axis), profondeur(z-axis)]
-
-                    switch(coldr_type[1]){
-                        case "BoxCollider" :
-                            b_cldr = is_prnt_cldr ? (sl.GetComponent<BoxCollider>()) : (sl.GetComponentsInChildren<BoxCollider>()[0]);
-                            if(b_cldr)
-                            {
-                                _sze = b_cldr.size;
-
-                                if(bld_wdth < _sze.x){indx_scale = j; bld_wdth = _sze.x; bld_sze = new Vector2(_sze.x, _sze.y);}
-                            }
-                            break;
-                        case "SphereCollider" : 
-                            s_cldr = is_prnt_cldr ? (sl.GetComponent<SphereCollider>()) : (sl.GetComponentsInChildren<SphereCollider>()[0]);
-                            if(s_cldr)
-                            {
-                                _rds = s_cldr.radius;
-
-                                if(bld_wdth < _rds){indx_scale = j; bld_wdth = _rds; }
-                            }
-                            break;
-                        case "MeshCollider" : 
-                            m_cldr = is_prnt_cldr ? (sl.GetComponent<MeshCollider>()) : (sl.GetComponentsInChildren<MeshCollider>()[0]);
-                            if(m_cldr){
-                                Mesh sharedMsh_ = m_cldr.sharedMesh;
-                                if(sharedMsh_){
-                                    float[] x_values = new float[sharedMsh_.vertices.Length];
-                                    float[] z_values = new float[sharedMsh_.vertices.Length];
-                                    for(var x = 0; x < sharedMsh_.vertices.Length; x ++)
-                                    {
-                                        x_values[x] = sharedMsh_.vertices[x].x;
-                                        z_values[x] = sharedMsh_.vertices[x].z;
-                                    }
-                                    Array.Sort(x_values);
-                                    _msh_wdt = new Vector2(Math.Abs(x_values[0]) + x_values[x_values.Length - 1],
-                                        Math.Abs(z_values[0]) + z_values[z_values.Length - 1]
-                                    );
-
-                                    if(bld_wdth < _msh_wdt.x){
-                                        indx_scale = j; bld_wdth = _msh_wdt.x; bld_sze = _msh_wdt;
-                                    }
-                                }    
-                            }
-                            break;  
-                    }
-                    if(bld_wdth < _sze.x || bld_wdth < _rds || bld_wdth < _msh_wdt.x)
-                    {
-                        bld_sze.x = _sze.x > 0 ? _sze.x : _msh_wdt.x;
-                        bld_sze.y = _sze.z > 0 ? _sze.z : _msh_wdt.y;
-                        bld_wdth = _rds > 0 ? _rds : (_sze.x > 0 ? _sze.x : _msh_wdt.x);
-                    }
-                }
-                /////////////////////////////////////////////////
-
-                if(is_prnt_cldr){ bld_wdth = bld_wdth * sl.transform.localScale.x; }else
-                {
-                    bld_wdth = (bld_wdth * sl_coldrs[indx_scale].gameObject.transform.localScale.x) * sl.transform.localScale.x;
-                    //bld_wdth = bld_wdth  * sl.transform.localScale.x;
-                }
-                Instantiate(sl, new Vector3(x_pos + bld_wdth/2 , 0, 0), new Quaternion(0f, 90f, 0f, 1), bldg_parent);
-
-                x_pos += bld_wdth;
-            } 
-            //z_pos += 40.0f;
-        }
-    }
-    // ** ** ** ** ** **
-
-
-
-
 
 
     // ========================================
@@ -319,73 +298,84 @@ public class Buildings : MonoBehaviour
     // ========================================
     private void Gen_PrefabSection()
     {
-        int ln_ = sections_prefabs.Length;
-        float z = 0f;
-        // Ignored-Scale gameobjects
-        const int ign_ln = 3;
-        List<string> ignored_scale_tags = new List<string>(new string[ign_ln]
-        {
-            "TURRET", // Turrets
-            "ignoreTYRO", // Tyro things
-            "coin"
-        } );
 
-        GameObject[] active_sections = GameObject.FindGameObjectsWithTag("Section");
-        for(int i = 0; i < active_sections.Length; i ++)
-        {
-            BoxCollider bx = active_sections[i].GetComponent<BoxCollider>();
-            float z_size = (bx.size.z) * (active_sections[i].transform.localScale.z);
-            z += z_size;
-        }
+        Transform[] active_sections = (
+            (transform.GetComponentsInChildren<Transform>())
+            .Where(t => 
+                (t.gameObject.tag) == "Section"
+            ).ToArray()) as Transform[];
+
+        // for(int i = 0; i < active_sections.Length; i ++)
+        // {
+        //     if(!(active_sections[i].gameObject.activeSelf))
+        //         continue; 
+        //     BoxCollider bx = active_sections[i].GetComponent<BoxCollider>();
+        //     float z_size = (bx.size.z) * (active_sections[i].transform.localScale.z);
+        //     z += z_size;
+        // }
+
+        int ln_ = sections_pool.Length;
+
+        int pooled_sections;
 
         int rdm_ = UnityEngine.Random.Range(0, ln_);/// RAND Section indx 
-        int rdm_2 = UnityEngine.Random.Range(0, ln_);/// RAND Section indx 
-        GameObject sl = sections_prefabs[UnityEngine.Random.Range(1, 3) == 1 ? rdm_ : rdm_2];
+        while(sections_pool[rdm_].transform.parent == transform)
+        {
+            rdm_ = UnityEngine.Random.Range(0, ln_);
+        }
+        GameObject sl = sections_pool[rdm_];
 
         // BoxCldr Size as whole Sect Size
         // (135) Section Z-Size
         Vector3 sl_size = sl.GetComponent<BoxCollider>().size;
 
+
         if(sections_scale != 1f)
         {
             sl_size.z *= sections_scale;
-            // sl_size.x *= sections_scale;
         }
 
-        GameObject buffer_sect = Instantiate(
-            sl, 
-            new Vector3(
-                -1 * (sl_size.x / 2), 
-                0f,
-                z + (sl_size.z / 2) // + 1f
-            ), 
-            new Quaternion(0f, 0f, 0f, 1), 
-            bldg_parent
+        // set position and rotation
+        Vector3 section_pos =  new Vector3(
+            -1 * (sl_size.x / 2), 
+            0f,
+            _z_ + (sl_size.z / 2) // + 1f
         );
-        
-        buffer_sect.transform.localScale = new Vector3(sections_scale, sections_scale, sections_scale);
-        for(int i = 0; i < ign_ln; i++)
-        {
-            Transform[] selected_t = ((buffer_sect.transform.GetComponentsInChildren<Transform>()).Where(
-                t => t.gameObject.tag == ignored_scale_tags[i]
-            ).ToArray()) as Transform[];
-            float r = 1f + (1f - sections_scale);
-            for(int j = 0; j < selected_t.Length; j ++)
-            {
-                float s =  selected_t[j].localScale.x * (r);
-                selected_t[j].localScale = new Vector3(s, s, s);
-            }
-        }
+        Quaternion section_rot = new Quaternion(0f, 0f, 0f, 1);
 
-        last_sectionSpawned = buffer_sect.transform;
 
-        if(buffer_sect.transform.childCount >= 2)
+        sl.transform.parent = bldg_parent;
+        sl.transform.localPosition = section_pos;
+        sl.transform.rotation = section_rot;
+
+        last_sectionSpawned = sl.transform;
+
+        _z_ += sl_size.z;
+
+        if(sl.transform.childCount >= 10)
         {
-            // combine_Meshes(buffer_sect, buffer_sect.transform.childCount);
+            // combine_Meshes(sl, sl.transform.childCount);
             // generate_SubTerrain(buffer_sect);
             // generateBounds(buffer_sect);
         }
     }
+    /*
+    private async void Spawn(GameObject section)
+    {
+        _spawnedObjects = await AsyncInstantiation(section);
+        return (_spawnedObjects);
+    }
+    private AsyncInstantiateOperation<GameObject> AsyncInstantiation(GameObject section)
+    {
+        result = InstantiateAsync(section, 1);
+        result.allowSceneActivation = false;
+        result.completed += Message;
+        return (result);
+    }*/
+
+
+
+
 
 
 
@@ -670,9 +660,6 @@ public class Buildings : MonoBehaviour
 
         Debug.Log(" Whole Batch : "  + (wholeBatchBldg * wholeBatchMat) );
     }
-
-    
-
     private Mesh fixFinalVertices(Mesh _mesh, Vector3 scale)
     {
         // Step 1: Get the vertices of the mesh
@@ -702,6 +689,8 @@ public class Buildings : MonoBehaviour
 
         return _mesh;
     }
+
+
 
 
 
@@ -967,6 +956,120 @@ public class Buildings : MonoBehaviour
         r.center = new Vector3(r_[r_.Length - 1], 0, 0);
     }
 
+
+    // ** ** ** ** ** ** ** **
+    // Outdated buildings generation function
+    private void Gen_Bldngs(int z_len)
+    {
+        int ln_ = buildngs_prefb.Length;
+        float x_pos, space_t_fill, z_pos;
+        // Z 
+        for(int p = 0; p < z_len; p++)
+        {
+            x_pos = 0.0f;
+            space_t_fill = 0.0f;
+            // X 
+            for(int i = 0; i < ln_; i ++)
+            {
+                const float fnc_gn_w = 50.0f;
+                if(x_pos > fnc_gn_w){break;}
+
+                int rdm_ = UnityEngine.Random.Range(0, ln_);/// RAND bat indx
+                GameObject sl = buildngs_prefb[rdm_];
+                Vector2 bld_sze = new Vector2(0, 0); // Type of => Vect2 [width(x-axis), profondeur(z-axis)]
+                
+                float bld_wdth = 0.0f; // Actual Width of BLDG
+                bool prnt_passed = false; bool is_prnt_cldr = false;
+                int indx_scale = 0;
+
+                //////////////////// BLDG SIZE ////////////////////
+                Collider[] sl_coldrs = sl.transform.GetComponentsInChildren<Collider>();
+                for (int j = 0; j < sl_coldrs.Length; j ++)
+                {
+
+                    string[] coldr_type = sl_coldrs[j].GetType().ToString().Split('.');
+                    //  //  //  //  //  //
+                    Collider parent_cldr_ = sl.transform.GetComponent<Collider>();
+                    
+                    if(j == 0 && parent_cldr_ && !prnt_passed)
+                    {
+                        prnt_passed = true;
+                        coldr_type = parent_cldr_.GetType().ToString().Split('.');
+                        is_prnt_cldr = true;
+                        j--;
+                    }
+                    //  //  //  //  //  // 
+                    BoxCollider b_cldr; SphereCollider s_cldr; MeshCollider m_cldr;
+
+                    Vector3 _sze = new Vector3(0, 0, 0); // Box => Vect3
+                    float _rds = 0.0f; // Sphere => Radius
+                    Vector2 _msh_wdt = new Vector2(0, 0); // Mesh => Vect2 [width(x-axis), profondeur(z-axis)]
+
+                    switch(coldr_type[1]){
+                        case "BoxCollider" :
+                            b_cldr = is_prnt_cldr ? (sl.GetComponent<BoxCollider>()) : (sl.GetComponentsInChildren<BoxCollider>()[0]);
+                            if(b_cldr)
+                            {
+                                _sze = b_cldr.size;
+
+                                if(bld_wdth < _sze.x){indx_scale = j; bld_wdth = _sze.x; bld_sze = new Vector2(_sze.x, _sze.y);}
+                            }
+                            break;
+                        case "SphereCollider" : 
+                            s_cldr = is_prnt_cldr ? (sl.GetComponent<SphereCollider>()) : (sl.GetComponentsInChildren<SphereCollider>()[0]);
+                            if(s_cldr)
+                            {
+                                _rds = s_cldr.radius;
+
+                                if(bld_wdth < _rds){indx_scale = j; bld_wdth = _rds; }
+                            }
+                            break;
+                        case "MeshCollider" : 
+                            m_cldr = is_prnt_cldr ? (sl.GetComponent<MeshCollider>()) : (sl.GetComponentsInChildren<MeshCollider>()[0]);
+                            if(m_cldr){
+                                Mesh sharedMsh_ = m_cldr.sharedMesh;
+                                if(sharedMsh_){
+                                    float[] x_values = new float[sharedMsh_.vertices.Length];
+                                    float[] z_values = new float[sharedMsh_.vertices.Length];
+                                    for(var x = 0; x < sharedMsh_.vertices.Length; x ++)
+                                    {
+                                        x_values[x] = sharedMsh_.vertices[x].x;
+                                        z_values[x] = sharedMsh_.vertices[x].z;
+                                    }
+                                    Array.Sort(x_values);
+                                    _msh_wdt = new Vector2(Math.Abs(x_values[0]) + x_values[x_values.Length - 1],
+                                        Math.Abs(z_values[0]) + z_values[z_values.Length - 1]
+                                    );
+
+                                    if(bld_wdth < _msh_wdt.x){
+                                        indx_scale = j; bld_wdth = _msh_wdt.x; bld_sze = _msh_wdt;
+                                    }
+                                }    
+                            }
+                            break;  
+                    }
+                    if(bld_wdth < _sze.x || bld_wdth < _rds || bld_wdth < _msh_wdt.x)
+                    {
+                        bld_sze.x = _sze.x > 0 ? _sze.x : _msh_wdt.x;
+                        bld_sze.y = _sze.z > 0 ? _sze.z : _msh_wdt.y;
+                        bld_wdth = _rds > 0 ? _rds : (_sze.x > 0 ? _sze.x : _msh_wdt.x);
+                    }
+                }
+                /////////////////////////////////////////////////
+
+                if(is_prnt_cldr){ bld_wdth = bld_wdth * sl.transform.localScale.x; }else
+                {
+                    bld_wdth = (bld_wdth * sl_coldrs[indx_scale].gameObject.transform.localScale.x) * sl.transform.localScale.x;
+                    //bld_wdth = bld_wdth  * sl.transform.localScale.x;
+                }
+                Instantiate(sl, new Vector3(x_pos + bld_wdth/2 , 0, 0), new Quaternion(0f, 90f, 0f, 1), bldg_parent);
+
+                x_pos += bld_wdth;
+            } 
+            //z_pos += 40.0f;
+        }
+    }
+    // ** ** ** ** ** **
 
 }
 

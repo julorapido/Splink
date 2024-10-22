@@ -11,7 +11,7 @@ public class CameraMovement : MonoBehaviour
     private const float divisor = 55f;
 
     [Header ("Camera Main Rotation Ratio")]
-    private const float x_ratio = -0.075f;
+    private const float x_ratio = -0.090f;
 
     [Header ("Camera Dash/Movements settings")]
     private const float Camera_Movement_Ratio = 1.25f;
@@ -480,6 +480,7 @@ public class CameraMovement : MonoBehaviour
 
             bool aim_off =  (aimed_target == null || tyro_on ) ? true : false;
 
+            // --- [ROTATION] ---
             // Smooth Damp (rotation)
             // Dampen towards target rotation
             x_offst = (player.rotation.eulerAngles.y > 298.0f ?
@@ -509,12 +510,13 @@ public class CameraMovement : MonoBehaviour
                 (!(is_build)) ? 
                     ((tyro_on) ? 0.020f : 0.08f) // PC = a constant (0.08f)
                     :
-                    (15f * Time.deltaTime )  // Mobile = fixed deltaTime            
+                    (20f * Time.deltaTime )  // Mobile = fixed deltaTime            
             );
             // --------------------------------------------------------------------
 
 
 
+            // --- [POSITION] ---
             // Smooth Damp (position)
             // Dampen towards offset position
             desired_  = (player.position + offset); // <----------------------
@@ -526,7 +528,6 @@ public class CameraMovement : MonoBehaviour
                 ))// <----------------------
             );// <----------------------
             desired_.z = desired_.z +  (Math.Abs(x_offst)) / 75f;// <----------------------
-            
 
             if( !(is_build) ) // PC = SmoothDamp
             {
@@ -564,7 +565,7 @@ public class CameraMovement : MonoBehaviour
                         + new Vector3(0f, ( (player_velocity.y < -4) ? ((player_velocity.y * Time.fixedDeltaTime) * 1.6f) : 0f), 0f) // y neg velocity compensation
                     ),
                     (
-                        30f * Time.deltaTime 
+                        40f * Time.deltaTime 
                     )
                 );
             }
@@ -653,12 +654,15 @@ public class CameraMovement : MonoBehaviour
         if(is_for_smoothDamps)
         {
             List<float> temp_flt = values_flt;
-            temp_flt.Select(el => el * (Camera_Movement_Ratio)).ToList();
-            // for(int i = 0; i > 6; i++)
-            // {
-            //     values_flt[i] *= (Camera_Movement_Ratio);
-            // }
-            values_flt = temp_flt;
+            temp_flt.Select(
+                    (el, index) => new {index, el = el * (Camera_Movement_Ratio)}
+                ).ToList();
+            // values_flt = temp_flt;
+            for(int i = 0; i < 6; i++)
+            {
+                values_flt[i] *= (Camera_Movement_Ratio);
+                //Debug.Log("AFTER = " + values_flt[i]);
+            }
         }else
         {
             foreach(string key in pos_dc.Keys.ToList())
@@ -838,11 +842,11 @@ public class CameraMovement : MonoBehaviour
             float s_ = UnityEngine.Random.Range(1, 3);
 
             // CLOSE UP Z OFFSET
-            pos_dc["wallR_z_offst"] = 1.5f;
-            pos_dc["wallR_y_offst"] = -0.6f;
+            pos_dc["wallR_z_offst"] = 1f;
+            pos_dc["wallR_y_offst"] = -1.2f;
 
             // SMOOTH DAMP FOR X ROTATION
-            rot_dc["wallR_rot_x_offst"] = 0.13f;
+            rot_dc["wallR_rot_x_offst"] = -0.06f;
             rot_dc["wallR_rot_z_offst"] =  s_ == 1 ? -0.10f : 0.10f;
 
             apply_movementRatio(false);
@@ -992,10 +996,11 @@ public class CameraMovement : MonoBehaviour
             false, false, false ,false, false, false
         });
 
+        apply_movementRatio(true);
+
         trns_fnc = use_specialSmooth = true;
         trns_back = false;
 
-        apply_movementRatio(true);
 
         StartCoroutine(time_coroutine());
     }
@@ -1008,17 +1013,20 @@ public class CameraMovement : MonoBehaviour
         reset_smoothDmpfnc();
 
         // +30% smoothTime !!
-        smoothTime_prc = 20f;
+        smoothTime_prc = 15f;
 
-        iterator_ = 3;
-        List<float> v_flt = new List<float>(new float[6] {0.170f, 1.40f, 0.040f, 0.0f, 0.0f, 0.0f} );
-        List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "", "",""} );
+        iterator_ = 4;
+        List<float> v_flt = new List<float>(new float[6] {0.120f, 0.85f, 0.040f, 
+            0.6f, 0.0f, 0.0f} );
+        List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", 
+            "wallR_z_offst", "",""} );
 
         values_ref = s_arr; values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] {
             false, false, false ,false, false, false
         });
 
+        apply_movementRatio(true);
         trns_fnc = use_specialSmooth = true; trns_back = false;
 
     }
@@ -1149,6 +1157,8 @@ public class CameraMovement : MonoBehaviour
     public void tapTapJmp(bool tap_tapExit){
         reset_smoothDmpfnc();
 
+        if(tap_tapExit)
+            Debug.Log("OUT !");
         // +10% || +30%
         smoothTime_prc = tap_tapExit ? 10f : 30f;
 
@@ -1157,13 +1167,16 @@ public class CameraMovement : MonoBehaviour
 
         iterator_ = 4;
         List<float> v_flt = new List<float>(new float[6] {
-            tap_tapExit ? -1.5f : -0.9f, tap_tapExit ? 0f : 0.4f,
-            tap_tapExit ? -0.13f : 0.100f, tap_tapExit ? -0.110f : 0.040f, 0f, 0f
+            tap_tapExit ? -0.7f : -0.2f, tap_tapExit ? 0.3f : 0.55f,
+            tap_tapExit ? 0.2f : -0.050f, tap_tapExit ? -0.040f : 0.09f, 0f, 0f
         } );
-        List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_z_offst", "wallR_rot_z_offst", "wallR_rot_x_offst", "",  ""} );
+        List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_z_offst", 
+            "wallR_rot_z_offst", "wallR_rot_x_offst", "",  ""} );
 
         values_ref = s_arr; values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false });
+
+        apply_movementRatio(true);
 
         trns_fnc = use_specialSmooth = true; trns_back = false;
     }
@@ -1184,6 +1197,9 @@ public class CameraMovement : MonoBehaviour
         values_ref = s_arr;
         values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] {false, false, false ,false, false, false});
+
+        apply_movementRatio(true);
+
         trns_fnc = use_specialSmooth = true; trns_back = false;
     }
 
@@ -1198,7 +1214,7 @@ public class CameraMovement : MonoBehaviour
         smoothTime_prc = 15f;
 
         iterator_ = 3;
-        List<float> v_flt = new List<float>(new float[6] {-1.15f, y_rot > 0 ? -0.12f : 0.12f, -0.085f,
+        List<float> v_flt = new List<float>(new float[6] {-1.15f, y_rot > 0 ? -0.15f : 0.15f, -0.085f,
         0f, 0f, 0f } );
         List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
         "", "",  ""} );
@@ -1206,6 +1222,9 @@ public class CameraMovement : MonoBehaviour
         values_ref = s_arr;
         values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
+
+        apply_movementRatio(true);
+ 
         trns_fnc = use_specialSmooth = true; trns_back = false;
     }
 
@@ -1218,7 +1237,7 @@ public class CameraMovement : MonoBehaviour
         smoothTime_prc = 13f;
 
         iterator_ = 3;
-        List<float> v_flt = new List<float>(new float[6] {0.4f, y_rotation < 0 ? 0.14f : -0.14f, 0.1f, 
+        List<float> v_flt = new List<float>(new float[6] {0.4f, y_rotation < 0 ? 0.2f : -0.2f, 0.1f, 
         0f, 0f, 0f } );
         List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
         "", "",  ""} );
@@ -1226,6 +1245,9 @@ public class CameraMovement : MonoBehaviour
         values_ref = s_arr;
         values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
+
+        apply_movementRatio(true);
+
         trns_fnc = use_specialSmooth = true; trns_back = false;
     }
     
@@ -1277,8 +1299,10 @@ public class CameraMovement : MonoBehaviour
         values_ref = s_arr;
         values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
+
+        apply_movementRatio(true);
+
         trns_fnc = use_specialSmooth = true; trns_back = false;
-     
     }
 
 
@@ -1315,6 +1339,9 @@ public class CameraMovement : MonoBehaviour
         values_ref = s_arr;
         values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
+
+        apply_movementRatio(true);
+
         trns_fnc = use_specialSmooth = true; trns_back = false;
     }
 
@@ -1376,6 +1403,10 @@ public class CameraMovement : MonoBehaviour
         values_ref = s_arr;
         values_flt = v_flt;
         trns_back_arr = new List<bool?>(new bool?[6] { false, false, false ,false, false, false});
+
+
+        apply_movementRatio(true);
+
         trns_fnc = use_specialSmooth = true; trns_back = false;
     }
 

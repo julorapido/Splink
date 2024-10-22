@@ -27,8 +27,21 @@ public class GameUI : MonoBehaviour
     [SerializeField] private GameObject ui_announcer_;
     [SerializeField] private GameObject _3d_ui_announcer;
 
-    [Header ("PLAYER HEALTH")]
+    [Header ("TOP -- LEFT")]
     [SerializeField] private GameObject healh_ui;
+    [SerializeField] private GameObject money_ui;
+
+    [Header ("TOP -- RIGHT")]
+    [SerializeField] private GameObject gun_ui;
+    [SerializeField] private TextMeshPro ammo_ui;
+
+
+    [Header ("TOP -- CENTER")]
+    [SerializeField] private TextMeshProUGUI score_txt;
+    [SerializeField] private TextMeshProUGUI timer_txt;  
+    [SerializeField] private TextMeshProUGUI fps_txt;  
+
+    [Header ("PLAYER HEALTH")]
     private TextMeshProUGUI healh_text;
     private int max_health = 10000;
     private int player_health = 0; // = 200;
@@ -39,7 +52,6 @@ public class GameUI : MonoBehaviour
     }
 
     [Header ("WEAPON")]
-    [SerializeField] private GameObject weapon_ui_obj;
     private Weapon weapon_script;
     private TextMeshPro[] weapon_ammoTxts;
     private GameObject weapon_reload;
@@ -47,7 +59,6 @@ public class GameUI : MonoBehaviour
     private int weapon_level = 0;
 
     [Header ("MONEY")]
-    [SerializeField] private GameObject money_ui;
     private TextMeshProUGUI[] money_bfr = new TextMeshProUGUI[20]; // 20 sized gm bfr
     private bool m_textGlow_sns = false, is_glowing = false;
     private TextMeshProUGUI money_txt;
@@ -57,14 +68,13 @@ public class GameUI : MonoBehaviour
     private float money_timer = 0f;
 
 
-    [Header ("TIMER & SCORE")]
-    [SerializeField] private TextMeshProUGUI score_txt;
-    [SerializeField] private TextMeshProUGUI timer_txt;  
-    private float timer_ = 0f;
+    [Header ("TIMER & SCORE & FPS_COUNTER")]
+    private float timer_ = 0f, fps_timer = 0f;
+    private const float fps_polling_time = 0.2f;
     private bool countScore_ = false, countBonus_ = false;
     private uint lastZ = 0, score = 0;
     private decimal v_score = 0;
-    private int temp_bonus = 0;
+    private int frame_count = 0, temp_bonus = 0;
     [HideInInspector] public bool set_countBonus_
     {
         get { return false; }
@@ -90,8 +100,6 @@ public class GameUI : MonoBehaviour
 
 
     [Header ("GUN UI")]
-    [SerializeField] private GameObject gun_ui;
-    [SerializeField] private TextMeshPro ammo_txt;
     [SerializeField] private Material[] Gun_Materials;
     private Vector3 saved_prefabPos_, saved_prefabScale_;
     private Quaternion saved_prefabRotation_;
@@ -119,25 +127,50 @@ public class GameUI : MonoBehaviour
     private LTDescr combo_lt;
 
 
-    // Awake
+
+    // [Awake]
     private void Awake()
     {
         player_health = max_health;
 
-    }
-
-    // Start
-    private void Start()
-    {
         weapon_scrpt = FindObjectOfType<Weapon>();
         building_s = FindObjectOfType<Buildings>();
-
+        
         PlayerMovement pm = FindObjectOfType<PlayerMovement>();
         p_movement = pm;
         plyr_transform = pm.transform;
         plyr_rgBody  = pm.transform.GetComponent<Rigidbody>();
 
+        Debug.Log("DEVICE: "+ Application.platform);
+        Debug.Log("FRAMERATE: " + Screen.currentResolution.refreshRate);
+        Debug.Log("RESOLUTION:  " + Screen.currentResolution.width + "x" + Screen.currentResolution.height);
 
+        if (Application.platform == RuntimePlatform.Android 
+            || (Application.platform == RuntimePlatform.IPhonePlayer)
+            || (Application.platform == RuntimePlatform.OSXPlayer)
+            || (Application.isMobilePlatform)
+        ){
+            
+            // if(Application.platform == RuntimePlatform.IPhonePlayer)
+            //     QualitySettings.vSyncCount = 1;
+            // else
+            QualitySettings.vSyncCount = 0;
+            // Application.targetFrameRate = 30;
+            Application.targetFrameRate = Screen.currentResolution.refreshRate;
+
+            p_movement.set_build_mode = true;
+        }else
+        {
+            p_movement.set_build_mode = false;
+        }
+    }
+
+
+
+
+    // [Start]
+    private void Start()
+    {
         gun_fetchedPrefabs = weapon_scrpt.get_weaponsResourcesPrefab_buffer;
 
 
@@ -146,37 +179,20 @@ public class GameUI : MonoBehaviour
         saved_prefabScale_ = gun_ui.transform.GetChild(l_prefb).GetChild(0).transform.localScale;
         saved_prefabRotation_ = gun_ui.transform.GetChild(l_prefb).GetChild(0).transform.localRotation;
 
-        Debug.Log(Application.platform);
 
-        QualitySettings.vSyncCount = 0;
-        if (Application.platform == RuntimePlatform.Android 
-            || (Application.platform == RuntimePlatform.IPhonePlayer)
-            || (Application.platform == RuntimePlatform.OSXPlayer)
-        ){
-            
-            QualitySettings.vSyncCount = 0;
-            // Application.targetFrameRate = 60;
-            Application.targetFrameRate = Screen.currentResolution.refreshRate;
-
-            p_movement.set_build_mode = true;
-        }else
-        {
-            p_movement.set_build_mode = false;
-        }
-    
         // money txt
         money_txt = money_ui.transform.GetChild(1).GetComponent<TextMeshProUGUI>();
 
 
         // weapon ammo txt
         weapon_ammoTxts = new TextMeshPro[2]{
-            weapon_ui_obj.transform.GetChild(1).GetChild(2).GetComponent<TextMeshPro>(), // stack
-            weapon_ui_obj.transform.GetChild(1).GetChild(1).GetComponent<TextMeshPro>(), // magz
+            gun_ui.transform.GetChild(1).GetChild(2).GetComponent<TextMeshPro>(), // stack
+            gun_ui.transform.GetChild(1).GetChild(1).GetComponent<TextMeshPro>(), // magz
         };
 
 
         // weapon reload
-        weapon_reload = weapon_ui_obj.transform.parent.GetChild(1).gameObject;
+        weapon_reload = gun_ui.transform.parent.GetChild(1).gameObject;
         weapon_reload.SetActive(false);
 
         // health 
@@ -189,10 +205,13 @@ public class GameUI : MonoBehaviour
 
 
     
-    // Update
+
+
+    // [Update]
     private void Update()
     {
         timer_ += Time.deltaTime;
+        fps_timer += Time.deltaTime;
 
         // values attribution
         timer_txt.text = timer_.ToString();
@@ -222,15 +241,19 @@ public class GameUI : MonoBehaviour
             reload_timerFloat -= Time.deltaTime;
         }
 
+        
+        // fps counter
+        frame_count++;
+        if(fps_timer >= fps_polling_time)
+        {
+            int frameRate = Mathf.RoundToInt((frame_count)/(fps_timer));
+            fps_txt.text = frameRate.ToString() + " FPS";
+
+            fps_timer -= fps_polling_time;
+            frame_count = 0;
+        }
 
 
-
-     
-        return; // < < <----------------------------------------------
-
-
-        // if(false == true)
-        // {
         // floating damages
         for(int i = 0; i < 40; i++)
         {
@@ -284,19 +307,19 @@ public class GameUI : MonoBehaviour
                 );
             }
         }
-
-        //}   
     }
+
 
     // -----------
     // FixedUpdate 
     // -----------
     private void FixedUpdate()
     {
+        return;
         // ammo
-        if( ammo_txt.text.ToString() != weapon_scrpt.get_ammo.ToString())
+        if( ammo_ui.text.ToString() != weapon_scrpt.get_ammo.ToString())
         {
-            ammo_txt.text = weapon_scrpt.get_ammo.ToString();
+            ammo_ui.text = weapon_scrpt.get_ammo.ToString();
         }
 
 
@@ -349,7 +372,6 @@ public class GameUI : MonoBehaviour
     // =======================
     public void newEnemy_UI(Transform enemy_)
     {
-        return;// < < <----------------------------------------------
         if(enemy_ == null)
             return;
 

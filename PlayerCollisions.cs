@@ -318,7 +318,6 @@ public class PlayerCollisions : MonoBehaviour
             //         aimed_enemy = null;
             // }
 
-
             // Player Box Auto-Aim
             bool enemy_destroyed = false;
             if(slcted_clsion == "boxAutoAim")

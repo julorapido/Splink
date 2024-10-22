@@ -60,7 +60,8 @@ public class PlayerMovement : MonoBehaviour
     private const float fall_sub = 16f;
     private const float jumpAmount = 30f;
     private const float strafe_speed = 0.225f;
-    private const float player_speed = 5.5f;
+    //private const float player_speed = 5.5f;
+     private const float player_speed = 6.5f;
     private const float tyro_speed = 28f;
     private float railSlide_speed = 0.5f; // 1f
 
@@ -237,9 +238,9 @@ public class PlayerMovement : MonoBehaviour
     }
 
     [Header ("TACTILE-INPUT (TOUCH)")]
-    // stationary touch delay until release (rt auth)
-    private const float t_stationaryTouch_time = 2f;
-    private float t_stationaryDelay = 0f;
+    // MAX AND MIN FORCES VALUES
+    private const float t_maxForce = 5f;
+    private const float t_minForce = 1.5f;
     // touch positions
     private Vector3 f_tch, l_tch;
     // dead zones && vertical drag
@@ -251,13 +252,14 @@ public class PlayerMovement : MonoBehaviour
     private bool t_leftStrafe = false, t_rightStrafe = false;
     private bool t_stationary = false;
     private bool t_untouched = true;
-    // tick && swipe power
+    // tick && swipe power calculation
     private float t_calculated_swipePower = 0f;
     private float t_rotation_tick = 0f;
 
 
     [Header ("EDITOR fly boolean")]
     private bool FLYYY = false;
+
 
 
 
@@ -275,6 +277,8 @@ public class PlayerMovement : MonoBehaviour
         movement_auth = true;
     }
 
+
+
     // Awake
     private void Awake()
     {
@@ -289,9 +293,9 @@ public class PlayerMovement : MonoBehaviour
         movement_auth = false;
 
         vertical_dragDistance = (Screen.height / 100) * 9; // 9% of screen height
-        swipe_area_width = (Screen.width / 100) * 20f; // 25% of screen width
+        swipe_area_width = (Screen.width / 100) * 40f; // 40% of screen width
 
-        t_rotation_tick = (4f) / (swipe_area_width / 2);
+        t_rotation_tick = (t_maxForce) / (swipe_area_width / 2);
         // Debug.Log("area w:" + swipe_area_width + "  a tick:" + (t_rotation_tick));
 
         // var runtimeController = _anim.runtimeAnimatorController;
@@ -318,6 +322,8 @@ public class PlayerMovement : MonoBehaviour
         //     // Debug.Log(controller.layers);
         // }
     }
+
+
 
     // Start
     private void Start()
@@ -554,7 +560,6 @@ public class PlayerMovement : MonoBehaviour
                     f_tch = touch.position;
                     l_tch = touch.position;
                     t_calculated_swipePower = 0f;
-                    t_stationaryDelay = t_stationaryTouch_time; // 2f
 
                     t_untouched = false;
                 }
@@ -566,21 +571,53 @@ public class PlayerMovement : MonoBehaviour
                     //     t_lstStationary_wasLft = (t_leftStrafe) ? (1) : (0);
 
                     t_stationary = true;
-
-                    if(t_stationaryDelay > 0f)
-                        t_stationaryDelay -= Time.deltaTime;
                 }
 
                 // MOVED - TOUCH
                 if (touch.phase == TouchPhase.Moved) 
                 {
+                    
                     l_tch = touch.position;  // last touch position.
+                    t_stationary = false; // touch exists. (not stationary)
 
                     // HORIZONTAL DRAG
-                    if(Mathf.Abs(l_tch.y - f_tch.y) < (vertical_dragDistance * 0.3f))
+                    if(Mathf.Abs(l_tch.y - f_tch.y) < (vertical_dragDistance * 0.85f)) // < 1% screen height
                     {
+                        // assign ratios
+                        // clamp (> t_minForce < t_maxForce)
+                        if(Mathf.Abs(f_tch.x - l_tch.x) * (t_rotation_tick) > (t_maxForce))
+                        {
+                            t_calculated_swipePower = ((l_tch.x - f_tch.x) > 0) ? (t_maxForce) : (-t_maxForce);
+                        }else
+                        {
+                            t_calculated_swipePower = (Mathf.Abs(f_tch.x - l_tch.x) * (t_rotation_tick) < (t_minForce) ?
+                                ((l_tch.x - f_tch.x) > 0) ? (t_minForce) : (-t_minForce)
+                                :
+                                ((l_tch.x - f_tch.x) * t_rotation_tick)
+                            );
+                        }
+
+
+                        // left/right
+                        if (touch.deltaPosition.x > 0f)
+                        {
+                            if(t_leftStrafe)
+                                f_tch = touch.position;
+                            t_rightStrafe = true;
+                            t_leftStrafe = false;
+                        }
+                        if (touch.deltaPosition.x < 0f)
+                        {
+                            if(t_rightStrafe)
+                                f_tch = touch.position;
+                            t_leftStrafe = true;
+                            t_rightStrafe = false;
+                        }
+
+
                         // Swipe-out [outside swipe area]
-                        // Adjust f_tch
+                        // Adjust DeadZone [f_tch]
+                        
                         if( (l_tch.x > (f_tch.x + (swipe_area_width / 2)) && (t_rightStrafe)) 
                             || (l_tch.x < (f_tch.x - (swipe_area_width / 2)) && (t_leftStrafe))
                         ){
@@ -596,46 +633,10 @@ public class PlayerMovement : MonoBehaviour
                                     f_tch.x += l_tch.x - (f_tch.x + (swipe_area_width / 2));
                             }
                         }
-             
-                        // assign ratios
-                        if(Mathf.Abs(f_tch.x - l_tch.x) * (t_rotation_tick) > 4f)
-                        {
-                            t_calculated_swipePower = ((l_tch.x - f_tch.x) > 0) ? 4f : -4f;
-                        }else
-                        {
-                            t_calculated_swipePower = (l_tch.x - f_tch.x) * (t_rotation_tick);
-                        }
-
-
-                        t_stationary = false;
-                        // left/right
-                        if (touch.deltaPosition.x > 0f)
-                        {
-                            t_rightStrafe = true;
-                            t_leftStrafe = false;
-                        }
-                        if (touch.deltaPosition.x < 0f)
-                        {
-                            t_leftStrafe = true;
-                            t_rightStrafe = false;
-                        }
-
-
-                        // const float horizontal_dragDistance = 0.40f;
-                        // if (Mathf.Abs(l_tch.x - f_tch.x) > horizontal_dragDistance)
-                        // {
-                        //     if ((l_tch.x > f_tch.x)) // right strafe
-                        //     {
-                        //         // t_rightStrafe = true;
-                        //         t_rtForce = 4f;
-                        //     }
-                        //     if ((l_tch.x < f_tch.x)) // movement was to the left
-                        //     {   
-                        //         // t_leftStrafe = true;
-                        //         t_rtForce = -4;
-                        //     }
-                        // }
+                        
                     }
+
+
 
                     // VERTICAL DRAG
                     if(Mathf.Abs(l_tch.y - f_tch.y) > vertical_dragDistance && (can_registerJump))
@@ -727,8 +728,7 @@ public class PlayerMovement : MonoBehaviour
                 can_registerJump = true;
                 t_untouched = true;
 
-                t_leftStrafe = false;
-                t_rightStrafe = false;
+                t_leftStrafe = t_rightStrafe = false;
                 t_stationary = false;
 
                 t_calculated_swipePower = 0f;
@@ -1022,12 +1022,17 @@ public class PlayerMovement : MonoBehaviour
         // anim Y_ROT
         if(y_r != (transform.rotation.eulerAngles.y > 180f))
         {
-            string s = _anim.GetCurrentAnimatorClipInfo(0)[0].clip.name;
-            if((s != "jumpOut") && (s != "groundLeave") && (s != "bareerSide") && (s != "bareer"))
+            AnimatorClipInfo[] m_CurrentClipInfo = _anim.GetCurrentAnimatorClipInfo(0);
+            if(m_CurrentClipInfo.Length > 0)
             {
-                _anim.SetBool("Y_ROT", (transform.rotation.eulerAngles.y > 180f));
-                y_r = (transform.rotation.eulerAngles.y > 180f);   
+                string s = m_CurrentClipInfo[0].clip.name;
+                if((s != "jumpOut") && (s != "groundLeave") && (s != "bareerSide") && (s != "bareer"))
+                {
+                    _anim.SetBool("Y_ROT", (transform.rotation.eulerAngles.y > 180f));
+                    y_r = (transform.rotation.eulerAngles.y > 180f);   
+                }
             }
+       
         }
 
 
@@ -1167,6 +1172,7 @@ public class PlayerMovement : MonoBehaviour
             {
                 if(_anim.GetCurrentAnimatorClipInfo(0).Length > 0)
                 {
+                    //Debug.Log("allo salem?");
                     string animClip_info = _anim.GetCurrentAnimatorClipInfo(0)[0].clip.name;
                     bool armRigMaybe = ((animClip_info == "slide") || (animClip_info == "flyArmed")
                         || (animClip_info == "railSlideShoot") ||  (animClip_info == "slideDown")
@@ -1464,14 +1470,14 @@ public class PlayerMovement : MonoBehaviour
                     { 
                         plyr_rb.velocity = new Vector3(
                             plyr_rb.velocity.x, 
-                            plyr_rb.velocity.y,
-                            (plyr_rb.velocity.z < (tapTap_exited ? 
-                                    (player_speed * 0.3f) : (player_speed * 0.7f)
-                                ) ? (tapTap_exited ? 
-                                    player_speed * 0.3f : player_speed * 0.7f) 
-                                :
-                                (plyr_rb.velocity.z)
-                            )
+                            tapTap_exited ? plyr_rb.velocity.y : 1.5f,
+                            (tapTap_exited ? player_speed * 1.1f : player_speed * 0.75f) 
+                            // (plyr_rb.velocity.z < (tapTap_exited ? 
+                            //         (player_speed * 0.3f) : (player_speed * 0.7f)
+                            //     ) ? 
+                            //     :
+                            //     (plyr_rb.velocity.z)
+                            // )
                         );
                     }
 
@@ -1493,7 +1499,6 @@ public class PlayerMovement : MonoBehaviour
                             plyr_rb.velocity = new Vector3(
                                 0f, plyr_rb.velocity.y < 0.60f ? 0.60f : plyr_rb.velocity.y, 0f
                             );
-
                     }
 
 
@@ -1563,20 +1568,6 @@ public class PlayerMovement : MonoBehaviour
                         // [MOBILE, TABLET]
                         if((is_build))
                         {
-                            // STATIONARY [Mobile only]
-                            // if(t_stationary)
-                            // {
-                            //     transform.rotation = transform.rotation;
-                            // }
-                            // else
-                            // {
-                            //     if(Math.Abs(t_calculated_swipePower) > 0.020f)
-                            //     {
-                            //         plyr_.transform.Rotate(0, (t_calculated_swipePower * 1.10f), 0, Space.Self); 
-                            //     }
-                            // }
-
-                            // rt
                             if(!(t_untouched))
                             {
                                 // Quaternion target = Quaternion.Euler(
@@ -1584,9 +1575,9 @@ public class PlayerMovement : MonoBehaviour
                                 //     (t_calculated_swipePower > 0f) ? (t_calculated_swipePower * 10f) : (359.9f + (t_calculated_swipePower * 10f)), 
                                 //     0f
                                 // );
-                                // transform.rotation = Quaternion.Slerp(transform.rotation, target,  Time.deltaTime * 80f);
+                                // transform.rotation = Quaternion.Slerp(transform.rotation, target,  Time.deltaTime * 80f);  
 
-                                
+                                // rt        
                                 if(t_stationary)
                                 {
                                     transform.rotation = transform.rotation;
@@ -1599,24 +1590,42 @@ public class PlayerMovement : MonoBehaviour
                                     // }
                                 }else
                                 {
-                                    plyr_.transform.Rotate(0, ((t_calculated_swipePower * 50f) * Time.deltaTime), 0, Space.Self); 
-                                    // plyr_.transform.Rotate(0, ((t_calculated_swipePower) ), 0, Space.Self); 
+                                    // plyr_.transform.rotation = Quaternion.Euler(
+                                    //     0f,
+                                    //     (t_calculated_swipePower < 0f) ? 
+                                    //         (359.9f + (t_calculated_swipePower * 10f))
+                                    //          :  
+                                    //         (t_calculated_swipePower * 10f),
+                                    //     0f
+                                    // );
+                                    plyr_.transform.Rotate(
+                                        0, 
+                                        (
+                                            Mathf.Abs(t_calculated_swipePower)
+                                            * 
+                                            (t_rightStrafe ? 1f : -1f)
+                                        ),
+                                        // ((t_rightStrafe ? 3f : -3f)),
+                                        // (((t_rightStrafe ? 4f : -4f) * 50f) * Time.deltaTime),
+                                        0, 
+                                    Space.Self); 
                                 }
-                                //plyr_.transform.Rotate(0, ((t_calculated_swipePower * 50f) * Time.deltaTime), 0, Space.Self); 
-
-                               
-                  
+                    
 
                                 // addforce
                                 if(Math.Abs(plyr_rb.velocity.x) < max_rightX)
                                 {
+               
                                     plyr_rb.AddForce(
-                                        //((t_leftStrafe ? -4f : 4f)) * (Vector3.right * strafe_speed), 
-                                        (t_calculated_swipePower) * (Vector3.right * strafe_speed), 
+                                        (Mathf.Abs(t_calculated_swipePower) * (t_rightStrafe ? 1f : -1f)) 
+                                        * 
+                                        (Vector3.right * strafe_speed), 
                                         ForceMode.VelocityChange
                                     );
+                        
                                 }
-                                else{
+                                else
+                                {
                                     plyr_rb.velocity = new Vector3(
                                         plyr_rb.velocity.x > 0f ? max_rightX : max_leftX, 
                                         plyr_rb.velocity.y, 
@@ -1624,10 +1633,8 @@ public class PlayerMovement : MonoBehaviour
                                     );
                                 } 
                             }
-
-                
-                       
                         }
+
 
                         // CLAMP ROTATIONS
                         if(transform.rotation.eulerAngles.y < 180f && transform.rotation.eulerAngles.y > 50f)
@@ -1867,6 +1874,7 @@ public class PlayerMovement : MonoBehaviour
                     && (!_anim.GetBool("GroundHit"))
                     && !plyr_bareerJumping
                     && !plyr_jumping
+                    && !plyr_launchJumping
                 )
                 {
                     plyr_rb.AddForce(new Vector3(0f, 10f, 0f), ForceMode.VelocityChange);
@@ -2216,12 +2224,15 @@ public class PlayerMovement : MonoBehaviour
             case "launcherHit":
                 StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(1f));
 
-                plyr_rb.AddForce( new Vector3(0, jumpForce * 1.2f, 0), ForceMode.VelocityChange);
-                StartCoroutine(Dly_bool_anm(0.90f, "launcherJump"));
+                plyr_rb.AddForce( new Vector3(0, jumpForce * 1.1f, 0), ForceMode.VelocityChange);
+                plyr_rb.AddTorque(
+                    new Vector3((transform.rotation.eulerAngles.y > 180f ? 50f : -50f), 0f, 0f), 
+                    ForceMode.VelocityChange
+                );
+                StartCoroutine(Dly_bool_anm(0.80f, "launcherJump"));
 
                 plyr_launchJumping = true;
 
-                // Debug.Log(optional_gm.transform.rotation.eulerAngles);
                 // FindObjectOfType<CameraMovement>().special_jmp();
                 cm_movement.special_jmp();
                 action_momentum += 10f;
@@ -2229,32 +2240,40 @@ public class PlayerMovement : MonoBehaviour
 
             case "tapTapJump":
                 _anim.SetBool("Flying", true);
+                _anim.SetFloat("tapTapSpeed", 1f);
+                bool s = false;
 
+                Debug.Log(optional_gm + " SIBLINGS INDEX " + optional_gm.transform.GetSiblingIndex() );
                 // tapTap end special trigger
-                if(optional_gm.transform.GetSiblingIndex() == 2){
+                if(optional_gm.transform.GetSiblingIndex() == 0)
+                {
+                    if(!plyr_tapTapJumping)
+                        s = true;
                     plyr_rb.velocity = new Vector3(0, 0, plyr_rb.velocity.z/2);
-                    plyr_rb.AddForce(new Vector3(0f, 10f, 0f), ForceMode.VelocityChange);
+                    //plyr_rb.AddForce(new Vector3(0f, 10f, 0f), ForceMode.VelocityChange);
                     cm_movement.tapTapJmp(true);
-                    action_momentum += 0.5f;
-                    tapTap_exited = true;
+                    action_momentum += 0.75f;
+                    // tapTap_exited = true;
                 }
 
                 if(plyr_tapTapJumping) 
                     return;
 
-                fix_Cldrs_pos( -0.25f, true);
+                // fix_Cldrs_pos( -0.25f, true);
 
                 plyr_tapTapJumping = true;
                 plyr_rb.velocity = new Vector3(0, 0, plyr_rb.velocity.z/2);
                 plyr_rb.AddForce( new Vector3(
-                    0f, -2f,
+                    0f, -1f,
                     optional_gm.transform.GetSiblingIndex() == 0 ? 3f : 16f
                 ) , ForceMode.VelocityChange);
 
                 cm_movement.tapTapJmp(false);
 
                 rotate_bck();
-                StartCoroutine(Dly_bool_anm(0.7f, "tapTapJump"));
+                if(s)
+                    _anim.SetFloat("tapTapSpeed", 2f);
+                StartCoroutine(Dly_bool_anm((s ? 0.6f : 1.15f), "tapTapJump"));
 
                 break;
 
@@ -2435,10 +2454,12 @@ public class PlayerMovement : MonoBehaviour
             case "land":
 
                 if(_anim.GetBool("fallBox") || last_landBoxId == optional_gm.GetInstanceID() 
-                    || (plyr_interacting && !plyr_jumping && !plyr_downDashing))
+                    // || (plyr_interacting && !plyr_jumping && !plyr_downDashing)
+                )
                     return;
 
                 last_landBoxId = optional_gm.GetInstanceID();
+
 
                 StartCoroutine(Dly_bool_anm(1.45f, "fallBox"));
                 StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(1.6f));
@@ -2453,24 +2474,35 @@ public class PlayerMovement : MonoBehaviour
                 dashDownCnt = 1;
 
 
-                Vector3 a = Vector3.MoveTowards(transform.position, optional_gm.transform.position, 100f);
+                Mesh box_contact = (
+                    optional_gm.transform.GetChild(1)
+                ).GetComponent<MeshFilter>().sharedMesh;
+                Vector3 back_Vertex = new Vector3(0,float.NegativeInfinity,0);
+                Vector3[] box_verts = box_contact.vertices;
+                for(int i = 0; i < box_contact.vertices.Length; i ++)
+                {
+                    if(box_verts[i].z > back_Vertex.z)
+                    {
+                        back_Vertex = box_verts[i];
+                    }
+                }
+                back_Vertex.z = -(back_Vertex.z);
+                Vector3 m = (optional_gm.transform.GetChild(1)).TransformPoint(back_Vertex);
+                Debug.Log(m);
                 float x_f = Mathf.Abs(optional_gm.transform.position.x) - Mathf.Abs(transform.position.x);
-                // Debug.Log("BOX vs PLAYER [x:" + x_f + "]   Force [a.z:" + a.z * 0.06f + "]  v3[" + a + "]");
                 cm_movement.fall_box(x_f * -1f > 0);
-                a = new Vector3(
-                    x_f * -1f,
-                    (transform.position.y > optional_gm.transform.GetChild(0).transform.position.y ? 
-                        (7f) : (14f)
-                    ),
-                    a.z * 0.09f
-                );
                 transform.rotation = Quaternion.Euler(
                     0f,
                     x_f * -8f,
                     0f
                 );
-                plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0f, 0f);
-                plyr_rb.AddForce(a, ForceMode.VelocityChange);
+                movement_auth = false;
+                plyr_rb.useGravity = false;
+
+                
+                LeanTween.move(gameObject, 
+                    new Vector3(transform.position.x, transform.position.y, m.z),
+                1.3f).setEaseInOutCubic();
 
                 break;
 
@@ -3035,13 +3067,14 @@ public class PlayerMovement : MonoBehaviour
         }
 
      
-        if(anim_bool == "fallBox" || anim_bool == "ladderInputDelay")
+        if(anim_bool == "ladderInputDelay")
             movement_auth = true;
 
         if(anim_bool == "fallBox")
         {
             plyr_boxFalling = false;
-            // cm_movement.fall_box(true);
+            movement_auth = false;
+            plyr_rb.useGravity = false;
         }
 
         if(anim_bool == "climb")
