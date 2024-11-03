@@ -61,7 +61,7 @@ public class PlayerMovement : MonoBehaviour
     private const float jumpAmount = 30f;
     private const float strafe_speed = 0.225f;
     //private const float player_speed = 5.5f;
-     private const float player_speed = 6.5f;
+     private const float player_speed = 6f;
     private const float tyro_speed = 28f;
     private float railSlide_speed = 0.5f; // 1f
 
@@ -125,6 +125,7 @@ public class PlayerMovement : MonoBehaviour
     private bool anim_bool_hang = false;
     ///// TapTap
     private bool tapTap_exited = false;
+    private Vector3 taptap_V3;
     ///// Fallbox
     private int last_landBoxId = 0;
     private int last_jumpedOut_landBoxId = 0;
@@ -137,6 +138,8 @@ public class PlayerMovement : MonoBehaviour
     private GameObject hang_bar = null;
     ///// Obstacle
     private GameObject last_ObstJumped;
+    private bool side_obst_side = false;
+    private int obst_type = -1;
     ///// SaveClimbing
     private float rot_y_saveClimbing = 0f;
     ///// WallRun
@@ -239,8 +242,8 @@ public class PlayerMovement : MonoBehaviour
 
     [Header ("TACTILE-INPUT (TOUCH)")]
     // MAX AND MIN FORCES VALUES
-    private const float t_maxForce = 5f;
-    private const float t_minForce = 1.5f;
+    private const float t_maxForce = 7f;
+    private const float t_minForce = 0.30f;
     // touch positions
     private Vector3 f_tch, l_tch;
     // dead zones && vertical drag
@@ -255,6 +258,13 @@ public class PlayerMovement : MonoBehaviour
     // tick && swipe power calculation
     private float t_calculated_swipePower = 0f;
     private float t_rotation_tick = 0f;
+    private float rt_delay = 1f;
+
+    public bool is_free_flying {
+        get{ return (plyr_flying && !plyr_interacting); }
+        set{ return; }
+    }
+
 
 
     [Header ("EDITOR fly boolean")]
@@ -293,7 +303,7 @@ public class PlayerMovement : MonoBehaviour
         movement_auth = false;
 
         vertical_dragDistance = (Screen.height / 100) * 9; // 9% of screen height
-        swipe_area_width = (Screen.width / 100) * 40f; // 40% of screen width
+        swipe_area_width = (Screen.width / 100) * 40f; // 50% of screen width
 
         t_rotation_tick = (t_maxForce) / (swipe_area_width / 2);
         // Debug.Log("area w:" + swipe_area_width + "  a tick:" + (t_rotation_tick));
@@ -544,6 +554,8 @@ public class PlayerMovement : MonoBehaviour
             }
             // ---------------------------------------------
 
+            if(rt_delay > 0f)
+                rt_delay -= Time.deltaTime;
 
 
 
@@ -1362,17 +1374,22 @@ public class PlayerMovement : MonoBehaviour
                         rt_auth = false;
 
                     if(rt_auth)
-                    {
-                        if(plyr_trsnfm.rotation.eulerAngles.y >= 0.1f || plyr_trsnfm.rotation.eulerAngles.y <= -0.1f)
-                        {
-                            transform.localRotation = Quaternion.Slerp(
-                                    plyr_trsnfm.rotation, 
-                                    new Quaternion(0,0,0,1), 
-                                    (is_build ? 2.70f : 3.0f) * Time.deltaTime
-                            );
+                    {          
+                        if((is_build && rt_delay <= 0f && !plyr_jumping && !plyr_downDashing) || (!is_build))
+                        {          
+                            if(plyr_trsnfm.rotation.eulerAngles.y >= 0.1f || plyr_trsnfm.rotation.eulerAngles.y <= -0.1f)
+                            {
+                                transform.localRotation = Quaternion.Slerp(
+                                        plyr_trsnfm.rotation, 
+                                        new Quaternion(0,0,0,1), 
+                                        (is_build ? 2.65f : 3.0f) * Time.deltaTime
+                                );
+                            }
                         }
-                    }
-                }
+                    }else
+                        rt_delay = 1f;
+                }else
+                    rt_delay = 1f;
             }
             // ---------------------------------------------------------------------------------------------------------
             // ---------------------------------------------------------------------------------------------------------
@@ -1402,7 +1419,7 @@ public class PlayerMovement : MonoBehaviour
                             plyr_rb.velocity.y,
                             ((player_speed + momentum_ + action_momentum) * 1.35f)
                                                 *
-                                       (plyr_shooting ? 0.6f : 1f)
+                                       (plyr_shooting ? 0.7f : 1f)
                         );
                     }
 
@@ -1448,7 +1465,7 @@ public class PlayerMovement : MonoBehaviour
                             2.6f,
                             ((player_speed + momentum_ + action_momentum) * 1.15f)
                                             *
-                                        (plyr_shooting ? 0.65f : 1f)
+                                    (plyr_shooting ? 0.65f : 1f)
                         );
                     }
 
@@ -1461,7 +1478,7 @@ public class PlayerMovement : MonoBehaviour
                             plyr_rb.velocity.y,
                             ((player_speed + momentum_ + action_momentum) * 1.30f)
                                                     *
-                                        (plyr_shooting ? 0.8f : 1f)
+                                    (plyr_shooting ? 0.8f : 1f)
                         );
                     }
 
@@ -1470,14 +1487,9 @@ public class PlayerMovement : MonoBehaviour
                     { 
                         plyr_rb.velocity = new Vector3(
                             plyr_rb.velocity.x, 
-                            tapTap_exited ? plyr_rb.velocity.y : 1.5f,
-                            (tapTap_exited ? player_speed * 1.1f : player_speed * 0.75f) 
-                            // (plyr_rb.velocity.z < (tapTap_exited ? 
-                            //         (player_speed * 0.3f) : (player_speed * 0.7f)
-                            //     ) ? 
-                            //     :
-                            //     (plyr_rb.velocity.z)
-                            // )
+                            tapTap_exited ? 
+                                (plyr_rb.velocity.y) : (1f),
+                            (player_speed * 0.6f) 
                         );
                     }
 
@@ -1490,7 +1502,7 @@ public class PlayerMovement : MonoBehaviour
                             plyr_rb.velocity.y, 
                             ((player_speed + momentum_ + action_momentum) * 1f)
                                                 *
-                                        (plyr_shooting || plyr_animKilling ? 0.55f : 1f)
+                                        (plyr_shooting || plyr_animKilling ? 0.65f : 1f)
                         );
 
                         if(Input.GetKeyDown("f"))
@@ -1507,7 +1519,7 @@ public class PlayerMovement : MonoBehaviour
                     //                     INPUTS
                     // -----------------------------------------------
                     // STRAFE FORCES
-                    if( !plyr_saveClimbing && !plyr_boxFalling)
+                    if( !plyr_saveClimbing && !plyr_boxFalling && !plyr_tapTapJumping)
                     {
                         float max_leftX = (plyr_shooting ? -0.7f : -1.1f) * (player_speed + momentum_ + action_momentum);
                         float max_rightX = (plyr_shooting ? 0.7f : 1.1f) * (player_speed + momentum_ + action_momentum);
@@ -1570,15 +1582,9 @@ public class PlayerMovement : MonoBehaviour
                         {
                             if(!(t_untouched))
                             {
-                                // Quaternion target = Quaternion.Euler(
-                                //     0f,
-                                //     (t_calculated_swipePower > 0f) ? (t_calculated_swipePower * 10f) : (359.9f + (t_calculated_swipePower * 10f)), 
-                                //     0f
-                                // );
-                                // transform.rotation = Quaternion.Slerp(transform.rotation, target,  Time.deltaTime * 80f);  
 
                                 // rt        
-                                if(t_stationary)
+                                if((t_stationary))
                                 {
                                     transform.rotation = transform.rotation;
                                     // if(t_stationaryDelay > 0f)
@@ -1605,7 +1611,6 @@ public class PlayerMovement : MonoBehaviour
                                             * 
                                             (t_rightStrafe ? 1f : -1f)
                                         ),
-                                        // ((t_rightStrafe ? 3f : -3f)),
                                         // (((t_rightStrafe ? 4f : -4f) * 50f) * Time.deltaTime),
                                         0, 
                                     Space.Self); 
@@ -1680,8 +1685,8 @@ public class PlayerMovement : MonoBehaviour
                     {
                         if(aimed_enemy != null)
                         {
-                            if(plyr_rb.velocity.y < -10f)
-                                plyr_rb.velocity =  new Vector3(plyr_rb.velocity.x, -10f, plyr_rb.velocity.z);
+                            // if(plyr_rb.velocity.y < -10f)
+                            //     plyr_rb.velocity =  new Vector3(plyr_rb.velocity.x, -10f, plyr_rb.velocity.z);
                         }
                     }
 
@@ -1704,14 +1709,14 @@ public class PlayerMovement : MonoBehaviour
                 if ( (Input.GetKey("q") || Input.GetKey("d") || t_leftStrafe || t_rightStrafe) 
                     && (plyr_railSliding)
                 ){
-                    if(Input.GetKey("q"))
+                    if(Input.GetKey("q") || (t_leftStrafe))
                         cm_movement.jumpOut(-1f);
                     else
                         cm_movement.jumpOut(1f);
 
                     plyr_railSliding = false;
                     plyr_rb.AddForce(( 
-                            (Input.GetKey("q") ? 80 : -80) * (Vector3.left * strafe_speed) 
+                            ((Input.GetKey("q") || t_leftStrafe) ? 80 : -80) * (Vector3.left * strafe_speed) 
                         ),
                         ForceMode.VelocityChange
                     );
@@ -1742,6 +1747,8 @@ public class PlayerMovement : MonoBehaviour
                     }
                 }
 
+
+ 
             }
             // ----------------------------------------------------------------------------------------------------------
             // ---------------------------------------------------------------------------------------------------------
@@ -1764,11 +1771,11 @@ public class PlayerMovement : MonoBehaviour
                 plyr_rb.useGravity = true;
                 StartCoroutine(Dly_bool_anm(0.85f, "specialHANG"));
             }
-            // --- FALL BOX ---
-            if(plyr_boxFalling)
+            // --- OBSTACLE JMUPING ---
+            if(plyr_obstclJmping)
             {
-                if(plyr_rb.velocity.z < 6f)
-                    plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, plyr_rb.velocity.y, 6f);
+                if(plyr_rb.velocity.y < 0.65f)
+                    plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0.65f, plyr_rb.velocity.z);
             }
             // --- FALL_DOWN ---
             if(plyr_rb.velocity.y < -13f && (!_anim.GetBool("falling")) )
@@ -1860,10 +1867,6 @@ public class PlayerMovement : MonoBehaviour
       
 
 
-        // -- [HANG]
-  
-        // ----------
-
         combo(cls_type, optional_gm);
 
 
@@ -1915,29 +1918,174 @@ public class PlayerMovement : MonoBehaviour
 
 
             case "obstacleHit":
-                if(plyr_bareerJumping) return;
 
-                rotate_bck();
-
-                if(!plyr_obstclJmping && optional_gm.GetComponent<Rigidbody>() == null)
+                if(!plyr_obstclJmping)
                 {
                     last_ObstJumped = optional_gm;
 
-                    StartCoroutine(Dly_bool_anm(plyr_flying ? 1.75f : 1.25f, "obstacleJump"));
-                    plyr_rb.AddForce( new Vector3(0, 2, 0), ForceMode.VelocityChange);
-                    StartCoroutine( obstcl_anim(
-                        cls_size,
-                        // Vector3.Scale(cls_size, optional_gm.transform.lossyScale),
-                        optional_gm)
+                    Vector3 r = optional_gm.transform.rotation.eulerAngles;
+                
+
+                    bool _object_straight = (((r.y >= 80f && r.y <= 100f) || (r.y >= 170f && r.y <= 190f)
+                            || (r.y >= 260f && r.y <= 280f) ) ? 
+                        (true) : (false));
+                    bool _object_travers = !(_object_straight);
+
+                    Mesh mesh = ( !(optional_gm.GetComponent<MeshFilter>()) ? 
+                        (null) : ((optional_gm.GetComponent<MeshFilter>())?.sharedMesh) 
                     );
-                }else
-                {
-                    if(last_ObstJumped != optional_gm) kickObst(optional_gm);
+                    Vector3 s_v3;
+                    Vector3 top_vertex = new Vector3(0f, float.MinValue, 0f);
+                    Vector3 far_away_vertex = new Vector3(0f, 0f, float.MinValue);
+                    Vector3 min_x = new Vector3(float.MaxValue, 0f, 0f), max_x = new Vector3(float.MinValue, 0f, 0f);
+                    if(mesh != null)
+                    {
+                        Debug.Log("-mesh");
+                        s_v3 = mesh.bounds.size;
+                        for(int i = 0; i < mesh.vertexCount; i++)
+                        {
+                            if(mesh.vertices[i].x < min_x.x)
+                                min_x = mesh.vertices[i];
+                            if(mesh.vertices[i].x > max_x.x)
+                                max_x = mesh.vertices[i];
+                            if(mesh.vertices[i].z > far_away_vertex.z)
+                                far_away_vertex =  mesh.vertices[i];
+                            if(mesh.vertices[i].y > top_vertex.y)
+                                top_vertex = mesh.vertices[i];
+                        }
+                        min_x = optional_gm.transform.TransformPoint(min_x);
+                        max_x = optional_gm.transform.TransformPoint(max_x);
+                        top_vertex = optional_gm.transform.TransformPoint(top_vertex);
+                        far_away_vertex = new Vector3(
+                            optional_gm.transform.TransformPoint(far_away_vertex).x,
+                            optional_gm.transform.TransformPoint(far_away_vertex).y,
+                            (optional_gm.transform.position.z) +
+                            (Mathf.Abs(optional_gm.transform.TransformPoint(far_away_vertex).z - optional_gm.transform.position.z))
+                        );
+                    }else
+                    {
+                        Debug.Log("non-mesh");
+                        Collider[] c_arr = optional_gm.GetComponents<Collider>();
+                        Bounds b_ = new Bounds(Vector3.zero, Vector3.zero);
+                        s_v3 = Vector3.zero;
+                        for(int i = 0; i < c_arr.Length; i ++)
+                        {
+                            if((float)(c_arr[i].bounds.size.x) > s_v3.x || (float)(c_arr[i].bounds.size.y) > s_v3.y
+                            || (float)(c_arr[i].bounds.size.z) > s_v3.z)
+                            {
+                                b_ = c_arr[i].bounds;
+                                s_v3 = c_arr[i].bounds.size;
+                            }
+                        }
+                        top_vertex = new Vector3(0f, b_.center.y  + (s_v3.y / 2), 0f);
+                        min_x = new Vector3(b_.center.x - (s_v3.x / 2), 0f, 0f);
+                        max_x = new Vector3(b_.center.x + (s_v3.x / 2), 0f, 0f);
+                        far_away_vertex = new Vector3(
+                            b_.center.x, 
+                            b_.center.y + (s_v3.y / 2), b_.center.z + (s_v3.z / 2)
+                        );
+                    }
+                    Debug.Log("----------------------------------------------------------------------------------------------------------------------------");
+                    Debug.Log("GM:" + optional_gm + "   RT:" + r + "    BOUNDS:"+ (mesh != null ? mesh.bounds.size : null)
+                        + "    STRAIGHT?:" + _object_straight + " TOP[]" + top_vertex);
+                    Debug.Log("----------------------------------------------------------------------------------------------------------------------------");
+
+                    plyr_obstclJmping = true;
+                    movement_auth = false;
+                    _anim.SetBool("obstacleJump", true);
+
+                    // o o o
+                    if ((_object_travers))
+                    {
+                        _anim.SetInteger("obstacleType", 1);
+                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x / 3, 0f, plyr_rb.velocity.z);
+                        transform.position = new Vector3(
+                            transform.position.x, top_vertex.y + (0.01f), transform.position.z - 0.35f
+                        );
+                        StartCoroutine(Dly_bool_anm(0.43f, "obstacleJump"));
+                        plyr_rb.AddForce(
+                            new Vector3(
+                                0f, 0f, 1.5f + ((s_v3.z) * (1.2f))
+                            )
+                            , ForceMode.VelocityChange
+                        );
+                        cm_movement.obstacle_jump(1);
+                        obst_type = 1;
+                    }
+                    // o
+                    // o
+                    // o
+                    else
+                    {
+                        plyr_rb.velocity = new Vector3(0f, 0f, 0f);
+                        plyr_rb.useGravity = false;
+                        if((transform.rotation.eulerAngles.y >= 180f && transform.rotation.eulerAngles.y <= 350f )
+                                                                ||
+                            (transform.rotation.eulerAngles.y <= 180f && transform.rotation.eulerAngles.y >= 10f ) )
+                        {
+                            _anim.SetInteger("obstacleType", 2);
+                  
+                            bool plyr_inZone = (transform.position.x >= (min_x.x + (0.05f)) && transform.position.x <= (max_x.x - (0.05f)) );
+
+                            side_obst_side = ((plyr_inZone)) ? 
+                                (transform.rotation.eulerAngles.y >= 180f) : (transform.position.x < optional_gm.transform.position.x);
+                            transform.position = new Vector3(
+                                (side_obst_side) ?
+                                    (min_x.x - (0.2f)) :  (max_x.x + (0.2f)),
+                                top_vertex.y, 
+                                transform.position.z
+                            );
+                            _anim.SetBool("obstacle2ROT", side_obst_side);
+                            
+                            LeanTween.move( gameObject, 
+                                new Vector3(
+                                    (side_obst_side) ?
+                                        (max_x.x + (0.1f)) : (min_x.x - (0.1f)), 
+                                    transform.position.y, 
+                                    transform.position.z + (0.1f)
+                                ),
+                                0.72f
+                            ); //.setEaseInOutCubic();
+                            StartCoroutine(Dly_bool_anm(0.75f, "obstacleJump"));
+                            cm_movement.obstacle_jump(2, side_obst_side);
+                            obst_type = 2;
+                        }else
+                        {
+                            _anim.SetInteger("obstacleType", 3);                     
+                            Debug.Log("front slide whole obst");
+
+                            transform.position = new Vector3(
+                                transform.position.x, top_vertex.y, transform.position.z
+                            );
+                            LeanTween.move( gameObject, 
+                                new Vector3(
+                                    far_away_vertex.x, 
+                                    far_away_vertex.y,
+                                    far_away_vertex.z
+                                ),
+                                1.3f
+                            );
+                            StartCoroutine(Dly_bool_anm(1.5f, "obstacleJump"));    
+                            cm_movement.obstacle_jump(3);
+                            obst_type = 3;
+                        }
+                    }
+
+                    _anim.SetBool("Flying", true);
+                    // StartCoroutine( obstcl_anim(
+                    //     cls_size,
+                    //     optional_gm)
+                    // );
                 }
+                // }else
+                // {
+                //     if(last_ObstJumped != optional_gm) kickObst(optional_gm);
+                // }
                 break;
 
             case "obstacleLeave":
                 // TODO : ADD RIGIDBODT TO OBJ AND THROW IT AWAY
+                optional_gm.tag = "obstacle";
                 break;
 
             case "wallRunHit":
@@ -2187,15 +2335,18 @@ public class PlayerMovement : MonoBehaviour
                     jumpCnt = 2;
                     dashDownCnt = 1;
                     cm_movement.sld_offset(false);
-                    
+
+                    plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0f, plyr_rb.velocity.z);
+
                     GameObject top = optional_gm.transform.parent.GetChild(1).gameObject;
                     if((transform.position.y < top.transform.position.y) )
                     {
-                        plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0f, plyr_rb.velocity.z);
                         transform.position = new Vector3(
                             transform.position.x, top.transform.position.y + 0.02f, transform.position.z
                         );
                     }
+                    
+                    plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0f, plyr_rb.velocity.z);
                 }
 
                 break;
@@ -2224,6 +2375,7 @@ public class PlayerMovement : MonoBehaviour
             case "launcherHit":
                 StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(1f));
 
+                plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0f, plyr_rb.velocity.z);
                 plyr_rb.AddForce( new Vector3(0, jumpForce * 1.1f, 0), ForceMode.VelocityChange);
                 plyr_rb.AddTorque(
                     new Vector3((transform.rotation.eulerAngles.y > 180f ? 50f : -50f), 0f, 0f), 
@@ -2239,44 +2391,74 @@ public class PlayerMovement : MonoBehaviour
                 break;
 
             case "tapTapJump":
-                _anim.SetBool("Flying", true);
-                _anim.SetFloat("tapTapSpeed", 1f);
-                bool s = false;
+                rotate_bck();
+                // #1
+                _anim.SetBool("tapTapJump", true);
 
-                Debug.Log(optional_gm + " SIBLINGS INDEX " + optional_gm.transform.GetSiblingIndex() );
+                // #2
+                _anim.SetBool("Flying", true);
+
+                // if(!plyr_tapTapJumping)
+                //     Debug.Log("TAP TAP HIT " + Time.time);
+
+                taptap_V3 = (optional_gm.transform.parent).GetChild(5).transform.position;
+
+                if(!plyr_tapTapJumping)
+                {
+                    transform.position = new Vector3(
+                        ( (transform.position.x > (taptap_V3.x + 0.6f)) 
+                            || 
+                          (transform.position.x < (taptap_V3.x - 0.6f))
+                        ) 
+                        ?
+                            (transform.position.x > taptap_V3.x ? (taptap_V3.x + 0.6f) : (taptap_V3.x - 0.6f)) 
+                                :
+                            (transform.position.x)
+                        ,
+                        taptap_V3.y,
+                        taptap_V3.z
+                    );
+                }
+
                 // tapTap end special trigger
                 if(optional_gm.transform.GetSiblingIndex() == 0)
                 {
-                    if(!plyr_tapTapJumping)
-                        s = true;
-                    plyr_rb.velocity = new Vector3(0, 0, plyr_rb.velocity.z/2);
-                    //plyr_rb.AddForce(new Vector3(0f, 10f, 0f), ForceMode.VelocityChange);
+                    if(tapTap_exited)
+                        return ;
+                    plyr_rb.AddForce(new Vector3(0f, 2f, 0f), ForceMode.VelocityChange);
                     cm_movement.tapTapJmp(true);
-                    action_momentum += 0.75f;
-                    // tapTap_exited = true;
+                    action_momentum += 2f;
+                    tapTap_exited = true;
                 }
-
+          
+            
                 if(plyr_tapTapJumping) 
                     return;
 
-                // fix_Cldrs_pos( -0.25f, true);
-
                 plyr_tapTapJumping = true;
-                plyr_rb.velocity = new Vector3(0, 0, plyr_rb.velocity.z/2);
-                plyr_rb.AddForce( new Vector3(
-                    0f, -1f,
-                    optional_gm.transform.GetSiblingIndex() == 0 ? 3f : 16f
-                ) , ForceMode.VelocityChange);
+                plyr_rb.velocity = new Vector3(
+                    plyr_rb.velocity.x * 0.15f, 0, plyr_rb.velocity.z / 2
+                );
 
                 cm_movement.tapTapJmp(false);
 
-                rotate_bck();
-                if(s)
-                    _anim.SetFloat("tapTapSpeed", 2f);
-                StartCoroutine(Dly_bool_anm((s ? 0.6f : 1.15f), "tapTapJump"));
-
+                StartCoroutine(Dly_bool_anm((1.25f), "tapTapJump"));
                 break;
 
+            case "tapTapJumpExit":
+                if(plyr_tapTapJumping)
+                {
+                    if(optional_gm.transform.GetSiblingIndex() == 2)
+                    {
+                        plyr_tapTapJumping = false;
+                        _anim.SetBool("tapTapJump", false);
+                        StopCoroutine(Dly_bool_anm(0f, "tapTapJump"));
+                        tapTap_exited = false;
+                        plyr_rb.AddForce(new Vector3(0f, 6f, 0f), ForceMode.VelocityChange);
+                        action_momentum += 5f;
+                    }
+                }
+                break;
             case "railSlide":
                 StopCoroutine(delay_jumpInput(0.0f));
                 if(slideRail_ref == optional_gm)
@@ -2305,6 +2487,12 @@ public class PlayerMovement : MonoBehaviour
                     false,
                     _anim.GetBool("railSide")
                 );
+
+                if(plyr_wallRninng)
+                {
+                    plyr_wallRninng = false;
+                    _anim.SetBool("wallRun", false);
+                }
 
                 // adaptive rail speed
                 float rS_adaptiveSpeed = (r_speed / 100) < 0.16f ? 0.16f : r_speed / 100;
@@ -2343,7 +2531,7 @@ public class PlayerMovement : MonoBehaviour
                 hang_bar = optional_gm;
                 cm_movement.hang(false);
                 transform.rotation = optional_gm.transform.rotation;
-                // Debug.Log("diff : " + optional_gm.transform.position.y + " vs " + transform.position.y);
+
                 // transform.rotation = Quaternion.Euler(
                 //     optional_gm.transform.position.y < (transform.position.y + 1.8f) ? (
                 //             ((transform.position.y + 1.5f) - optional_gm.transform.position.y) * 20f
@@ -2423,7 +2611,7 @@ public class PlayerMovement : MonoBehaviour
             case "rampSlide":
                 StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(1f));
                 rotate_bck();
-                fix_Cldrs_pos( 0.42f, true);
+                // fix_Cldrs_pos( 0.42f, true);
 
                 plyr_rampSliding = true;
                 _anim.SetBool("rampSlide", true);
@@ -2441,7 +2629,7 @@ public class PlayerMovement : MonoBehaviour
                 _anim.SetBool("rampSlide", false);
                 plyr_rampSliding = false;
 
-                fix_Cldrs_pos(-0.42f, false);
+                // fix_Cldrs_pos(-0.42f, false);
 
                 pico_character.transform.localRotation = Quaternion.identity;
                 pico_character.transform.localPosition = Vector3.zero;
@@ -2451,63 +2639,69 @@ public class PlayerMovement : MonoBehaviour
 
                 
         
-            case "land":
+            case "fallBox":
 
                 if(_anim.GetBool("fallBox") || last_landBoxId == optional_gm.GetInstanceID() 
-                    // || (plyr_interacting && !plyr_jumping && !plyr_downDashing)
+                    || (plyr_interacting && !(plyr_jumping || plyr_downDashing))
                 )
                     return;
 
                 last_landBoxId = optional_gm.GetInstanceID();
 
 
-                StartCoroutine(Dly_bool_anm(1.45f, "fallBox"));
-                StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(1.6f));
+                StartCoroutine(Dly_bool_anm(0.8f, "fallBox"));
+                StopCoroutine(delay_jumpInput(0.0f)); StartCoroutine(delay_jumpInput(1.2f));
 
                 _anim.SetBool("Flying", false);
-                movement_auth = false;
 
+
+                movement_auth = false;
                 plyr_flying = false;
                 plyr_boxFalling = true;
+                _anim.SetBool("flying", false);
 
                 jumpCnt = 2;
                 dashDownCnt = 1;
 
-
-                Mesh box_contact = (
-                    optional_gm.transform.GetChild(1)
-                ).GetComponent<MeshFilter>().sharedMesh;
-                Vector3 back_Vertex = new Vector3(0,float.NegativeInfinity,0);
-                Vector3[] box_verts = box_contact.vertices;
-                for(int i = 0; i < box_contact.vertices.Length; i ++)
-                {
-                    if(box_verts[i].z > back_Vertex.z)
-                    {
-                        back_Vertex = box_verts[i];
-                    }
-                }
-                back_Vertex.z = -(back_Vertex.z);
-                Vector3 m = (optional_gm.transform.GetChild(1)).TransformPoint(back_Vertex);
-                Debug.Log(m);
-                float x_f = Mathf.Abs(optional_gm.transform.position.x) - Mathf.Abs(transform.position.x);
-                cm_movement.fall_box(x_f * -1f > 0);
-                transform.rotation = Quaternion.Euler(
-                    0f,
-                    x_f * -8f,
-                    0f
+                plyr_rb.velocity = new Vector3(plyr_rb.velocity.x, 0f, plyr_rb.velocity.z);
+                Debug.Log(transform.rotation.eulerAngles);
+                cm_movement.fall_box(transform.rotation.eulerAngles.y > 180f);
+                plyr_rb.AddForce(
+                    new Vector3(0f, -6f, 3f),
+                    ForceMode.VelocityChange
                 );
-                movement_auth = false;
-                plyr_rb.useGravity = false;
+
+                // Mesh box_contact = (
+                //     optional_gm.transform.GetChild(1)
+                // ).GetComponent<MeshFilter>().sharedMesh;
+                // Vector3 back_Vertex = new Vector3(0,float.NegativeInfinity,0);
+                // Vector3[] box_verts = box_contact.vertices;
+                // for(int i = 0; i < box_contact.vertices.Length; i ++)
+                // {
+                //     if(box_verts[i].z > back_Vertex.z)
+                //     {
+                //         back_Vertex = box_verts[i];
+                //     }
+                // }
+                // back_Vertex.z = -(back_Vertex.z);
+                // Vector3 m = (optional_gm.transform.GetChild(1)).TransformPoint(back_Vertex);
+                // Debug.Log(m);
+                // float x_f = Mathf.Abs(optional_gm.transform.position.x) - Mathf.Abs(transform.position.x);
+                // transform.rotation = Quaternion.Euler(
+                //     0f,
+                //     x_f * -8f,
+                //     0f
+                // );
+                // movement_auth = false;
 
                 
-                LeanTween.move(gameObject, 
-                    new Vector3(transform.position.x, transform.position.y, m.z),
-                1.3f).setEaseInOutCubic();
-
+                // LeanTween.move(gameObject, 
+                //     new Vector3(transform.position.x, transform.position.y, m.z),
+                // 1.3f).setEaseInOutCubic();
                 break;
 
-            case "landExit":
-
+            case "fallBoxExit":
+                return; 
                 if(plyr_boxFalling || optional_gm.GetInstanceID() == last_jumpedOut_landBoxId)
                     return;
 
@@ -2561,23 +2755,6 @@ public class PlayerMovement : MonoBehaviour
                 cm_movement.ladderClimb_offst(true);
                 cm_movement.special_jmp();
                 break;
-            // case "bumper":
-
-            //     float y_ = ( Math.Abs(optional_gm.transform.rotation.eulerAngles.y) > 42f ?
-            //         (optional_gm.transform.rotation.eulerAngles.y > 0 ?
-            //              42f : -42f
-            //         ) : optional_gm.transform.rotation.eulerAngles.y
-            //     );
-            //     // plyr_rb.AddTorque( new Vector3(0, y_ * 50, 0), ForceMode.VelocityChange);
-
-            //     plyr_rb.AddForce( new Vector3(0, jumpForce * 1.5f, 0), ForceMode.VelocityChange);
-
-            //     StartCoroutine(Dly_bool_anm(0.8f, "bumper"));
-            //     = true;
-
-            //     cm_movement.bump(y_);
-            //     action_momentum += 1f;
-            //     break;
             case "under":
                 StartCoroutine(Dly_bool_anm(1f, "underSlide"));
                 movement_auth = false;
@@ -3066,6 +3243,29 @@ public class PlayerMovement : MonoBehaviour
             plyr_rb.AddForce( new Vector3(0f, 12f, 0f), ForceMode.VelocityChange);
         }
 
+        if(anim_bool == "obstacleJump")
+        {
+  
+            if(obst_type == 1)
+            {
+                plyr_rb.AddForce( new Vector3(0f, 4.5f, 0f), ForceMode.VelocityChange);
+                action_momentum += 5f;
+            }
+            if(obst_type == 2)
+            {
+                plyr_rb.AddForce( new Vector3(side_obst_side ? 6f : -6f, 6f, 0f), ForceMode.VelocityChange);
+                action_momentum += 2f;
+                plyr_rb.useGravity = true;
+            }
+            if(obst_type == 3)
+            {
+                plyr_rb.AddForce( new Vector3(0f, 7f, 0f), ForceMode.VelocityChange);
+                action_momentum += 3f;
+                plyr_rb.useGravity = true;
+            }
+            movement_auth = true;
+            plyr_obstclJmping = false;
+        }
      
         if(anim_bool == "ladderInputDelay")
             movement_auth = true;
@@ -3073,8 +3273,8 @@ public class PlayerMovement : MonoBehaviour
         if(anim_bool == "fallBox")
         {
             plyr_boxFalling = false;
-            movement_auth = false;
-            plyr_rb.useGravity = false;
+            action_momentum += 2f;
+            movement_auth = true;
         }
 
         if(anim_bool == "climb")
@@ -3099,7 +3299,7 @@ public class PlayerMovement : MonoBehaviour
             if(_anim.GetBool("tapTapJump"))
             {
                 plyr_tapTapJumping = false;
-                fix_Cldrs_pos( 0.25f, false);
+                // fix_Cldrs_pos( 0.25f, false);
                 tapTap_exited = false;
             }
         }
@@ -3246,7 +3446,7 @@ public class PlayerMovement : MonoBehaviour
                 // 3 : Reset velocity & JUMP++
                 plyr_rb.useGravity = true;
                 plyr_rb.AddForce( new Vector3(0, jumpForce * 1.30f, 0), ForceMode.VelocityChange);
-                FindObjectOfType<CameraMovement>().obs_offset();
+                // FindObjectOfType<CameraMovement>().obs_offset();
 
 
             yield return new WaitForSeconds(0.15f);

@@ -17,7 +17,7 @@ public class Weapon : MonoBehaviour
     private bool ammo_fixed  = true;
 
     [Header ("Weapon Stats")]
-    private const int damage = 60;
+    private const int damage = 6;
     private const int precision_ = 80;
     private const float fireRate = 0.2f;
     private const int criticalChance = 5; // /100

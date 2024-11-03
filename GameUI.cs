@@ -151,12 +151,14 @@ public class GameUI : MonoBehaviour
             || (Application.isMobilePlatform)
         ){
             
-            // if(Application.platform == RuntimePlatform.IPhonePlayer)
-            //     QualitySettings.vSyncCount = 1;
-            // else
             QualitySettings.vSyncCount = 0;
-            // Application.targetFrameRate = 30;
-            Application.targetFrameRate = Screen.currentResolution.refreshRate;
+            Application.targetFrameRate = 60;
+
+            if (Screen.currentResolution.refreshRate > 61f)
+            {
+                Application.targetFrameRate = 90;
+            }
+            // Application.targetFrameRate = Screen.currentResolution.refreshRate;
 
             p_movement.set_build_mode = true;
         }else
@@ -315,7 +317,6 @@ public class GameUI : MonoBehaviour
     // -----------
     private void FixedUpdate()
     {
-        return;
         // ammo
         if( ammo_ui.text.ToString() != weapon_scrpt.get_ammo.ToString())
         {

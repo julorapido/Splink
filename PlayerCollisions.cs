@@ -130,6 +130,10 @@ public class PlayerCollisions : MonoBehaviour
     private Rigidbody[] character_connectedBodies;
     private CharacterJoint[] pico_characterJoints;
 
+    [Header ("Character Joints")]
+    private const float _overlapBox_delay = 0.4f;
+    private float delay_overlapBox_value = 0f;
+
     // AWAKE
     private void Awake()
     {
@@ -160,7 +164,11 @@ public class PlayerCollisions : MonoBehaviour
         psCollisions_movement = ar;
     }
   
-  
+    private void Update()
+    {
+        if(delay_overlapBox_value >= 0f)
+            delay_overlapBox_value -= Time.deltaTime;
+    }
  
     // aim box
     private void DisplayBox(Vector3 center, Vector3 HalfExtend, Quaternion rotation, float Duration = 0)
@@ -319,76 +327,81 @@ public class PlayerCollisions : MonoBehaviour
             // }
 
             // Player Box Auto-Aim
-            bool enemy_destroyed = false;
-            if(slcted_clsion == "boxAutoAim")
+            if(delay_overlapBox_value <= 0f)
             {
-                float minDistance = float.MaxValue;
+                bool enemy_destroyed = false;
+                if(slcted_clsion == "boxAutoAim")
+                {
+                    float minDistance = float.MaxValue;
 
-                // DisplayBox(transform.position,  
-                //     new Vector3(4f, 10f, player_attackRange), 
-                //     wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
-                // );
+                    // DisplayBox(transform.position,  
+                    //     new Vector3(4f, 10f, player_attackRange), 
+                    //     wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
+                    // );
 
-                int maxColliders = (player_attackRange / 10) * 100;
-                // Debug.Log((player_attackRange / 10) * 100);
-                Collider[] hitColliders = new Collider[maxColliders];
-                int numColliders = Physics.OverlapBoxNonAlloc
-                (
-                    transform.position,
-                    new Vector3(4f, 10f, player_attackRange), 
-                    hitColliders,
-                    //transform.rotation
-                    (wallRun_aimBox) ? 
-                        (Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0)) : (transform.rotation)
-                );
+                    int maxColliders = (player_attackRange / 10) * 100;
+                    // Debug.Log((player_attackRange / 10) * 100);
+                    Collider[] hitColliders = new Collider[maxColliders];
+                    int numColliders = Physics.OverlapBoxNonAlloc
+                    (
+                        transform.position,
+                        new Vector3(4f, 10f, player_attackRange), 
+                        hitColliders,
+                        //transform.rotation
+                        (wallRun_aimBox) ? 
+                            (Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0)) : (transform.rotation)
+                    );
 
-                if(numColliders > 0)
-                {   
-                    turretInSight = 0;
-                    for (int i = 0; i < hitColliders.Length; i ++)
+
+                    if(numColliders > 0)
                     {   
-                        if(hitColliders[i] == null ) 
-                            continue;
+                        turretInSight = 0;
+                        for (int i = 0; i < hitColliders.Length; i ++)
+                        {   
+                            if(hitColliders[i] == null ) 
+                                continue;
 
-                        if(hitColliders[i].tag == "TURRET" || hitColliders[i].tag == "ENEMY")
-                        {
-                            Vector3 possiblePosition = hitColliders[i].transform.position;
-                        
-                            float currDistance = Vector3.Distance(transform.position, possiblePosition);
-                            float zDist = possiblePosition.z - transform.position.z;
-
-                            if(zDist < 1f
-                                || ((zDist <= 15) && ((possiblePosition.y - transform.position.y) > 10f))
-                            ) continue;
-
-                            // If the distance is smaller than the one before...
-                            if ( (currDistance < minDistance) )
+                            if(hitColliders[i].tag == "TURRET" || hitColliders[i].tag == "ENEMY")
                             {
-                                sphere_aimed_turret = hitColliders[i].transform.gameObject;
-                                minDistance = currDistance;
-                            }
+                                Vector3 possiblePosition = hitColliders[i].transform.position;
+                            
+                                float currDistance = Vector3.Distance(transform.position, possiblePosition);
+                                float zDist = possiblePosition.z - transform.position.z;
 
-                            turretInSight++;
+                                if(zDist < 1f
+                                    || ((zDist <= 15) && ((possiblePosition.y - transform.position.y) > 10f))
+                                ) continue;
+
+                                // If the distance is smaller than the one before...
+                                if ( (currDistance < minDistance) )
+                                {
+                                    sphere_aimed_turret = hitColliders[i].transform.gameObject;
+                                    minDistance = currDistance;
+                                }
+
+                                turretInSight++;
+                            }
+                        }
+
+                        if( (sphereStored_aimed_turret != sphere_aimed_turret)
+                                                    && 
+                            (!firstEverDetectedEnemy || (sphere_aimed_turret != null) ) 
+                        ){
+                            p_movement.animateCollision("newEnemyAim", new Vector3(0, 0, 0), sphere_aimed_turret);
+                            sphereStored_aimed_turret = sphere_aimed_turret;
+                            firstEverDetectedEnemy = true;
+                        }
+
+                        if( turretInSight == 0  && (sphere_aimed_turret != null) )
+                        {
+                            p_movement.animateCollision("emptyEnemyAim", new Vector3(0, 0, 0));
+                            sphere_aimed_turret = null;
+                            sphereStored_aimed_turret = null;
                         }
                     }
 
-                    if( (sphereStored_aimed_turret != sphere_aimed_turret)
-                                                && 
-                        (!firstEverDetectedEnemy || (sphere_aimed_turret != null) ) 
-                    ){
-                        p_movement.animateCollision("newEnemyAim", new Vector3(0, 0, 0), sphere_aimed_turret);
-                        sphereStored_aimed_turret = sphere_aimed_turret;
-                        firstEverDetectedEnemy = true;
-                    }
-
-                    if( turretInSight == 0  && (sphere_aimed_turret != null) )
-                    {
-                        p_movement.animateCollision("emptyEnemyAim", new Vector3(0, 0, 0));
-                        sphere_aimed_turret = null;
-                        sphereStored_aimed_turret = null;
-                    }
+                    delay_overlapBox_value = _overlapBox_delay;
                 }
-
             }
         }
 
@@ -445,10 +458,10 @@ public class PlayerCollisions : MonoBehaviour
                     if(collision.gameObject.tag == "tapTapJump") 
                         p_movement.animateCollision("tapTapJump", _size, collision.gameObject);
                     
-                    // Land
+                    // FallBox
                     if(collision.gameObject.tag == "fallBox")
                     {
-                        p_movement.animateCollision("land", _size, collision.gameObject);
+                        p_movement.animateCollision("fallBox", _size, collision.gameObject);
                     }  
 
                     // void & sidevoid
@@ -481,22 +494,26 @@ public class PlayerCollisions : MonoBehaviour
                     }
 
                     // FrontWall Gameover
-                    if(collision.gameObject.tag == "ground"){
+                    if(collision.gameObject.tag == "ground")
+                    {
                         p_movement.animateCollision("frontWallHit", _size, collision.gameObject);
                     }
 
                     // fallBox front hit Gameover
-                    if(collision.gameObject.tag == "fallBox"){
+                    if(collision.gameObject.tag == "fallBox")
+                    {
                         if( !collision.isTrigger )
                             p_movement.animateCollision("frontSpecialGameOver", _size, collision.gameObject);
                     }
 
                     // Ladder
-                    if(collision.gameObject.tag == "ladder"){
+                    if(collision.gameObject.tag == "ladder")
+                    {
                         p_movement.animateCollision("ladderHit", _size, collision.gameObject);
                     }
 
-                    if(collision.gameObject.tag == "bareer"){
+                    if(collision.gameObject.tag == "bareer")
+                    {
                         p_movement.animateCollision("bareerFrontDelay", _size, collision.gameObject);   
                     }
 
@@ -557,12 +574,6 @@ public class PlayerCollisions : MonoBehaviour
                         
                     }
 
-                    // SideHang
-                    if(collision.gameObject.tag == "sideHang")
-                    {
-                        p_movement.animateCollision("sideHang", _size, collision.gameObject);
-                        
-                    }
 
                     // hang
                     if(collision.gameObject.tag == "hang")
@@ -673,8 +684,12 @@ public class PlayerCollisions : MonoBehaviour
                     // Land
                     if(collision.gameObject.tag == "fallBox")
                     {
-                        p_movement.animateCollision("landExit", _size, collision.gameObject);
+                        p_movement.animateCollision("fallBoxExit", _size, collision.gameObject);
                     }  
+                
+                    // TapTap Jump
+                    if(collision.gameObject.tag == "tapTapJumpExit") 
+                        p_movement.animateCollision("tapTapJump", _size, collision.gameObject);
 
                     break;
 

@@ -73,6 +73,7 @@ public class Buildings : MonoBehaviour
             );
         }
 
+
         // SAVE SNAPSHOTS of [Respawnable Objects in Pool Sections]
         List<string> respawnable_objs = new List<string>(new string[9]
         {
@@ -96,17 +97,8 @@ public class Buildings : MonoBehaviour
                 ).ToArray()) as Transform[];
             pool_snapshots[a] = respawnables_t;
         }
-
-        // for(int i = 0; i < sections_pool.Length; i++)
-        // {
-        //     Debug.Log("SECTION " + i);
-        //     for(int j = 0; j < pool_snapshots[i].Length; j++)
-        //     {
-        //         Debug.Log(pool_snapshots[i][j]);
-        //     }
-        //     Debug.Log("========================");
-        // }
     }
+
 
 
 
@@ -120,7 +112,7 @@ public class Buildings : MonoBehaviour
 
         for(int i = 0; i < 30; i ++)
             optmized_go_bfr[i] = activated_go_bfr[i] = null;
-
+ 
         optimize_sections();
     }
 
@@ -130,7 +122,7 @@ public class Buildings : MonoBehaviour
     private void Update()
     {
         o_timer += Time.deltaTime;
-        if(o_timer >= 7f)
+        if(o_timer >= 5f)
         {
             o_timer = 0f;
             optimize_sections();
@@ -355,8 +347,6 @@ public class Buildings : MonoBehaviour
         if(sl.transform.childCount >= 10)
         {
             // combine_Meshes(sl, sl.transform.childCount);
-            // generate_SubTerrain(buffer_sect);
-            // generateBounds(buffer_sect);
         }
     }
     /*
