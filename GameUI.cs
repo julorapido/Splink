@@ -161,6 +161,7 @@ public class GameUI : MonoBehaviour
             // Application.targetFrameRate = Screen.currentResolution.refreshRate;
 
             p_movement.set_build_mode = true;
+            FindObjectOfType<CameraMovement>().is_build = true;
         }else
         {
             p_movement.set_build_mode = false;

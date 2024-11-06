@@ -11,10 +11,11 @@ public class CameraMovement : MonoBehaviour
     private const float divisor = 55f;
 
     [Header ("Camera Main Rotation Ratio")]
-    private const float x_ratio = -0.086f;
+    // [SerializeField, Range(-0.05f, -0.2f)] private float x_ratio;
+    private const float x_ratio = -0.070f;
 
     [Header ("Camera Dash/Movements settings")]
-    private const float Camera_Movement_Ratio = 1.25f;
+    private const float Camera_Movement_Ratio = 1.20f;
 
     [Header ("Player Animator")]
     public GameObject p_gm;
@@ -176,8 +177,8 @@ public class CameraMovement : MonoBehaviour
     private void Awake()
     {
         plyr_mv = FindObjectOfType<PlayerMovement>();
+    
 
-        saved_y_offset = offset.y;
     }
 
     private void Start()
@@ -192,6 +193,11 @@ public class CameraMovement : MonoBehaviour
         c_ = gameObject.GetComponent<Camera>();
         start_fov = gameObject.GetComponent<Camera>().fieldOfView;
         new_fov = start_fov;
+
+        //if(is_build)
+        //     offset = new Vector3(0f, 2.8f, -f);
+
+        saved_y_offset = offset.y;
     }
 
 
@@ -201,9 +207,12 @@ public class CameraMovement : MonoBehaviour
     {
 
         // field of view
-        if(c_.fieldOfView != (new_fov + plyr_Momentum))
+        if(true == false)
         {
-            c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, (new_fov + plyr_Momentum), 0.10f);
+            if(c_.fieldOfView != (new_fov + plyr_Momentum))
+            {
+                c_.fieldOfView = Mathf.Lerp(c_.fieldOfView, (new_fov + plyr_Momentum), 0.10f);
+            }
         }
 
         /*
@@ -254,7 +263,7 @@ public class CameraMovement : MonoBehaviour
                 lerp_v_pos != new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"], pos_dc["wallR_z_offst"]) &&
                 lerp_v_rot != new Vector3(rot_dc["wallR_rot_x_offst"], rot_dc["wallR_rot_y_offst"], rot_dc["wallR_rot_z_offst"])
             )
-                currentLerpTime += 0.02f * (Time.deltaTime);
+                currentLerpTime += 0.095f * (Time.deltaTime);
 
             if (currentLerpTime > lerpTime)
                 currentLerpTime = lerpTime;
@@ -275,18 +284,7 @@ public class CameraMovement : MonoBehaviour
 
         
         
-        // x_offst Assignation
-        // x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ?
-        //         -1 *  (60 - (player_rb.rotation.eulerAngles.y - 300.0f))
-        //     :  player_rb.rotation.eulerAngles.y
-        // );
 
-        /*
-        x_offst = (player.rotation.eulerAngles.y > 298.0f ?
-                -1 *  (60 - (player.rotation.eulerAngles.y - 300.0f))
-            :  player.rotation.eulerAngles.y
-        );
-        */
         /*
 
         // Lerp [Position] and [Rotation]
@@ -364,7 +362,7 @@ public class CameraMovement : MonoBehaviour
                         if(trns_back_arr[i] == false)
                         {
                             rot_dc[values_ref[i]] = Mathf.SmoothDamp( rot_dc[values_ref[i]], values_flt[i] /* * (Camera_Movement_Ratio) */, 
-                                        ref srched_ref, 0.060f * (1.0f + (smoothTime_prc/100) ) );
+                                        ref srched_ref, 0.055f * (1.0f + (smoothTime_prc/100) ) );
 
                             if( Math.Abs(rot_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.0045f)
                             {
@@ -395,7 +393,7 @@ public class CameraMovement : MonoBehaviour
                         if(trns_back_arr[i] == false)
                         {
                             pos_dc[values_ref[i]] = Mathf.SmoothDamp( pos_dc[values_ref[i]], values_flt[i] /* * (Camera_Movement_Ratio) */, 
-                                        ref srched_ref, 0.060f * (0.8f + (smoothTime_prc/100) ) );
+                                        ref srched_ref, 0.055f * (0.8f + (smoothTime_prc/100) ) );
                             if( Math.Abs(pos_dc[values_ref[i]]) >= Math.Abs(values_flt[i]) - 0.003f )
                             {
                                 trns_back_arr[i] = true;
@@ -473,25 +471,23 @@ public class CameraMovement : MonoBehaviour
         
         if (!game_Over_)
         {
-            // float xy_ratio = 0.0590f;
 
             bool aim_off =  (aimed_target == null || tyro_on ) ? true : false;
 
-            // --- [ROTATION] ---
+            // --- [ROTATION] ---------------------
             // Smooth Damp (rotation)
             // Dampen towards target rotation
             x_offst = (player.rotation.eulerAngles.y > 298.0f ?
                     -1 *  (60 - (player.rotation.eulerAngles.y - 300.0f))
                 :  player.rotation.eulerAngles.y
             );
-        
             Quaternion desired_rt  = new Quaternion(
                 xRot + supl_xRot
                 + (!use_specialSmooth ? lerp_v_rot.x : rot_dc["wallR_rot_x_offst"])
                 + (aim_v.y * 0.002f)
                 ,
                 (!use_specialSmooth ? lerp_v_rot.y : rot_dc["wallR_rot_y_offst"])
-                +  (hanging ? 0f : (x_offst / (sliding_on ? 120f : 160.0f) ))
+                +  (hanging ? 0f : (x_offst / 160.0f))
                  + (aim_v.x * 0.002f)
                 ,
                 (!use_specialSmooth ? lerp_v_rot.z : rot_dc["wallR_rot_z_offst"])
@@ -513,18 +509,19 @@ public class CameraMovement : MonoBehaviour
 
 
 
-            // --- [POSITION] ---
+
+            // --- [POSITION] ------------------------------
             // Smooth Damp (position)
             // Dampen towards offset position
-            desired_  = (player.position + offset); // <----------------------
-            desired_.x = desired_.x +  (// <----------------------
-                (x_ratio * ( (tyro_on) ?// <----------------------
-                    (x_offst * 2)// <----------------------
-                        :// <----------------------
-                    (x_offst / 2.6f)// <----------------------
-                ))// <----------------------
-            );// <----------------------
-            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 75f;// <----------------------
+            desired_  = (player.position + offset);
+            desired_.x = desired_.x +  (
+                (x_ratio * ( (tyro_on) ?
+                    (x_offst * 2)
+                        :
+                    (x_offst / 2.6f)
+                ))
+            );
+            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 55f;
 
             if( !(is_build) ) // PC = SmoothDamp
             {
@@ -537,9 +534,8 @@ public class CameraMovement : MonoBehaviour
                         (!use_specialSmooth ?
                             (lerp_v_pos) : (new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"]))
                         )
-                        + new Vector3(0f, ( (player_velocity.y < -4) ? ((player_velocity.y * Time.fixedDeltaTime) * 1.6f) : 0f), 0f) // y neg velocity compensation
-                        // + new Vector3(0, 0, (player_rb.velocity.z > 8 ) ? (player_rb.velocity.z - 8) * 0.03f : 0f ) // z speed compensation
-                        + (aim_v * 0.005f) // aiming vector
+                        // + new Vector3(0f, ( (player_velocity.y < -4) ? ((player_velocity.y * Time.fixedDeltaTime) * 1.6f) : 0f), 0f) // y neg velocity compensation
+                        + (aim_v * 0.015f) // aiming vector
                     ),
                     ref currentVelocity_pos,
                     (
@@ -559,7 +555,7 @@ public class CameraMovement : MonoBehaviour
                         (!use_specialSmooth ?
                             (lerp_v_pos) : (new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"]))
                         )
-                        + new Vector3(0f, ( (player_velocity.y < -4) ? ((player_velocity.y * Time.fixedDeltaTime) * 1.6f) : 0f), 0f) // y neg velocity compensation
+                        // + new Vector3(0f, ( (player_velocity.y < -4) ? ((player_velocity.y * Time.fixedDeltaTime) * 1.6f) : 0f), 0f) // y neg velocity compensation
                     ),
                     (
                         40f * Time.deltaTime 
@@ -700,7 +696,7 @@ public class CameraMovement : MonoBehaviour
             float sns =  Math.Abs(player.position.x) - Math.Abs(gm_.position.x);
 
             new_fov = 87f;
-            pos_dc["wallR_y_offst"] = -1.3f;
+            pos_dc["wallR_y_offst"] = -1.4f;
 
             // CLOSE UP Z OFFSET
             pos_dc["wallR_z_offst"] = 0.75f;
@@ -715,14 +711,14 @@ public class CameraMovement : MonoBehaviour
                 // right wall hit
                 // pos_dc["wallR_x_offst"] = -1.5f + (y_bonuss / 22);
                 // rot_dc["wallR_rot_y_offst"] = 0.2f + (-1 * (y_bonuss / 92));
-                pos_dc["wallR_x_offst"] = -1.1f;
+                pos_dc["wallR_x_offst"] = -1.2f;
                 rot_dc["wallR_rot_y_offst"] = 0.085f;
             }else
             {
                 // left wall hit
                 // pos_dc["wallR_x_offst"] = 1.2f + ( -1 * (y_bonuss / 22) );
                 // rot_dc["wallR_rot_y_offst"] = -0.15f + 1 * (y_bonuss / 92);
-                pos_dc["wallR_x_offst"] = 1.1f;
+                pos_dc["wallR_x_offst"] = 1.2f;
                 rot_dc["wallR_rot_y_offst"] = -0.085f;
             }
         
@@ -839,11 +835,11 @@ public class CameraMovement : MonoBehaviour
             float s_ = UnityEngine.Random.Range(1, 3);
 
             // CLOSE UP Z OFFSET
-            pos_dc["wallR_z_offst"] = 1f;
-            pos_dc["wallR_y_offst"] = -1.2f;
+            pos_dc["wallR_z_offst"] = 0.4f;
+            pos_dc["wallR_y_offst"] = -1f;
 
             // SMOOTH DAMP FOR X ROTATION
-            rot_dc["wallR_rot_x_offst"] = -0.06f;
+            rot_dc["wallR_rot_x_offst"] = -0.090f;
             rot_dc["wallR_rot_z_offst"] =  s_ == 1 ? -0.10f : 0.10f;
 
             apply_movementRatio(false);
@@ -982,7 +978,7 @@ public class CameraMovement : MonoBehaviour
 
         iterator_ = 3;
         List<float> v_flt = new List<float>(new float[6] {
-            is_dblJmp ? -0.26f : -0.22f, is_dblJmp ? -2.2f : -1.8f, is_dblJmp ?  -0.155f : 0.155f,
+            is_dblJmp ? -0.24f : -0.21f, is_dblJmp ? -2f : -1.6f, is_dblJmp ?  -0.155f : 0.155f,
             0.0f, 0.0f, 0.0f
         } );
         List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "", "",""} );
@@ -1188,7 +1184,7 @@ public class CameraMovement : MonoBehaviour
         smoothTime_prc = 10f;
 
         iterator_ = 4;
-        List<float> v_flt = new List<float>(new float[6] {0.19f, 0.45f,  -0.125f, 0.5f, 0f, 0f } );
+        List<float> v_flt = new List<float>(new float[6] {0.23f, 0.45f,  -0.125f, 0.3f, 0f, 0f } );
         List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "wallR_z_offst", "",  ""} );
 
         values_ref = s_arr;
@@ -1211,7 +1207,7 @@ public class CameraMovement : MonoBehaviour
         smoothTime_prc = 15f;
 
         iterator_ = 3;
-        List<float> v_flt = new List<float>(new float[6] {-1.15f, y_rot > 0 ? -0.15f : 0.15f, -0.085f,
+        List<float> v_flt = new List<float>(new float[6] {-1.15f, y_rot > 0 ? -0.15f : 0.15f, -0.105f,
         0f, 0f, 0f } );
         List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
         "", "",  ""} );
@@ -1233,11 +1229,11 @@ public class CameraMovement : MonoBehaviour
         // +12%
         smoothTime_prc = 13f;
 
-        iterator_ = 4;
+        iterator_ = 3;
         List<float> v_flt = new List<float>(new float[6] {-0.30f, y_rotation < 0 ? 0.2f : -0.2f, 0.1f, 
-        0.5f, 0f, 0f } );
+        0f, 0f, 0f } );
         List<string> s_arr = new List<string>(new string[6] {"wallR_y_offst", "wallR_rot_z_offst", "wallR_rot_x_offst",
-        "wallR_z_offst", "",  ""} );
+        "", "",  ""} );
 
         values_ref = s_arr;
         values_flt = v_flt;
@@ -1385,13 +1381,13 @@ public class CameraMovement : MonoBehaviour
 
         
         // -5%
-        smoothTime_prc = -5f;
+        smoothTime_prc = 10f;
 
         // +7 fov  !!
         new_fov = 85f;
 
         iterator_ = 2; 
-        List<float> v_flt = new List<float>(new float[6] {sns ? 0.26f : -0.26f, -0.4f,
+        List<float> v_flt = new List<float>(new float[6] {sns ? 0.24f : -0.24f, -0.4f,
         0f, 0f, 0f, 0f} );
 
         List<string> s_arr = new List<string>(new string[6] {"wallR_rot_z_offst", "wallR_y_offst", 

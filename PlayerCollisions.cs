@@ -293,7 +293,7 @@ public class PlayerCollisions : MonoBehaviour
              player_ammo = p_weapon.get_ammo;
         }
 
-        if(player_ammo > 0)
+        if(player_ammo > 0 && (true == false))
         {
             // player shots auto-aim
             // if(slcted_clsion == "boxCastAutoAim" && (true == false))

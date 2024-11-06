@@ -61,7 +61,7 @@ public class PlayerMovement : MonoBehaviour
     private const float jumpAmount = 30f;
     private const float strafe_speed = 0.225f;
     //private const float player_speed = 5.5f;
-     private const float player_speed = 6f;
+     private const float player_speed = 4.5f;
     private const float tyro_speed = 28f;
     private float railSlide_speed = 0.5f; // 1f
 
@@ -242,8 +242,8 @@ public class PlayerMovement : MonoBehaviour
 
     [Header ("TACTILE-INPUT (TOUCH)")]
     // MAX AND MIN FORCES VALUES
-    private const float t_maxForce = 7f;
-    private const float t_minForce = 0.30f;
+    private const float t_maxForce = 6f;
+    private const float t_minForce = 0.05f;
     // touch positions
     private Vector3 f_tch, l_tch;
     // dead zones && vertical drag
@@ -258,7 +258,7 @@ public class PlayerMovement : MonoBehaviour
     // tick && swipe power calculation
     private float t_calculated_swipePower = 0f;
     private float t_rotation_tick = 0f;
-    private float rt_delay = 1f;
+    private float rt_delay = 0.5f;
 
     public bool is_free_flying {
         get{ return (plyr_flying && !plyr_interacting); }
@@ -302,8 +302,8 @@ public class PlayerMovement : MonoBehaviour
 
         movement_auth = false;
 
-        vertical_dragDistance = (Screen.height / 100) * 9; // 9% of screen height
-        swipe_area_width = (Screen.width / 100) * 40f; // 50% of screen width
+        vertical_dragDistance = (Screen.height / 100) * 12; // 12% of screen height
+        swipe_area_width = (Screen.width / 100) * 75f; // 75% of screen width
 
         t_rotation_tick = (t_maxForce) / (swipe_area_width / 2);
         // Debug.Log("area w:" + swipe_area_width + "  a tick:" + (t_rotation_tick));
@@ -365,7 +365,6 @@ public class PlayerMovement : MonoBehaviour
 
         rig_animController.enabled = false;
 
-        cm_movement.is_build = is_build;
         StartCoroutine(start_game());
     }
 
@@ -595,21 +594,8 @@ public class PlayerMovement : MonoBehaviour
                     // HORIZONTAL DRAG
                     if(Mathf.Abs(l_tch.y - f_tch.y) < (vertical_dragDistance * 0.85f)) // < 1% screen height
                     {
-                        // assign ratios
-                        // clamp (> t_minForce < t_maxForce)
-                        if(Mathf.Abs(f_tch.x - l_tch.x) * (t_rotation_tick) > (t_maxForce))
-                        {
-                            t_calculated_swipePower = ((l_tch.x - f_tch.x) > 0) ? (t_maxForce) : (-t_maxForce);
-                        }else
-                        {
-                            t_calculated_swipePower = (Mathf.Abs(f_tch.x - l_tch.x) * (t_rotation_tick) < (t_minForce) ?
-                                ((l_tch.x - f_tch.x) > 0) ? (t_minForce) : (-t_minForce)
-                                :
-                                ((l_tch.x - f_tch.x) * t_rotation_tick)
-                            );
-                        }
-
-
+                        Debug.Log((t_leftStrafe ? "LEFT_STRAFE :" : "RIGHT_STRAFE :") + t_calculated_swipePower + "  f_tch:" + f_tch);
+        
                         // left/right
                         if (touch.deltaPosition.x > 0f)
                         {
@@ -630,21 +616,36 @@ public class PlayerMovement : MonoBehaviour
                         // Swipe-out [outside swipe area]
                         // Adjust DeadZone [f_tch]
                         
-                        if( (l_tch.x > (f_tch.x + (swipe_area_width / 2)) && (t_rightStrafe)) 
-                            || (l_tch.x < (f_tch.x - (swipe_area_width / 2)) && (t_leftStrafe))
+                        if( (l_tch.x > (f_tch.x + (swipe_area_width / 2)) /*&& (t_rightStrafe)*/) 
+                            || (l_tch.x < (f_tch.x - (swipe_area_width / 2)) /*&& (t_leftStrafe)*/)
                         ){
 
-                            if(t_leftStrafe)
-                            {
+                            /*if(t_leftStrafe)
+                            {*/
                                 if(l_tch.x < (f_tch.x - (swipe_area_width / 2)))
                                     f_tch.x -= Math.Abs(l_tch.x - (f_tch.x - (swipe_area_width / 2)));
-                            }
+                            /*}
                             if(t_rightStrafe)
-                            {
+                            {*/
                                 if(l_tch.x > (f_tch.x + (swipe_area_width / 2)))
                                     f_tch.x += l_tch.x - (f_tch.x + (swipe_area_width / 2));
-                            }
+                            // }
                         }
+
+                        // assign ratios
+                        // clamp (> t_minForce < t_maxForce)
+                        if(Mathf.Abs(f_tch.x - l_tch.x) * (t_rotation_tick) > (t_maxForce))
+                        {
+                            t_calculated_swipePower = ((l_tch.x - f_tch.x) > 0) ? (t_maxForce) : (-t_maxForce);
+                        }else
+                        {
+                            t_calculated_swipePower = (Mathf.Abs(f_tch.x - l_tch.x) * (t_rotation_tick) < (t_minForce) ?
+                                ((l_tch.x - f_tch.x) > 0) ? (t_minForce) : (-t_minForce)
+                                :
+                                ((l_tch.x - f_tch.x) * t_rotation_tick)
+                            );
+                        }
+
                         
                     }
 
@@ -1387,9 +1388,9 @@ public class PlayerMovement : MonoBehaviour
                             }
                         }
                     }else
-                        rt_delay = 1f;
+                        rt_delay = 0.3f;
                 }else
-                    rt_delay = 1f;
+                    rt_delay = 0.3f;
             }
             // ---------------------------------------------------------------------------------------------------------
             // ---------------------------------------------------------------------------------------------------------
@@ -1531,7 +1532,7 @@ public class PlayerMovement : MonoBehaviour
                             if ( Input.GetKey("q") )
                             {
                                 // rt   
-                                if((plyr_trsnfm.rotation.eulerAngles.y >= 310f)
+                                if((plyr_trsnfm.rotation.eulerAngles.y >= 315f)
                                     ||
                                     (plyr_trsnfm.rotation.eulerAngles.y <= 180f)
                                 ){
@@ -1558,7 +1559,7 @@ public class PlayerMovement : MonoBehaviour
                                 // rt
                                 if((plyr_trsnfm.rotation.eulerAngles.y >= 180f)
                                     ||
-                                    (plyr_trsnfm.rotation.eulerAngles.y <= 50f)
+                                    (plyr_trsnfm.rotation.eulerAngles.y <= 45f)
                                 ){
                                     plyr_.transform.Rotate(0, (3.10f), 0, Space.Self);
                                 }
@@ -1642,11 +1643,11 @@ public class PlayerMovement : MonoBehaviour
 
 
                         // CLAMP ROTATIONS
-                        if(transform.rotation.eulerAngles.y < 180f && transform.rotation.eulerAngles.y > 50f)
-                            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, 50f, transform.rotation.eulerAngles.z);
+                        if(transform.rotation.eulerAngles.y < 180f && transform.rotation.eulerAngles.y > 45f)
+                            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, 45f, transform.rotation.eulerAngles.z);
 
-                        if(transform.rotation.eulerAngles.y > 180f && transform.rotation.eulerAngles.y < 310f)
-                            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, 310f, transform.rotation.eulerAngles.z);
+                        if(transform.rotation.eulerAngles.y > 180f && transform.rotation.eulerAngles.y < 315f)
+                            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, 315f, transform.rotation.eulerAngles.z);
                     }
 
 
@@ -1926,8 +1927,8 @@ public class PlayerMovement : MonoBehaviour
                     Vector3 r = optional_gm.transform.rotation.eulerAngles;
                 
 
-                    bool _object_straight = (((r.y >= 80f && r.y <= 100f) || (r.y >= 170f && r.y <= 190f)
-                            || (r.y >= 260f && r.y <= 280f) ) ? 
+                    bool _object_straight = (((r.y >= 70f && r.y <= 110f) || (r.y >= 160f && r.y <= 200f)
+                            || (r.y >= 250f && r.y <= 290f) ) ? 
                         (true) : (false));
                     bool _object_travers = !(_object_straight);
 
@@ -1985,11 +1986,12 @@ public class PlayerMovement : MonoBehaviour
                             b_.center.y + (s_v3.y / 2), b_.center.z + (s_v3.z / 2)
                         );
                     }
+                    
                     Debug.Log("----------------------------------------------------------------------------------------------------------------------------");
                     Debug.Log("GM:" + optional_gm + "   RT:" + r + "    BOUNDS:"+ (mesh != null ? mesh.bounds.size : null)
                         + "    STRAIGHT?:" + _object_straight + " TOP[]" + top_vertex);
                     Debug.Log("----------------------------------------------------------------------------------------------------------------------------");
-
+                    
                     plyr_obstclJmping = true;
                     movement_auth = false;
                     _anim.SetBool("obstacleJump", true);
@@ -2019,16 +2021,16 @@ public class PlayerMovement : MonoBehaviour
                     {
                         plyr_rb.velocity = new Vector3(0f, 0f, 0f);
                         plyr_rb.useGravity = false;
-                        if((transform.rotation.eulerAngles.y >= 180f && transform.rotation.eulerAngles.y <= 350f )
+                        if((transform.rotation.eulerAngles.y >= 180f && transform.rotation.eulerAngles.y <= 345f )
                                                                 ||
-                            (transform.rotation.eulerAngles.y <= 180f && transform.rotation.eulerAngles.y >= 10f ) )
+                            (transform.rotation.eulerAngles.y <= 180f && transform.rotation.eulerAngles.y >= 15f ) )
                         {
                             _anim.SetInteger("obstacleType", 2);
                   
                             bool plyr_inZone = (transform.position.x >= (min_x.x + (0.05f)) && transform.position.x <= (max_x.x - (0.05f)) );
 
                             side_obst_side = ((plyr_inZone)) ? 
-                                (transform.rotation.eulerAngles.y >= 180f) : (transform.position.x < optional_gm.transform.position.x);
+                                (!(transform.rotation.eulerAngles.y >= 180f)) : (transform.position.x < optional_gm.transform.position.x);
                             transform.position = new Vector3(
                                 (side_obst_side) ?
                                     (min_x.x - (0.2f)) :  (max_x.x + (0.2f)),
@@ -2052,7 +2054,6 @@ public class PlayerMovement : MonoBehaviour
                         }else
                         {
                             _anim.SetInteger("obstacleType", 3);                     
-                            Debug.Log("front slide whole obst");
 
                             transform.position = new Vector3(
                                 transform.position.x, top_vertex.y, transform.position.z
@@ -2085,7 +2086,23 @@ public class PlayerMovement : MonoBehaviour
 
             case "obstacleLeave":
                 // TODO : ADD RIGIDBODT TO OBJ AND THROW IT AWAY
-                optional_gm.tag = "obstacle";
+
+                // kick obj when alr obst jumping
+                // private void kickObst(GameObject obst)
+                // {
+                //     Rigidbody obst_rb = obst.GetComponent<Rigidbody>() == null ?
+                //         obst.AddComponent<Rigidbody>() : obst.GetComponent<Rigidbody>();
+
+                //     obst_rb.mass = 0.01f;
+                //     Vector3 randTorque = new Vector3(UnityEngine.Random.Range(-20f, 20f), UnityEngine.Random.Range(-30, 30f), UnityEngine.Random.Range(15f, -15f));
+                //     Vector3 kickForce = new Vector3(
+                //         plyr_trsnfm.position.x - obst.transform.position.x,
+                //         plyr_trsnfm.position.y - obst.transform.position.y, plyr_trsnfm.position.z - obst.transform.position.z
+                //     );
+                //     obst_rb.AddForce(new Vector3(kickForce.x * 2, 10, 16 ), ForceMode.VelocityChange);
+                //     obst_rb.AddTorque(randTorque, ForceMode.VelocityChange);
+                // }
+                // optional_gm.tag = "obstacle";
                 break;
 
             case "wallRunHit":
@@ -2358,6 +2375,7 @@ public class PlayerMovement : MonoBehaviour
                 {
                     plyr_sliding = false;
                     cm_movement.jumpOut(transform.rotation.eulerAngles.y);
+                    Debug.Log("slide out force");
                     plyr_rb.AddForce( new Vector3(0, jumpForce * 0.60f, 0f), ForceMode.VelocityChange);
                     _anim.SetBool("slide", false);
                 }
@@ -3249,7 +3267,7 @@ public class PlayerMovement : MonoBehaviour
             if(obst_type == 1)
             {
                 plyr_rb.AddForce( new Vector3(0f, 4.5f, 0f), ForceMode.VelocityChange);
-                action_momentum += 5f;
+                action_momentum += 4f;
             }
             if(obst_type == 2)
             {
@@ -3466,25 +3484,6 @@ public class PlayerMovement : MonoBehaviour
         movement_auth = true;
     }
 
-
-
-
-
-    // kick obj when alr obst jumping
-    private void kickObst(GameObject obst)
-    {
-        Rigidbody obst_rb = obst.GetComponent<Rigidbody>() == null ?
-            obst.AddComponent<Rigidbody>() : obst.GetComponent<Rigidbody>();
-
-        obst_rb.mass = 0.01f;
-        Vector3 randTorque = new Vector3(UnityEngine.Random.Range(-20f, 20f), UnityEngine.Random.Range(-30, 30f), UnityEngine.Random.Range(15f, -15f));
-        Vector3 kickForce = new Vector3(
-            plyr_trsnfm.position.x - obst.transform.position.x,
-            plyr_trsnfm.position.y - obst.transform.position.y, plyr_trsnfm.position.z - obst.transform.position.z
-        );
-        obst_rb.AddForce(new Vector3(kickForce.x * 2, 10, 16 ), ForceMode.VelocityChange);
-        obst_rb.AddTorque(randTorque, ForceMode.VelocityChange);
-    }
 
 
 
