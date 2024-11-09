@@ -60,8 +60,7 @@ public class PlayerMovement : MonoBehaviour
     private const float fall_sub = 16f;
     private const float jumpAmount = 30f;
     private const float strafe_speed = 0.225f;
-    //private const float player_speed = 5.5f;
-     private const float player_speed = 4.5f;
+    private const float player_speed = 4.25f;
     private const float tyro_speed = 28f;
     private float railSlide_speed = 0.5f; // 1f
 
@@ -151,7 +150,9 @@ public class PlayerMovement : MonoBehaviour
     private GameObject moving_camTraveler; // ladder
 
 
-    [Header ("WEAPON")]
+
+    [Header ("WEAPON - AIM - ENEMY ")]
+    // -------- WEAPON --------
     [HideInInspector] public int ammo = 0;
     private bool weapon_equipped = false, weapon_twoHanded = false;
     [HideInInspector] public bool set_weaponHandedMode {
@@ -171,8 +172,18 @@ public class PlayerMovement : MonoBehaviour
     private float weapon_reloadTime = 0f;
     private int weapon_reloadType = 0;
     private Weapon player_weaponScrpt;
-    
+    // -------- ENEMY --------
+    [HideInInspector] public Transform aimed_enemy;
+    private bool horizontal_enemy = false;
+    private Transform lastAimed_enemy;
+    private Vector3 saved_WorldPos_armTarget;
+    // -------- AIM --------
+    private bool aimSettingCalled = false;
+    private bool shoot_blocked = false;
+
+
     [Space(10)]
+
 
     [Header ("Player Left-Arm Rig")]
     [SerializeField] private MultiAimConstraint[] arm_aims;
@@ -187,8 +198,6 @@ public class PlayerMovement : MonoBehaviour
 
     [Header ("Player Animator, Rigs & Constraints")]
     [SerializeField] private Animator rig_animController;
-    // [SerializeField] private RuntimeAnimatorController _anim_controller = null;
-    // [SerializeField] private AnimatorController _anim_controller;
     [SerializeField] private AvatarMask lower_body_mask;
     [SerializeField] private RigBuilder player_Rig;
     [SerializeField] private MultiAimConstraint[] player_aims;
@@ -224,15 +233,6 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private Transform leftArm_TARGET;
 
 
-    [Header ("Enemy Data")]
-    [HideInInspector] public Transform aimed_enemy;
-    private bool horizontal_enemy = false;
-    private Transform lastAimed_enemy;
-    private Vector3 saved_WorldPos_armTarget;
-
-    [Header ("Aim Setting Called")] 
-    private bool aimSettingCalled = false;
-
     [Header ("Application State")]
     private bool is_build = true;
     [HideInInspector] public bool set_build_mode {
@@ -242,7 +242,7 @@ public class PlayerMovement : MonoBehaviour
 
     [Header ("TACTILE-INPUT (TOUCH)")]
     // MAX AND MIN FORCES VALUES
-    private const float t_maxForce = 6f;
+    private const float t_maxForce = 6.5f;
     private const float t_minForce = 0.05f;
     // touch positions
     private Vector3 f_tch, l_tch;
@@ -269,7 +269,6 @@ public class PlayerMovement : MonoBehaviour
 
     [Header ("EDITOR fly boolean")]
     private bool FLYYY = false;
-
 
 
 
@@ -303,7 +302,7 @@ public class PlayerMovement : MonoBehaviour
         movement_auth = false;
 
         vertical_dragDistance = (Screen.height / 100) * 12; // 12% of screen height
-        swipe_area_width = (Screen.width / 100) * 75f; // 75% of screen width
+        swipe_area_width = (Screen.width / 100) * 65f; // 75% of screen width
 
         t_rotation_tick = (t_maxForce) / (swipe_area_width / 2);
         // Debug.Log("area w:" + swipe_area_width + "  a tick:" + (t_rotation_tick));
@@ -594,7 +593,7 @@ public class PlayerMovement : MonoBehaviour
                     // HORIZONTAL DRAG
                     if(Mathf.Abs(l_tch.y - f_tch.y) < (vertical_dragDistance * 0.85f)) // < 1% screen height
                     {
-                        Debug.Log((t_leftStrafe ? "LEFT_STRAFE :" : "RIGHT_STRAFE :") + t_calculated_swipePower + "  f_tch:" + f_tch);
+                        // Debug.Log((t_leftStrafe ? "LEFT_STRAFE :" : "RIGHT_STRAFE :") + t_calculated_swipePower + "  f_tch:" + f_tch);
         
                         // left/right
                         if (touch.deltaPosition.x > 0f)
@@ -1283,8 +1282,8 @@ public class PlayerMovement : MonoBehaviour
                             pico_character.transform.localRotation, Quaternion.Euler(
                                 0f,
                                 //45f,
-                                Math.Abs(y_fl) > 45f ?
-                                   (y_fl > 0 ? 45f : -45f) : y_fl,
+                                Math.Abs(y_fl) > 55f ?
+                                   (y_fl > 0 ? 55f : -55f) : y_fl,
                                 0f
                             ),
                             0.15f
@@ -1532,7 +1531,7 @@ public class PlayerMovement : MonoBehaviour
                             if ( Input.GetKey("q") )
                             {
                                 // rt   
-                                if((plyr_trsnfm.rotation.eulerAngles.y >= 315f)
+                                if((plyr_trsnfm.rotation.eulerAngles.y >= 305f)
                                     ||
                                     (plyr_trsnfm.rotation.eulerAngles.y <= 180f)
                                 ){
@@ -1559,7 +1558,7 @@ public class PlayerMovement : MonoBehaviour
                                 // rt
                                 if((plyr_trsnfm.rotation.eulerAngles.y >= 180f)
                                     ||
-                                    (plyr_trsnfm.rotation.eulerAngles.y <= 45f)
+                                    (plyr_trsnfm.rotation.eulerAngles.y <= 55f)
                                 ){
                                     plyr_.transform.Rotate(0, (3.10f), 0, Space.Self);
                                 }
@@ -1623,7 +1622,7 @@ public class PlayerMovement : MonoBehaviour
                                 {
                
                                     plyr_rb.AddForce(
-                                        (Mathf.Abs(t_calculated_swipePower) * (t_rightStrafe ? 1f : -1f)) 
+                                        (Mathf.Abs(t_calculated_swipePower) * (t_rightStrafe ? 0.85f : -0.85f)) 
                                         * 
                                         (Vector3.right * strafe_speed), 
                                         ForceMode.VelocityChange
@@ -1643,11 +1642,11 @@ public class PlayerMovement : MonoBehaviour
 
 
                         // CLAMP ROTATIONS
-                        if(transform.rotation.eulerAngles.y < 180f && transform.rotation.eulerAngles.y > 45f)
-                            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, 45f, transform.rotation.eulerAngles.z);
+                        if(transform.rotation.eulerAngles.y < 180f && transform.rotation.eulerAngles.y > 55f)
+                            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, 55f, transform.rotation.eulerAngles.z);
 
-                        if(transform.rotation.eulerAngles.y > 180f && transform.rotation.eulerAngles.y < 315f)
-                            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, 315f, transform.rotation.eulerAngles.z);
+                        if(transform.rotation.eulerAngles.y > 180f && transform.rotation.eulerAngles.y < 305f)
+                            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, 305f, transform.rotation.eulerAngles.z);
                     }
 
 
@@ -1813,8 +1812,11 @@ public class PlayerMovement : MonoBehaviour
                         (movement_auth)
                 )
             {
-                player_weaponScrpt.Shoot(aimed_enemy);
-                plyr_shooting = true;
+                if( !(shoot_blocked) )
+                {
+                    player_weaponScrpt.Shoot(aimed_enemy);
+                    plyr_shooting = true;
+                }
             }else
             {
                 plyr_shooting = false;
@@ -2375,7 +2377,7 @@ public class PlayerMovement : MonoBehaviour
                 {
                     plyr_sliding = false;
                     cm_movement.jumpOut(transform.rotation.eulerAngles.y);
-                    Debug.Log("slide out force");
+                    // Debug.Log("slide out force")
                     plyr_rb.AddForce( new Vector3(0, jumpForce * 0.60f, 0f), ForceMode.VelocityChange);
                     _anim.SetBool("slide", false);
                 }
@@ -3016,7 +3018,8 @@ public class PlayerMovement : MonoBehaviour
                 if(ammo > 0)
                     cm_movement.set_aimedTarget = optional_gm.transform;
 
-                g_ui.newEnemy_UI(aimed_enemy);
+                shoot_blocked = false;
+                // g_ui.newEnemy_UI(aimed_enemy); <-- moved in PlayerCollisions.cs
                 break;
 
             case "emptyEnemyAim":
@@ -3028,10 +3031,19 @@ public class PlayerMovement : MonoBehaviour
 
                 head_TARGET.localPosition = new Vector3(6.80f,-10.57f,16.06f);
 
+                shoot_blocked = false;
                 aimed_enemy = null;
                 cm_movement.set_aimedTarget = null;
                 break;
+
+            case "blockEnemyAim":
+                shoot_blocked = true;
+                break;
+            case "unblockEnemyAim":
+                shoot_blocked = false;
+                break;
             case "gun":
+                shoot_blocked = false;
                 weapon_equipped = false;
                 aimed_enemy = null;
 

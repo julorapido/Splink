@@ -12,7 +12,7 @@ public class CameraMovement : MonoBehaviour
 
     [Header ("Camera Main Rotation Ratio")]
     // [SerializeField, Range(-0.05f, -0.2f)] private float x_ratio;
-    private const float x_ratio = -0.070f;
+    private const float x_ratio = -0.087f;
 
     [Header ("Camera Dash/Movements settings")]
     private const float Camera_Movement_Ratio = 1.20f;

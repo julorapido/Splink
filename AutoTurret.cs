@@ -597,10 +597,11 @@ public class AutoTurret : MonoBehaviour
 
 
 
-    public void turret_damage(string dmg_status, float wpn_damage, GameObject turret_part, bool is_crit, Vector3 offset)
+    public void turret_damage(int damage)
     {
-        if(turret_exploded) return;
-
+        if(turret_exploded)
+            return;
+        /*
         int dmg = 0;
         switch(dmg_status)
         {
@@ -639,23 +640,20 @@ public class AutoTurret : MonoBehaviour
 
         if(is_crit)
             dmg *= 2;
-            
-        if( (turret_health - dmg ) < 0)
+        */
+        if(turret_health - (damage) <= 0)
         {
             turret_health = 0;
 
             turret_explode();
 
             g_ui.kill_ui();
-            g_ui.damage_ui(transform, dmg, is_crit, offset);
             g_ui.gain_money(120);
         }
         else
         {
-            turret_health = turret_health - dmg;
-            g_ui.damage_ui(transform, dmg, is_crit, offset);
+            turret_health -= (damage);
         }
-
     }
 
 

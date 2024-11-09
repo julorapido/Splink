@@ -106,18 +106,69 @@ public class GameUI : MonoBehaviour
     private GameObject[] gun_fetchedPrefabs;
 
 
-    [Header ("DAMAGE && ENEMY UI")]
-    [SerializeField] private GameObject enemy_ui_instance;
+    [Header ("DAMAGES HITS && ENEMY HEALTH BAR")]
+    [SerializeField] private GameObject enemy_health_bar;
+    [SerializeField] private GameObject damage_hit;
+    [SerializeField] private Transform er;
+    [SerializeField] private Vector3 aimed_offset;
+    private Canvas _canvas_;
+    private Vector3 _canvas_rectSize = Vector3.zero;
+    private struct t_enemy_ui
+    {
+        public Transform _tr;
+        public GameObject _healthBar;
+        private AutoTurret _auto_turret;
+        private Enemy _enemy;
+        public RectTransform _rt;
+
+        // [Constructor] to initialize struct
+        public t_enemy_ui(
+            Transform t, AutoTurret at, 
+            Enemy en, GameObject go)
+        {
+            this._tr = t;
+            this._auto_turret = at;
+            this._enemy = en;
+            this._healthBar = go;
+            this._rt = go.GetComponent<RectTransform>();
+        }
+        // modify position
+        public void set_pos(Vector3 v_, float canvas_scale)
+        {
+            // this._healthBar.transform.position = v_;
+            this._rt.anchoredPosition = new Vector2(
+                (v_.x) * canvas_scale, 
+                (v_.y) * (canvas_scale * 0.80f)
+            );
+
+            this._healthBar.transform.localPosition = new Vector3(
+                this._healthBar.transform.localPosition.x, 
+                this._healthBar.transform.localPosition.y, 
+                v_.z
+            );
+        }
+        // empty struct
+        public void delete()
+        {
+            this._enemy = null;
+            this._auto_turret = null;
+            this._tr = null;
+            this._healthBar = (null);
+        }
+    }
+    private t_enemy_ui[] ui_enemies = new t_enemy_ui[25];
+    /*
     private GameObject[] ui_enemies = new GameObject[25]; // 25 fixed bfr
     private Transform[] enemies_tr = new Transform[25]; // 25 fixed bfr
     private Vector3[] enemies_offst = new Vector3[25]; // 25 fixed bfr
     private AutoTurret[] enemies_aT = new AutoTurret[40]; // 25 fixed bfr
-    [SerializeField] private Transform er;
+    
     /////////////////////////////////////////////
     [SerializeField] private GameObject damage_obj;
     private GameObject[] damage_hits = new GameObject[40]; // 25 fixed bfr
     private Transform[] damage_hits_t = new Transform[40]; // 25 fixed bfr
     private Vector3[] damage_hits_offst = new Vector3[40]; // 25 fixed bfr
+    */
 
     [Header ("COMBO")]
     [SerializeField] private Sprite[] combo_masks;
@@ -140,17 +191,21 @@ public class GameUI : MonoBehaviour
         p_movement = pm;
         plyr_transform = pm.transform;
         plyr_rgBody  = pm.transform.GetComponent<Rigidbody>();
+        _canvas_ = gameObject.GetComponent<Canvas>();
+        RectTransform rt = (_canvas_).gameObject.GetComponent<RectTransform>();
+        _canvas_rectSize = new Vector3(rt.rect.width, rt.rect.height, 0f);
 
         Debug.Log("DEVICE: "+ Application.platform);
         Debug.Log("FRAMERATE: " + Screen.currentResolution.refreshRate);
-        Debug.Log("RESOLUTION:  " + Screen.currentResolution.width + "x" + Screen.currentResolution.height);
+        Debug.Log("[SCREEN] RESOLUTION:  " + Screen.currentResolution.width + "x" + Screen.currentResolution.height);
+        Debug.Log("[SCREEN] X-Y:   " + Screen.width+ " x " + Screen.height);
+        Debug.Log("[CANVAS] X-Y:   " + _canvas_rectSize.x + " x " + _canvas_rectSize.y);
 
         if (Application.platform == RuntimePlatform.Android 
             || (Application.platform == RuntimePlatform.IPhonePlayer)
             || (Application.platform == RuntimePlatform.OSXPlayer)
             || (Application.isMobilePlatform)
         ){
-            
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = 60;
 
@@ -258,6 +313,7 @@ public class GameUI : MonoBehaviour
 
 
         // floating damages
+        /*
         for(int i = 0; i < 40; i++)
         {
             if(damage_hits[i] != null && damage_hits_t[i] != null)
@@ -280,17 +336,19 @@ public class GameUI : MonoBehaviour
                 damage_hits[i].transform.localScale = new Vector3(cam_scale, cam_scale, cam_scale);
             }
         }
+        */
 
 
 
         // enemies ui
-        if(ui_enemies[0] != null)
+        if(ui_enemies[0]._tr != null)
         {
             for(int i = 0; i < 25; i++)
             {
-                if(ui_enemies[i] == null)
+                if(ui_enemies[i]._tr == null)
                     continue;
         
+                /*
                 float distanceToCamera = Vector3.Distance(ui_camera.transform.position, enemies_tr[i].position);
                 float cam_scale = (
                         2.0f * (distanceToCamera * 0.55f) * 
@@ -308,6 +366,33 @@ public class GameUI : MonoBehaviour
                     ui_enemies[i].transform.rotation.eulerAngles.y +  180f,
                     ui_enemies[i].transform.rotation.eulerAngles.z
                 );
+                */
+                if(ui_enemies[i]._tr.position.z < plyr_transform.position.z)
+                {
+                    Destroy(ui_enemies[i]._healthBar);
+                    ui_enemies[i].delete();
+                    continue;
+                }else
+                {   
+                    // Step 1: Convert the target object's world position to screen space
+                    Vector3 screen_pos = Camera.main.WorldToViewportPoint(
+                        (ui_enemies[i]._tr.position) +  (aimed_offset)
+                    );
+
+                    // Step 2: Convert the screen position to local position relative to the canvas
+                    Vector2 v2_pos = new Vector2(
+                        (screen_pos.x) * (_canvas_rectSize.x), 
+                        (screen_pos.y) * (_canvas_rectSize.y)
+                    );
+
+                    // Step 3: Apply the position to UI element && remove Z-axis
+                    ui_enemies[i]._rt.anchoredPosition = (v2_pos);
+                    ui_enemies[i]._healthBar.transform.localPosition = new Vector3(
+                        ui_enemies[i]._healthBar.transform.localPosition.x, ui_enemies[i]._healthBar.transform.localPosition.y, 0f
+                    );
+                   
+                }
+          
             }
         }
     }
@@ -369,70 +454,81 @@ public class GameUI : MonoBehaviour
 
 
 
-    // =======================
-    //        ENEMY UI
-    // =======================
-    public void newEnemy_UI(Transform enemy_)
+    // ==============================================
+    //                  ENEMY UI
+    // ==============================================
+    public void newEnemy_UI(Transform enemy_, bool destroy_enemy_ui = false)
     {
-        if(enemy_ == null)
-            return;
-
-        for(int i = 0; i < 25; i ++)
+        if(destroy_enemy_ui)
         {
-            if(enemies_tr[i] == enemy_)
-                break;
-
-            if(ui_enemies[i] == null)
+            for(int i = 0; i < 25; i ++)
+                if(ui_enemies[i]._tr == enemy_)
+                    return;
+        }else
+        {
+            if(enemy_ == null)
+                return;
+            for(int i = 0; i < 25; i ++)
+                if(ui_enemies[i]._tr == enemy_)
+                    return;
+            for(int i = 0; i < 25; i ++)
             {
-                ui_enemies[i] = Instantiate(enemy_ui_instance, 
-                    enemy_.transform.position +  new Vector3(0f, 1.5f, 0f),
-                    Quaternion.identity,
-                    er
-                    //Quaternion.Euler(0f, enemy_.transform.rotation.eulerAngles.y, 0f)
-                    //,damage_obj.transform
-                );
+                if(ui_enemies[i]._tr == null)
+                {
+                    GameObject health_bar = Instantiate(
+                        enemy_health_bar, 
+                        new Vector3(0f, 1f, 0f),
+                        transform.rotation,
+                        transform
+                    );
+                    AutoTurret at_turret = enemy_.GetComponent<AutoTurret>();
+                    // Vector3 offset = ((at_turret != null) ?
+                    //     (
+                    //         (at_turret != null) && ((bool)(at_turret?.is_left)) ? 
+                    //         new Vector3(1f, 1f, 0f) : new Vector3(0f, 1f, 0f)
+                    //     )
+                    //     : 
+                    //     ( new Vector3(0f, 1f, 0f) )
+                    // );
+                    // Vector3 offset = new Vector3(2.5f, 5f, 0f);
+                    Enemy en_ = enemy_.GetComponent<Enemy>();
+                    ui_enemies[i] = new t_enemy_ui(
+                        enemy_,
+                        at_turret,
+                        en_,
+                        health_bar
+                    );
 
-                enemies_tr[i] = enemy_;
-                StartCoroutine(fade_ui_obj(ui_enemies[i], 1.5f));
+                    // StartCoroutine(fade_ui_obj(ui_enemies[i]._go, 1.5f));
+                    Transform t = health_bar.transform;
 
-                Transform t = ui_enemies[i].transform;
+                    int enemy_health = at_turret.get_health;
+                    int enemy_maxhealth = at_turret.get_maxHealth;
 
-                AutoTurret at_turret = enemy_.GetComponent<AutoTurret>();
+                    // // Name & Level Assignation
+                    // t.GetChild(3).GetComponent<TMPro.TextMeshPro>().text = at_turret.turret_name;
+                    //t.GetChild(2).GetComponent<TMPro.TextMeshPro>().text = ""  + at_turret.turret_level.ToString();
+                    // t.GetChild(3).GetComponent<TMPro.TextMeshPro>().text = enemy_health.ToString() + "/"  + enemy_maxhealth.ToString();
 
-                enemies_aT[i] = at_turret;
-                enemies_offst[i] = at_turret.is_horizontal ? 
-                    (at_turret.is_left ? 
-                        new Vector3(1.7f, 2f, -0.2f) : new Vector3(-1.7f, 2f, -0.2f)
-                    ) 
-                    : (new Vector3(0f, 3f, 0f)
-                );
-
-                int enemy_health = at_turret.get_health;
-                int enemy_maxhealth = at_turret.get_maxHealth;
-
-                // // Name & Level Assignation
-                t.GetChild(1).GetComponent<TMPro.TextMeshPro>().text = at_turret.turret_name;
-                t.GetChild(2).GetComponent<TMPro.TextMeshPro>().text = ""  + at_turret.turret_level.ToString();
-                t.GetChild(3).GetComponent<TMPro.TextMeshPro>().text = enemy_health.ToString() + "/"  + enemy_maxhealth.ToString();
-
-                // // Health Attribution
-                float x_health = (((float)enemy_health / (float)enemy_maxhealth) * 100f);
-                //t.GetChild(0).GetChild(1).localScale = new Vector3( (float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);
-                //t.GetChild(0).GetChild(2).localScale = new Vector3((float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);
-                break;
+                    // // Health Attribution
+                    float x_health = (((float)enemy_health / (float)enemy_maxhealth) * 100f);
+                    //t.GetChild(0).GetChild(1).localScale = new Vector3( (float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);
+                    //t.GetChild(0).GetChild(2).localScale = new Vector3((float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);
+                    return;
+                }
             }
         }
-        
     }
 
 
 
-    // =======================
-    //       ENEMY_DAMAGE
-    // =======================
+    // ==============================================
+    //                  ENEMY_DAMAGE
+    // ==============================================
     public void damage_ui(Transform enemy, int damage_value, bool? is_crit_hit, Vector3 offset)
     {
         return; // < < <----------------------------------------------
+        /*
         if(damage_value.GetType() != typeof(int) || enemy == null)
             return;
 
@@ -479,8 +575,10 @@ public class GameUI : MonoBehaviour
                 break;
             }
         }
+        */
 
         // health bar
+        /*
         for(int j = 0; j < enemies_tr.Length; j++)
         {
             if(enemies_tr[j] == enemy)
@@ -509,18 +607,8 @@ public class GameUI : MonoBehaviour
                 //t.GetChild(0).GetChild(1).localScale = new Vector3( (float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);
                 //t.GetChild(0).GetChild(2).localScale = new Vector3((float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1);       
             }
-        }
+        */
     }
-    private IEnumerator reset_damage_slot(int i_)
-    {
-        yield return new WaitForSeconds(0.6f);
-        StartCoroutine(fade_ui_obj(damage_hits[i_], 0.4f, true));
-        yield return new WaitForSeconds(0.4f);
-        Destroy(damage_hits[i_]);
-        damage_hits[i_] = null;
-        damage_hits_t[i_] = null;  
-    }
-
 
 
 

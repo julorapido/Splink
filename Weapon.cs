@@ -17,9 +17,9 @@ public class Weapon : MonoBehaviour
     private bool ammo_fixed  = true;
 
     [Header ("Weapon Stats")]
-    private const int damage = 50;
-    private const int precision_ = 80;
-    private const float fireRate = 0.2f;
+    private const int damage = 1;
+    private const int precision_ = 60;
+    private const float fireRate = 0.7f;
     private const int criticalChance = 5; // /100
     private const int range_ = 40; // max range 70-ish
     private const int magSize = 12;
@@ -242,6 +242,7 @@ public class Weapon : MonoBehaviour
         proj_scrpt.horitzontal_target = (
             (AT_ != null && AT_.is_horizontal) ? true : false 
         );
+        proj_scrpt.game_ui = g_ui;
         proj_scrpt.bullet_type = (A_T_Projectile.Bullet_Type.Direct);
         proj_scrpt.set_projSpeed = (bullet_speed);
         proj_scrpt.set_target = (target_transform);
@@ -382,7 +383,7 @@ public class Weapon : MonoBehaviour
         if(pocket_weapon != null)
         {
             // +3 mag && full actual mag
-            ammo_inMagazine += 3 * (magSize);
+            ammo_inMagazine += 7 * (magSize);
             ammo = (magSize);
         }
 

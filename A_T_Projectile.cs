@@ -5,11 +5,13 @@ using UnityEngine;
 
 public class A_T_Projectile : MonoBehaviour
 {
+    // PLAYER BULLET
     [Header ("WeaponBullet Specifics")]
     [HideInInspector] public bool horitzontal_target;
     [HideInInspector] public Vector3 weapon_precision;
     [HideInInspector] public bool target_isLeft;
     [HideInInspector] public bool is_crticial;
+    [HideInInspector] public GameUI game_ui;
 
     [Header ("Target")]
     private Transform target_;
@@ -110,7 +112,16 @@ public class A_T_Projectile : MonoBehaviour
     }
 
 
+
+    // FixedUpdate
+    private void FixedUpdate()
+    {
+        if(!exploded)
+            transform.Rotate(0,0,10f, Space.Self);
+    }
     
+
+
     // Update
     private void Update()
     {
@@ -120,7 +131,7 @@ public class A_T_Projectile : MonoBehaviour
                 Destroy(gameObject);
 
 
-        // NON-PLAYER BULLET
+        // NON-PLAYER [BULLET]
         if(!player_bullet)
         {
             float passedNear_inPrecision =  (bullet_type == Bullet_Type.Tracking ? rocket_near_inPrecision : 0f);
@@ -178,13 +189,9 @@ public class A_T_Projectile : MonoBehaviour
                 }
             }
         }
-
-
-
-        // PLAYER BULLET
+        // PLAYER [BULLET]
         else
         {
-
             if(!exploded)
             {
                 try{
@@ -247,28 +254,24 @@ public class A_T_Projectile : MonoBehaviour
                 transform.position = expl_offset;
             }
         }
-
-
-    }
-
-    private void FixedUpdate()
-    {
-        if(!exploded)
-            transform.Rotate(0,0,10f, Space.Self);
     }
 
 
-    // Player bullet
+
+    // [PLAYER] Collision
     private void OnCollisionEnter(Collision other)
     {
+        if(exploded)
+            return ;
+
         if(player_bullet)
         {
             GameObject member_gmObj_replaced = other.gameObject; // force initialization beacuse it's a GameObj
-            string hit_tag = other.gameObject.tag;
+            string hit_tag = other.gameObject.tag; // member part (hit)
             Transform parent_ = other.gameObject.transform.parent;
 
 
-            // hit a turret
+            // hit a [turret || enemy || mini-boss...]
             if( turret_parts.Contains(hit_tag) )
             {
                 for(int i = 0; i < 50; i ++)
@@ -281,20 +284,24 @@ public class A_T_Projectile : MonoBehaviour
                             member_gmObj_replaced = parent_.gameObject;
                         }
 
-
                         parent_ = parent_.parent;
                         if( (parent_.gameObject.tag == "TURRET" || parent_.gameObject.tag == "ENEMY") && !exploded)
                         {
                             AutoTurret turret = parent_.GetComponent<AutoTurret>();
-                                 
-                            turret.turret_damage(
-                                hit_tag,
-                                bullet_damage, 
-                                other.gameObject.tag != "Untagged" ?  other.gameObject : member_gmObj_replaced,
-                                is_crticial,
-                                transform.position - target_.position
+                            Enemy enemy = parent_.GetComponent<Enemy>();
+
+                            // turret.turret_damage(
+                            //     hit_tag,
+                            //     bullet_damage, 
+                            //     other.gameObject.tag != "Untagged" ?  other.gameObject : member_gmObj_replaced,
+                            //     is_crticial,
+                            // );
+                            enemy_hit(
+                                parent_,
+                                turret,
+                                enemy,
+                                hit_tag
                             );
-                            enemy_hit();
                             parent_ = null;
                             break;
                         }
@@ -308,28 +315,33 @@ public class A_T_Projectile : MonoBehaviour
     }
 
 
-    // Enemy Bullet
+    // [NON-PLAYER] Collision
     private void OnTriggerEnter(Collider other)
     {
+        // hit [ground | player | obstacles]
         if(!player_bullet)
         {
             if(other.gameObject.tag == "player_hitbx" && !exploded)
+            {
                 bullet_explode(other.gameObject);
-            if(other.gameObject.tag == "ground" || other.gameObject.tag == "obstacle" || 
-                other.gameObject.tag == "slide" && !exploded)
+            }
+            if( (!exploded) && (
+                other.gameObject.tag == "ground" || 
+                other.gameObject.tag == "obstacle" || 
+                other.gameObject.tag == "slide")
+            ){
                 bullet_explode();
-            // if(other.gameObject.tag == "obstacle" && !exploded) bullet_explode();
+            }
         }
     }
 
 
-    // TURRET-BULLET hit
+    // NON-PLAYER [hit]
     private void bullet_explode(GameObject go_ = null)
     {
         if(exploded) 
             return;
 
-        // CancelInvoke("bullet_explode");
         exploded = true;
         
         if(go_ != null)
@@ -341,20 +353,44 @@ public class A_T_Projectile : MonoBehaviour
     }
 
 
-    // PLAYER-BULLET hit
-    private void enemy_hit()
+    // PLAYER [hit]
+    private void enemy_hit(Transform enemy_tr, AutoTurret at, Enemy en, string hit_tag)
     {
-        if(exploded) 
+        if(exploded)
             return;
-
-        expl_offset = transform.position;
-        exploded = true;
-        Invoke("destry", 1f);
 
         TrailRenderer tr = gameObject.GetComponent<TrailRenderer>();
         MeshRenderer mr = gameObject.GetComponentInChildren<MeshRenderer>();
         Rigidbody rr = gameObject.GetComponent<Rigidbody>();
+        int dealed_damage = bullet_damage;
+        if(is_crticial)
+            dealed_damage *= 2;
 
+
+        // affect damages
+        if(at != null || en != null)
+        {
+            if(hit_tag == "tr_Plate" || hit_tag == "tr_Stand" || hit_tag == "legs")
+                dealed_damage /= 2;
+            
+            if(hit_tag == "head" || hit_tag == "tr_Radar" || hit_tag == "tr_Shootp")
+                dealed_damage *= 2;
+
+            if(at != null)
+                at.turret_damage(dealed_damage);
+            /*
+                if(en != null)
+                    en.enemy_damage(dealed_damage);
+            */
+        }
+
+        // ui
+        game_ui.damage_ui(
+            enemy_tr, dealed_damage, is_crticial, (transform.position - target_.position)
+        );
+
+
+        // explosion && trail
         if(tr != null) 
             tr.enabled = false;
         if(mr != null)
@@ -366,12 +402,15 @@ public class A_T_Projectile : MonoBehaviour
             else
                 blt_expl[0].Play();
         }
+        expl_offset = transform.position;
+
+        
         rr.isKinematic = true;
-        bool is_left =  ((target_.rotation.eulerAngles.y >= 170 ) ? true : false);  
+        Invoke("destry", 1f);
+        exploded = true;
     }
 
     private void destry(){ Destroy(gameObject); }
-
 
 
     // grenade throw
