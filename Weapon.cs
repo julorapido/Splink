@@ -17,11 +17,11 @@ public class Weapon : MonoBehaviour
     private bool ammo_fixed  = true;
 
     [Header ("Weapon Stats")]
-    private const int damage = 1;
+    private const int damage = 4;
     private const int precision_ = 60;
-    private const float fireRate = 0.7f;
+    private const float fireRate = 0.6f;
     private const int criticalChance = 5; // /100
-    private const int range_ = 40; // max range 70-ish
+    private const int range_ = 30; // max range 70-ish
     private const int magSize = 12;
     private const float reloadTime = 1.30f;
     private const float bullet_speed = 10f;
@@ -250,10 +250,10 @@ public class Weapon : MonoBehaviour
         proj_scrpt.player_bullet = true;
 
         float x_ = UnityEngine.Random.Range(
-            -1f * (100f - (float)(precision_)) / 1.7f, (100f - (float)(precision_)) / 1.7f
+            -1f * (100f - (float)(precision_)) / 1.5f, (100f - (float)(precision_)) / 1.5f
         ) * 0.1f;
         float y_ = UnityEngine.Random.Range(
-            -1f * (100f - (float)(precision_)) / 3f, (100f - (float)(precision_)) / 3f
+            -1f * (100f - (float)(precision_)) / 2.5f, (100f - (float)(precision_)) / 2.5f
         ) * 0.1f;
 
         if( Vector3.Distance(target_transform.position, transform.position) < 16f)

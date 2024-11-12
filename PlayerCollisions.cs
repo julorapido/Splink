@@ -104,23 +104,30 @@ public class PlayerCollisions : MonoBehaviour
     private GameObject aimed_enemy;
     // -- [OverLapBox] Auto-Aim --
     private bool firstEverDetectedEnemy = false;
-    private const float autoAim_delay = 0.4f;
+    private const float autoAim_delay = 0.25f;
     private float autoAim_delay_v = 0f;
     private int enemy_inSight = 0;
     // -- [RaycastHits] Auto-Aim-Block --
     private RaycastHit[] m_Hits;
-    private const float blockRay_delay = 0.2f;
+    private const float blockRay_delay = 0.15f;
     private LayerMask ray_mask;
+    // -- [OverLapBox] Block-Enemies-Ui --
+    private const float block_ui_delay = 0.10f;
+    private float block_ui_delay_v = 0f;
+
+
 
     [Header ("Wall Run Aim Hitbox")]
     [HideInInspector] public bool wallRun_aimBox = false;
     [HideInInspector] public float z_wallRun_aimRotation = 0.0f;
+
 
     [Header ("Attached Scrtips PlayerMovement/CameraMovement/GameUi")]
     private PlayerMovement player_movement;
     private CameraMovement c_movement;
     private PlayerVectors p_vectors;
     private GameUI game_ui;
+
 
     [Header ("Main PlayerCollisions")]
     private PlayerCollisions psCollisions_movement;
@@ -129,6 +136,7 @@ public class PlayerCollisions : MonoBehaviour
     private Rigidbody[] character_connectedBodies;
     private CharacterJoint[] pico_characterJoints;
 
+    [HideInInspector] public bool is_build = false;
 
     // AWAKE
     private void Awake()
@@ -187,18 +195,18 @@ public class PlayerCollisions : MonoBehaviour
 
         Vertices = RotateObject(Vertices, rotation.eulerAngles, center);
 
-        Debug.DrawLine(Vertices[0], Vertices[1], Color.white, Duration);
-        Debug.DrawLine(Vertices[1], Vertices[3], Color.white, Duration);
-        Debug.DrawLine(Vertices[2], Vertices[3], Color.white, Duration);
-        Debug.DrawLine(Vertices[2], Vertices[0], Color.white, Duration);
-        Debug.DrawLine(Vertices[4], Vertices[0], Color.white, Duration);
-        Debug.DrawLine(Vertices[4], Vertices[6], Color.white, Duration);
-        Debug.DrawLine(Vertices[2], Vertices[6], Color.white, Duration);
-        Debug.DrawLine(Vertices[7], Vertices[6], Color.white, Duration);
-        Debug.DrawLine(Vertices[7], Vertices[3], Color.white, Duration);
-        Debug.DrawLine(Vertices[7], Vertices[5], Color.white, Duration);
-        Debug.DrawLine(Vertices[1], Vertices[5], Color.white, Duration);
-        Debug.DrawLine(Vertices[4], Vertices[5], Color.white, Duration);
+        Debug.DrawLine(Vertices[0], Vertices[1], Color.white, autoAim_delay);
+        Debug.DrawLine(Vertices[1], Vertices[3], Color.white, autoAim_delay);
+        Debug.DrawLine(Vertices[2], Vertices[3], Color.white, autoAim_delay);
+        Debug.DrawLine(Vertices[2], Vertices[0], Color.white, autoAim_delay);
+        Debug.DrawLine(Vertices[4], Vertices[0], Color.white, autoAim_delay);
+        Debug.DrawLine(Vertices[4], Vertices[6], Color.white, autoAim_delay);
+        Debug.DrawLine(Vertices[2], Vertices[6], Color.white, autoAim_delay);
+        Debug.DrawLine(Vertices[7], Vertices[6], Color.white, autoAim_delay);
+        Debug.DrawLine(Vertices[7], Vertices[3], Color.white, autoAim_delay);
+        Debug.DrawLine(Vertices[7], Vertices[5], Color.white, autoAim_delay);
+        Debug.DrawLine(Vertices[1], Vertices[5], Color.white, autoAim_delay);
+        Debug.DrawLine(Vertices[4], Vertices[5], Color.white, autoAim_delay);
     }
 
 
@@ -301,12 +309,12 @@ public class PlayerCollisions : MonoBehaviour
                 {
                     float minDistance = float.MaxValue;
 
-                    /*
-                    DisplayBox(transform.position,  
-                        new Vector3(4f, 10f, player_attackRange), 
-                        wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
-                    );
-                    */
+                    if(!(is_build))
+                        DisplayBox(transform.position,  
+                            new Vector3(4f, 10f, player_attackRange), 
+                            wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
+                        );
+                        
 
                     int max_Colliders = (player_attackRange / 10) * 100;
 
@@ -329,15 +337,62 @@ public class PlayerCollisions : MonoBehaviour
                             if(hit_colliders[i] == null ) 
                                 continue;
 
+                            // all enemies detection
                             if(hit_colliders[i].tag == "TURRET" || hit_colliders[i].tag == "ENEMY")
                             {
-                                Vector3 possiblePosition = hit_colliders[i].transform.position;
+                                // handle ui (health bars)
+                                RaycastHit _rh;
+                                Transform tr = hit_colliders[i].transform;
+                                Vector3 dir = (
+                                    (tr.position + new Vector3(0f, 1f, 0f)) - (transform.position + new Vector3(0f, 1.6f, 0f))
+                                );
+
+                                // throw a ray
+                                if(transform.position.z < tr.position.z)
+                                {
+                                    Physics.Raycast(
+                                        (transform.position + new Vector3(0f, 1.6f, 0f)),
+                                        (dir),
+                                        out (_rh), 
+                                        (player_attackRange),
+                                        (ray_mask),
+                                        (QueryTriggerInteraction.Collide)
+                                    );
+                                    if(!(is_build))
+                                    {
+                                        Debug.DrawLine(
+                                            (transform.position + new Vector3(0f, 1.6f, 0f)),
+                                            (tr.position + new Vector3(0f, 1f, 0f)),
+                                            Color.cyan,
+                                            0.5f
+                                        );
+                                        Debug.DrawLine(
+                                            (transform.position + new Vector3(0f, 1.6f, 0f)),
+                                            _rh.point, // (tr.position + new Vector3(0f, 1f, 0f)),
+                                            Color.magenta,
+                                            0.5f
+                                        );
+                                    }
+                                    if(_rh.transform != null)
+                                    {
+                                        if(!(_rh.collider.tag == "ground"))
+                                        {
+                                            game_ui.newEnemy_UI(tr); // new
+                                        }else
+                                        {
+                                            game_ui.newEnemy_UI(tr, true); // clear
+                                        }
+                                    }
+                                }
+
+
+                                Vector3 pos_ = hit_colliders[i].transform.position;
                             
-                                float currDistance = Vector3.Distance(transform.position, possiblePosition);
-                                float zDist = possiblePosition.z - transform.position.z;
+                                float currDistance = Vector3.Distance(transform.position, pos_);
+                                float zDist = pos_.z - transform.position.z;
 
                                 if(zDist < 1f
-                                    || ((zDist <= 15) && ((possiblePosition.y - transform.position.y) > 10f))
+                                    || ((zDist <= 15) && ((pos_.y - transform.position.y) > 10f))
                                 ) continue;
 
                                 // If the distance is smaller than the one before...
@@ -357,7 +412,7 @@ public class PlayerCollisions : MonoBehaviour
                             (!firstEverDetectedEnemy || (aimed_enemy != null)))
                         {
                             player_movement.animateCollision("newEnemyAim", new Vector3(0, 0, 0), aimed_enemy);
-                            game_ui.newEnemy_UI(aimed_enemy.transform);
+                            /*      game_ui.newEnemy_UI(aimed_enemy.transform);     */
 
                             stored_aimed_enemy = aimed_enemy;
                             firstEverDetectedEnemy = true;
@@ -411,42 +466,51 @@ public class PlayerCollisions : MonoBehaviour
                             /*Debug.Log(
                                 "[HIT BLOCK][" + i + "]  :  " + m_Hits[i].collider.tag + "  |||  " + m_Hits[i].collider
                             );*/
-                            Debug.DrawLine(
-                                (
-                                (transform.position + new Vector3(0f, 0.2f, 0f)) +
-                                    new Vector3(0f, (0.075f * i), 0.27f)
-                                ),
-                                (m_Hits[i].point),
-                                Color.red, 
-                                0.05f
-                            );
+                            if(!(is_build))
+                            {
+                                Debug.DrawLine(
+                                    (
+                                    (transform.position + new Vector3(0f, 0.2f, 0f)) +
+                                        new Vector3(0f, (0.075f * i), 0.27f)
+                                    ),
+                                    (m_Hits[i].point),
+                                    Color.red, 
+                                    0.05f
+                                );
+                            }
                             blocked_rays++;
                         }else if (
                             !(GameObject.ReferenceEquals(m_Hits[i].collider.gameObject, (aimed_enemy.gameObject)))
                         )
                         {
-                            Debug.DrawLine(
-                                (
-                                (transform.position + new Vector3(0f, 0.2f, 0f)) +
-                                    new Vector3(0f, (0.075f * i), 0.27f)
-                                ),
-                                (m_Hits[i].point),
-                                Color.yellow,
-                                0.05f
-                            );
+                            if(!(is_build))
+                            {
+                                Debug.DrawLine(
+                                    (
+                                    (transform.position + new Vector3(0f, 0.2f, 0f)) +
+                                        new Vector3(0f, (0.075f * i), 0.27f)
+                                    ),
+                                    (m_Hits[i].point),
+                                    Color.yellow,
+                                    0.05f
+                                );
+                            }
                             intercepted_rays++;
                         }   
                         else
                         {
-                            Debug.DrawLine(
-                                (
-                                (transform.position + new Vector3(0f, 0.2f, 0f)) +
-                                    new Vector3(0f, (0.075f * i), 0.27f)
-                                ),
-                                (aimed_enemy.transform.position),
-                                Color.green,
-                                0.05f
-                            );
+                            if(!(is_build))
+                            {
+                                Debug.DrawLine(
+                                    (
+                                    (transform.position + new Vector3(0f, 0.2f, 0f)) +
+                                        new Vector3(0f, (0.075f * i), 0.27f)
+                                    ),
+                                    (aimed_enemy.transform.position),
+                                    Color.green,
+                                    0.05f
+                                );
+                            }
                         }
                     }
                     
@@ -460,6 +524,78 @@ public class PlayerCollisions : MonoBehaviour
                     {
                         player_movement.animateCollision("unblockEnemyAim", Vector3.zero);
                     }
+                }
+            }
+
+
+            // [OverlapBox] (larger box to clear enemies ui)
+            if(slcted_clsion == "boxAutoAim")
+            {
+                if(block_ui_delay_v <= 0f)
+                {
+                    int max_Colliders = (player_attackRange / 10) * 300;
+
+                    Collider[] hit_colliders = new Collider[max_Colliders];
+                    int numColliders = Physics.OverlapBoxNonAlloc
+                    (
+                        transform.position,
+                        new Vector3(8f, 10f, player_attackRange), 
+                        hit_colliders,
+                        Quaternion.identity
+                    );
+
+                    if(!(is_build))
+                        DisplayBox(transform.position,  
+                            new Vector3(8f, 10f, player_attackRange), 
+                            wallRun_aimBox ? Quaternion.Euler(z_wallRun_aimRotation, transform.rotation.y, 0) : transform.rotation
+                        );
+
+                
+                    for (int i = 0; i < hit_colliders.Length; i ++)
+                    { 
+                        if(hit_colliders[i] == null ) 
+                            continue;
+
+                        // all enemies detection
+                        if(hit_colliders[i].tag == "TURRET" || hit_colliders[i].tag == "ENEMY")
+                        {
+                            // handle ui (health bars)
+                            RaycastHit[] _rh = new RaycastHit[2];
+                            Transform tr = hit_colliders[i].transform;
+                            Vector3 dir = (
+                                (tr.position + new Vector3(0f, 1f, 0f)) - (transform.position + new Vector3(0f, 1.6f, 0f))
+                            );
+                            int blocked_h = 0;
+
+                            // throw a ray
+                            for(int k = 0; k < 2; k++)
+                            { 
+                                if(transform.position.z < tr.position.z)
+                                {
+                                    Physics.Raycast(
+                                        (transform.position + new Vector3(0f, 1.6f, 0f)),
+                                        (dir),
+                                        out (_rh[i]), 
+                                        (player_attackRange),
+                                        (ray_mask),
+                                        (QueryTriggerInteraction.Collide)
+                                    );
+                                    if(_rh[i].transform != null)
+                                    {
+                                        if((_rh[i].collider.tag == "ground"))
+                                        {
+                                            // game_ui.newEnemy_UI(tr, true); // clear
+                                            blocked_h++;
+                                        }
+                                    }
+                                }
+                            }
+                            if(blocked_h == 2)
+                                game_ui.newEnemy_UI(tr, true); // clear
+                        }
+                    }
+
+                    block_ui_delay_v = (block_ui_delay);
                 }
             }
         }

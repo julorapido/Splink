@@ -1531,7 +1531,7 @@ public class PlayerMovement : MonoBehaviour
                             if ( Input.GetKey("q") )
                             {
                                 // rt   
-                                if((plyr_trsnfm.rotation.eulerAngles.y >= 305f)
+                                if((plyr_trsnfm.rotation.eulerAngles.y >= 300f)
                                     ||
                                     (plyr_trsnfm.rotation.eulerAngles.y <= 180f)
                                 ){
@@ -1558,7 +1558,7 @@ public class PlayerMovement : MonoBehaviour
                                 // rt
                                 if((plyr_trsnfm.rotation.eulerAngles.y >= 180f)
                                     ||
-                                    (plyr_trsnfm.rotation.eulerAngles.y <= 55f)
+                                    (plyr_trsnfm.rotation.eulerAngles.y <= 60f)
                                 ){
                                     plyr_.transform.Rotate(0, (3.10f), 0, Space.Self);
                                 }
@@ -1642,11 +1642,11 @@ public class PlayerMovement : MonoBehaviour
 
 
                         // CLAMP ROTATIONS
-                        if(transform.rotation.eulerAngles.y < 180f && transform.rotation.eulerAngles.y > 55f)
-                            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, 55f, transform.rotation.eulerAngles.z);
+                        if(transform.rotation.eulerAngles.y < 180f && transform.rotation.eulerAngles.y > 60f)
+                            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, 60f, transform.rotation.eulerAngles.z);
 
-                        if(transform.rotation.eulerAngles.y > 180f && transform.rotation.eulerAngles.y < 305f)
-                            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, 305f, transform.rotation.eulerAngles.z);
+                        if(transform.rotation.eulerAngles.y > 180f && transform.rotation.eulerAngles.y < 300f)
+                            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, 300f, transform.rotation.eulerAngles.z);
                     }
 
 
