@@ -11,11 +11,14 @@ public class CameraMovement : MonoBehaviour
     private const float divisor = 55f;
 
     [Header ("Camera Main Rotation Ratio")]
-    // [SerializeField, Range(-0.05f, -0.2f)] private float x_ratio;
-    private const float x_ratio = -0.087f;
+    //[SerializeField, Range(-0.05f, -0.2f)] private float x_ratio_pos;
+    private const float x_ratio_pos = -0.090f;
+    //[SerializeField, Range(100f, 220f)] private int x_ratio_rot;
+    private const float x_ratio_rot = 140f;
+
 
     [Header ("Camera Dash/Movements settings")]
-    private const float Camera_Movement_Ratio = 1.20f;
+    private const float Camera_Movement_Ratio = 1.15f;
 
     [Header ("Player Animator")]
     public GameObject p_gm;
@@ -124,7 +127,15 @@ public class CameraMovement : MonoBehaviour
 
     [Header ("Aimed Target")]
     private Transform aimed_target;
-    private Vector3 aim_v;
+    private Vector3 aim_v, aim_q;
+    /*
+    [SerializeField, Range(-0.04f, 0.04f)] private float aim_effect_v;
+    [SerializeField, Range(0.0001f, 0.002f)] private float rtAim_effect_q_x;
+    [SerializeField, Range(0.0001f, 0.004f)] private float rtAim_effect_q_y;
+    */
+    private const float aim_effect_v = 0f;
+    private const float rtAim_effect_q_x = 0.00130f;
+    private const float rtAim_effect_q_y = 0.00130f;
     public Transform set_aimedTarget
     {
         get { return null; }
@@ -194,9 +205,6 @@ public class CameraMovement : MonoBehaviour
         start_fov = gameObject.GetComponent<Camera>().fieldOfView;
         new_fov = start_fov;
 
-        //if(is_build)
-        //     offset = new Vector3(0f, 2.8f, -f);
-
         saved_y_offset = offset.y;
     }
 
@@ -215,13 +223,6 @@ public class CameraMovement : MonoBehaviour
             }
         }
 
-        /*
-        if(smthDmp_grpl)
-            rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], 0.12f, ref mathfRef_grpl, 0.295f);
-
-        if(smthDmp_grpl_end)
-            rot_dc["wallR_rot_x_offst"] = Mathf.SmoothDamp(rot_dc["wallR_rot_x_offst"], -0.325f, ref mathfRef_grpl, 0.650f);
-        */
 
 
         // recoil
@@ -230,7 +231,6 @@ public class CameraMovement : MonoBehaviour
 
         else if ( (cam_recoil < 0 ) && (cam_recoil > (-1 *  (0.03f) * Time.deltaTime)) )
             cam_recoil -= (0.0002f) * Time.deltaTime;
-
 
 
 
@@ -250,7 +250,7 @@ public class CameraMovement : MonoBehaviour
                 aiming_rotation.eulerAngles.y > 180 ?  (aiming_rotation.eulerAngles.y - 360f) : (aiming_rotation.eulerAngles.y),
                 aiming_rotation.eulerAngles.x > 180f ?  (aiming_rotation.eulerAngles.x - 360f) : (aiming_rotation.eulerAngles.x),
                 0f
-            ) * (0.2f),
+            ) * (1f),
             4f * Time.deltaTime
         )) : (Vector3.zero);
 
@@ -477,18 +477,30 @@ public class CameraMovement : MonoBehaviour
             // --- [ROTATION] ---------------------
             // Smooth Damp (rotation)
             // Dampen towards target rotation
-            x_offst = (player.rotation.eulerAngles.y > 298.0f ?
-                    -1 *  (60 - (player.rotation.eulerAngles.y - 300.0f))
-                :  player.rotation.eulerAngles.y
+            /*
+            x_offst = (player_rb.rotation.eulerAngles.y > 298.0f ?
+                    -1 *  (60 - (player_rb.rotation.eulerAngles.y - 300.0f))
+                :  player_rb.rotation.eulerAngles.y
             );
+            */
+            x_offst = Mathf.Lerp(
+                x_offst, 
+                ((player_rb.rotation.eulerAngles.y > 298.0f )?
+                        -1 *  (60 - (player_rb.rotation.eulerAngles.y - 300.0f))
+                    : 
+                        player_rb.rotation.eulerAngles.y
+                ),
+                Time.deltaTime * 25f
+            );
+
             Quaternion desired_rt  = new Quaternion(
                 xRot + supl_xRot
                 + (!use_specialSmooth ? lerp_v_rot.x : rot_dc["wallR_rot_x_offst"])
-                + (aim_v.y * 0.002f)
+                + (aim_v.y * (rtAim_effect_q_x))
                 ,
                 (!use_specialSmooth ? lerp_v_rot.y : rot_dc["wallR_rot_y_offst"])
-                +  (hanging ? 0f : (x_offst / 160.0f))
-                 + (aim_v.x * 0.002f)
+                +  (hanging ? 0f : (x_offst / x_ratio_rot) )
+                + (aim_v.x * (rtAim_effect_q_y))
                 ,
                 (!use_specialSmooth ? lerp_v_rot.z : rot_dc["wallR_rot_z_offst"])
                 + (hanging ? 0f : (-1 * (x_offst / 360.0f)))
@@ -515,27 +527,26 @@ public class CameraMovement : MonoBehaviour
             // Dampen towards offset position
             desired_  = (player.position + offset);
             desired_.x = desired_.x +  (
-                (x_ratio * ( (tyro_on) ?
+                (x_ratio_pos * ( (tyro_on) ?
                     (x_offst * 2)
                         :
                     (x_offst / 2.6f)
                 ))
             );
-            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 55f;
+            desired_.z = desired_.z +  (Math.Abs(x_offst)) / 52f;
 
             if( !(is_build) ) // PC = SmoothDamp
             {
                 Vector3 smoothFollow = Vector3.SmoothDamp(
                     transform.position,
                     (
-                        desired_ +
+                        (desired_) +
                             (tyro_on ? new Vector3(0f, 0.5f, 0.5f) : new Vector3(0f,0f,0f))
                         +
                         (!use_specialSmooth ?
                             (lerp_v_pos) : (new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"]))
                         )
-                        // + new Vector3(0f, ( (player_velocity.y < -4) ? ((player_velocity.y * Time.fixedDeltaTime) * 1.6f) : 0f), 0f) // y neg velocity compensation
-                        + (aim_v * 0.015f) // aiming vector
+                        + (new Vector3(aim_v.x * (aim_effect_v), 0f, 0f)) // aiming vector
                     ),
                     ref currentVelocity_pos,
                     (
@@ -549,13 +560,13 @@ public class CameraMovement : MonoBehaviour
                 transform.position = Vector3.Lerp(
                     transform.position,
                     (
-                        desired_ +
+                        (desired_) +
                             (tyro_on ? new Vector3(0f, 0.5f, 0.5f) : new Vector3(0f,0f,0f))
                         +
                         (!use_specialSmooth ?
                             (lerp_v_pos) : (new Vector3(pos_dc["wallR_x_offst"], pos_dc["wallR_y_offst"] + supl_yOff, pos_dc["wallR_z_offst"]))
                         )
-                        // + new Vector3(0f, ( (player_velocity.y < -4) ? ((player_velocity.y * Time.fixedDeltaTime) * 1.6f) : 0f), 0f) // y neg velocity compensation
+                        + (new Vector3(aim_v.x * (aim_effect_v), 0f, 0f)) // aiming vector
                     ),
                     (
                         40f * Time.deltaTime 
@@ -686,7 +697,6 @@ public class CameraMovement : MonoBehaviour
         if(is_ext)
         {
             reset_notSmooth();
-
         }else
         {
             // // //
@@ -1184,8 +1194,10 @@ public class CameraMovement : MonoBehaviour
         smoothTime_prc = 10f;
 
         iterator_ = 4;
-        List<float> v_flt = new List<float>(new float[6] {0.23f, 0.45f,  -0.125f, 0.3f, 0f, 0f } );
-        List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", "wallR_z_offst", "",  ""} );
+        List<float> v_flt = new List<float>(new float[6] {0.15f, 0.5f,  -0.125f, 
+            0.25f, 0f, 0f } );
+        List<string> s_arr = new List<string>(new string[6] {"wallR_rot_x_offst", "wallR_y_offst", "wallR_rot_z_offst", 
+            "wallR_z_offst", "",  ""} );
 
         values_ref = s_arr;
         values_flt = v_flt;

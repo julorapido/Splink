@@ -15,10 +15,16 @@ public class A_T_Projectile : MonoBehaviour
 
     [Header ("Target")]
     private Transform target_;
+    private Vector3 missed_cible = Vector3.zero;
     [HideInInspector] public Transform set_target{
         get {  return null; }
         set { if(value.GetType() == typeof(Transform)) target_ = value; }
     }
+    [HideInInspector] public Vector3 set_missed_cible{
+        get {  return Vector3.zero; }
+        set { if(value.GetType() == typeof(Vector3)) missed_cible = value; }
+    }
+    
 
 
     [Header ("Bullet Type & Damage")]
@@ -64,9 +70,11 @@ public class A_T_Projectile : MonoBehaviour
 
     [Header ("ExplosionAnimation Position")]
     private const string turret_parts = "tr_Barrel tr_Stand tr_Plate tr_Radar tr_Shootp tr_BarrelHz";
+    private const string enemy_parts = "en_head en_torso en_legs";
+
 
     [Header ("Proj Duration")]
-    private const float w_bullet_duration = 4f;
+    private const float w_bullet_duration = 7f;
     private float w_bullet_t = 0f;
 
     // Start
@@ -88,26 +96,31 @@ public class A_T_Projectile : MonoBehaviour
         // direct 
         if(bullet_type == Bullet_Type.Direct)
         {
-            bullet_qtrn = Vector3.RotateTowards(
-                transform.forward,
+            bullet_qtrn = /* Vector3.RotateTowards(
+                transform.forward, */
                 (target_.position + 
                     (player_bullet ?
                         ( 
-                        (horitzontal_target ? 
-                            new Vector3(target_isLeft ? 2.0f : -3f, 0f, 0f) : new Vector3(0f, 2.25f, 0f) 
-                        ) + (weapon_precision) 
-                    )
-                    : (Vector3.zero) ) - transform.position
-                ), 
+                            (horitzontal_target ? 
+                                new Vector3((target_isLeft) ? 1.5f : -1.5f, 0f, 0f) : new Vector3(0f, 2f, 0f) 
+                            ) + (weapon_precision) 
+                        )
+                        : 
+                        (Vector3.zero) 
+                    ) 
+                    - (transform.position)
+                ); /*, 
                 Time.deltaTime * 100, 0.0f
-            );
+            ); */
             transform.rotation = Quaternion.Euler(bullet_qtrn.x, bullet_qtrn.y, bullet_qtrn.z);
 
         }
 
         // tracking
         if(bullet_type == Bullet_Type.Tracking)
-            rocket_near_inPrecision = UnityEngine.Random.Range(0.2f, 3f);
+            rocket_near_inPrecision = UnityEngine.Random.Range(0f, 10f);
+        else
+            rocket_near_inPrecision = 0f;
 
     }
 
@@ -118,6 +131,11 @@ public class A_T_Projectile : MonoBehaviour
     {
         if(!exploded)
             transform.Rotate(0,0,10f, Space.Self);
+
+        // force rocket rigidbody to be at zero.
+        if(!player_bullet)
+            if(bullet_type == Bullet_Type.Tracking)
+                bullet_rb.velocity = Vector3.zero;
     }
     
 
@@ -131,29 +149,30 @@ public class A_T_Projectile : MonoBehaviour
                 Destroy(gameObject);
 
 
+
         // NON-PLAYER [BULLET]
         if(!player_bullet)
         {
-            float passedNear_inPrecision =  (bullet_type == Bullet_Type.Tracking ? rocket_near_inPrecision : 0f);
             float dst_ = (is_behind) ? 
                 (transform.position.z - target_.position.z) : (target_.position.z - transform.position.z);
+            float dst_3d = Vector3.Distance(transform.position, target_.position);
 
             // detect player passed
             if(
                 ((bullet_type != Bullet_Type.Ricochet) && (bullet_type != Bullet_Type.Grenade))
-                && (dst_ > passedNear_inPrecision) 
-                && !target_passed
-                && !exploded
+                && ( (dst_3d) < (rocket_near_inPrecision) )
+                && !(target_passed)
+                && !(exploded)
             ){
                 target_passed = true; 
                 speed *= 1.30f;
-                // Invoke("bullet_explode", 2.25f);
             }
 
             if(!exploded)
             {
                 try{
-                    Vector3 dir = (target_.position + new Vector3(0f, 1f, 0f) ) - transform.position;
+                    Vector3 dir = ((target_.position) + new Vector3(0f, 1f, 0f)  + (missed_cible))
+                        - (transform.position);
                         
                     if(target_passed && bullet_type == Bullet_Type.Tracking)
                         dir = l_dir;
@@ -163,11 +182,12 @@ public class A_T_Projectile : MonoBehaviour
                         case Bullet_Type.Tracking:
                             Vector3 newDirection = Vector3.RotateTowards(transform.forward, dir, Time.deltaTime * turnSpeed, 0.0f);
 
+                            // bullet_rb.velocity = Vector3.zero; <- fixedUpdate()
                             transform.Translate(Vector3.forward * Time.deltaTime * speed);
                             transform.rotation = Quaternion.LookRotation(newDirection);
 
                             if(!target_passed)
-                                l_dir = new Vector3(dir.x, dir.y / 2, dir.z);
+                                l_dir = new Vector3(dir.x, dir.y, dir.z);
 
                             z_+= 3;
                             break;
@@ -189,6 +209,9 @@ public class A_T_Projectile : MonoBehaviour
                 }
             }
         }
+
+
+
         // PLAYER [BULLET]
         else
         {
@@ -210,7 +233,7 @@ public class A_T_Projectile : MonoBehaviour
                         (target_.position +
                                 (
                                     horitzontal_target ? 
-                                        new Vector3(target_isLeft ? 2.0f : -3f, 2.5f, 0f) : new Vector3(0f, 2.25f, 0f) 
+                                        new Vector3(target_isLeft ? 2.0f : -3f, 0f, 0f) : new Vector3(0f, 2f, 0f) 
                                 )
                             - transform.position 
                     ) + (weapon_precision);
@@ -254,16 +277,18 @@ public class A_T_Projectile : MonoBehaviour
                 transform.position = expl_offset;
             }
         }
+
     }
 
 
 
-    // [PLAYER] Collision
+    // [SOLID] Collision
     private void OnCollisionEnter(Collision other)
     {
         if(exploded)
             return ;
 
+        // [PLAYER] Collision
         if(player_bullet)
         {
             GameObject member_gmObj_replaced = other.gameObject; // force initialization beacuse it's a GameObj
@@ -311,7 +336,35 @@ public class A_T_Projectile : MonoBehaviour
                     }
                 }
             }
+
+            // hit a [projectile] (turret, enemy)
+            if(hit_tag == "rocket" || hit_tag == "en_bullet")
+            {
+                enemy_hit(
+                    other.gameObject.transform,
+                    null,
+                    null,
+                    hit_tag
+                );
+            }
        }
+
+       
+        // [NON-PLAYER] Collision
+        // hit [ground | player | obstacles]
+        if(!player_bullet)
+        {
+            if(bullet_type == Bullet_Type.Tracking)
+            {
+                if( (!exploded) && (
+                    other.gameObject.tag == "ground" || 
+                    other.gameObject.tag == "obstacle" || 
+                    other.gameObject.tag == "slide")
+                ){
+                    bullet_explode();
+                }
+            }
+        }
     }
 
 
@@ -324,13 +377,6 @@ public class A_T_Projectile : MonoBehaviour
             if(other.gameObject.tag == "player_hitbx" && !exploded)
             {
                 bullet_explode(other.gameObject);
-            }
-            if( (!exploded) && (
-                other.gameObject.tag == "ground" || 
-                other.gameObject.tag == "obstacle" || 
-                other.gameObject.tag == "slide")
-            ){
-                bullet_explode();
             }
         }
     }
@@ -365,7 +411,7 @@ public class A_T_Projectile : MonoBehaviour
         int dealed_damage = bullet_damage;
         if(is_crticial)
             dealed_damage *= 2;
-
+        bool hit_miss = false;
 
         // affect damages
         if(at != null || en != null)
@@ -382,11 +428,20 @@ public class A_T_Projectile : MonoBehaviour
                 if(en != null)
                     en.enemy_damage(dealed_damage);
             */
-        }
+        }else
+            hit_miss = true;
+
+        if(hit_miss)
+            enemy_tr.GetComponent<A_T_Projectile>().set_missed_cible = new Vector3(
+                UnityEngine.Random.Range(-10f, 10f), UnityEngine.Random.Range(-10f, 10f), -3f
+            ); 
 
         // ui
         game_ui.damage_ui(
-            enemy_tr, dealed_damage, is_crticial, (transform.position - target_.position)
+            enemy_tr, 
+            (hit_miss) ? (-1) : (dealed_damage), 
+            is_crticial, 
+            (hit_miss) ? (Vector3.zero) : (transform.position - target_.position)
         );
 
 

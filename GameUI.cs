@@ -85,14 +85,13 @@ public class GameUI : MonoBehaviour
     [Header ("UI Objects")]
     [SerializeField] private Transform[] parents_2d;
 
-    [Header ("Scripts")]
+    [Header ("PLAYER && Scripts")]
     private Weapon weapon_scrpt;
     private PlayerMovement p_movement;
     private Buildings building_s;
-
-    [Header ("Player")]
     private Transform plyr_transform;
     private Rigidbody plyr_rgBody;
+
 
     [Header ("KILLS")]
     [SerializeField] private GameObject kill_obj;
@@ -113,6 +112,7 @@ public class GameUI : MonoBehaviour
     [SerializeField] private Vector3 aimed_offset;
     private Canvas _canvas_;
     private Vector3 _canvas_rectSize = Vector3.zero;
+    private Vector3 h_bar_initalScale;
     private struct t_enemy_ui
     {
         public Transform _tr;
@@ -163,8 +163,6 @@ public class GameUI : MonoBehaviour
     /////////////////////////////////////////////
     [SerializeField] private GameObject damage_obj;
     private GameObject[] damage_hits = new GameObject[40]; // 25 fixed bfr
-    private Transform[] damage_hits_t = new Transform[40]; // 25 fixed bfr
-    private Vector3[] damage_hits_offst = new Vector3[40]; // 25 fixed bfr
     */
     private struct t_damage_ui
     {
@@ -194,6 +192,8 @@ public class GameUI : MonoBehaviour
         }  
     }
     private t_damage_ui[] ui_damageHits = new t_damage_ui[75];
+    [HideInInspector] public int used_playerRange = 0;
+
 
 
     [Header ("COMBO")]
@@ -220,6 +220,7 @@ public class GameUI : MonoBehaviour
         _canvas_ = gameObject.GetComponent<Canvas>();
         RectTransform rt = (_canvas_).gameObject.GetComponent<RectTransform>();
         _canvas_rectSize = new Vector3(rt.rect.width, rt.rect.height, 0f);
+        h_bar_initalScale = (enemy_health_bar).transform.localScale;
 
         Debug.Log("DEVICE: "+ Application.platform);
         Debug.Log("FRAMERATE: " + Screen.currentResolution.refreshRate);
@@ -227,6 +228,7 @@ public class GameUI : MonoBehaviour
         Debug.Log("[SCREEN] X-Y:   " + Screen.width+ " x " + Screen.height);
         Debug.Log("[CANVAS] X-Y:   " + _canvas_rectSize.x + " x " + _canvas_rectSize.y);
 
+       
         if (Application.platform == RuntimePlatform.Android 
             || (Application.platform == RuntimePlatform.IPhonePlayer)
             || (Application.platform == RuntimePlatform.OSXPlayer)
@@ -260,12 +262,10 @@ public class GameUI : MonoBehaviour
     {
         gun_fetchedPrefabs = weapon_scrpt.get_weaponsResourcesPrefab_buffer;
 
-
         int l_prefb = gun_ui.transform.childCount - 1;
         saved_prefabPos_ = gun_ui.transform.GetChild(l_prefb).GetChild(0).transform.position;
         saved_prefabScale_ = gun_ui.transform.GetChild(l_prefb).GetChild(0).transform.localScale;
         saved_prefabRotation_ = gun_ui.transform.GetChild(l_prefb).GetChild(0).transform.localRotation;
-
 
         // money txt
         money_txt = money_ui.transform.GetChild(1).GetComponent<TextMeshProUGUI>();
@@ -399,8 +399,7 @@ public class GameUI : MonoBehaviour
     private void LateUpdate()
     {
         // floating damages
-        /*if(ui_damageHits[0]._damageHit != null)
-        {*/
+        /* if(ui_damageHits[0]._damageHit != null) */
         for(int i = 0; i < ui_damageHits.Length; i++)
         {
             if(ui_damageHits[i]._hit_enemy == null)
@@ -439,59 +438,67 @@ public class GameUI : MonoBehaviour
         
 
         // enemies ui
-        /*if(ui_enemies[0]._tr != null)
-        {*/
-            for(int i = 0; i < ui_enemies.Length; i++)
+        /* if(ui_enemies[0]._tr != null) */
+        for(int i = 0; i < ui_enemies.Length; i++)
+        {
+            if(ui_enemies[i]._tr == null)
+                continue;
+            /*
+            float distanceToCamera = Vector3.Distance(ui_camera.transform.position, enemies_tr[i].position);
+            float cam_scale = (
+                    2.0f * (distanceToCamera * 0.55f) * 
+                    Mathf.Tan(Mathf.Deg2Rad * (ui_camera.fieldOfView * 0.5f)
+                )
+            ) * (7f);
+            cam_scale = (cam_scale < 105f) ? 105f : (cam_scale > 150f ? 150f : cam_scale);
+
+            ui_enemies[i].transform.localScale = new Vector3(cam_scale, cam_scale, cam_scale);
+
+            ui_enemies[i].transform.position = enemies_tr[i].position + enemies_offst[i];
+            ui_enemies[i].transform.LookAt(ui_camera.transform);        
+            ui_enemies[i].transform.rotation = Quaternion.Euler(
+                -1 * ui_enemies[i].transform.rotation.eulerAngles.x,
+                ui_enemies[i].transform.rotation.eulerAngles.y +  180f,
+                ui_enemies[i].transform.rotation.eulerAngles.z
+            );
+            */
+            if(ui_enemies[i]._tr.position.z < plyr_transform.position.z)
             {
-                if(ui_enemies[i]._tr == null)
-                    continue;
-        
-                /*
-                float distanceToCamera = Vector3.Distance(ui_camera.transform.position, enemies_tr[i].position);
-                float cam_scale = (
-                        2.0f * (distanceToCamera * 0.55f) * 
-                        Mathf.Tan(Mathf.Deg2Rad * (ui_camera.fieldOfView * 0.5f)
-                    )
-                ) * (7f);
-                cam_scale = (cam_scale < 105f) ? 105f : (cam_scale > 150f ? 150f : cam_scale);
-
-                ui_enemies[i].transform.localScale = new Vector3(cam_scale, cam_scale, cam_scale);
-
-                ui_enemies[i].transform.position = enemies_tr[i].position + enemies_offst[i];
-                ui_enemies[i].transform.LookAt(ui_camera.transform);        
-                ui_enemies[i].transform.rotation = Quaternion.Euler(
-                    -1 * ui_enemies[i].transform.rotation.eulerAngles.x,
-                    ui_enemies[i].transform.rotation.eulerAngles.y +  180f,
-                    ui_enemies[i].transform.rotation.eulerAngles.z
+                Destroy(ui_enemies[i]._healthBar);
+                ui_enemies[i].delete();
+                continue;
+            }else
+            {   
+                // Step 1: Convert the target object's world position to screen space
+                Vector3 screen_pos = Camera.main.WorldToViewportPoint(
+                    (ui_enemies[i]._tr.position) +  (aimed_offset)
+                    + (ui_enemies[i]._healthBar_offset)
                 );
-                */
-                if(ui_enemies[i]._tr.position.z < plyr_transform.position.z)
+
+                // Step 2: Convert the screen position to local position relative to the canvas
+                Vector2 v2_pos = new Vector2(
+                    (screen_pos.x) * (_canvas_rectSize.x), 
+                    (screen_pos.y) * (_canvas_rectSize.y)
+                );
+
+                // Step 3: Apply the position to UI element && remove Z-axis
+                ui_enemies[i]._rt.anchoredPosition = (v2_pos);
+                ui_enemies[i]._healthBar.transform.localPosition = new Vector3(
+                    ui_enemies[i]._healthBar.transform.localPosition.x, ui_enemies[i]._healthBar.transform.localPosition.y, 0f
+                );
+                
+                // Step 4: Attribute scale relative to player distance
+                if(ui_enemies[i]._tr.position.z > (plyr_transform.position.z + (used_playerRange * 0.625f)))
                 {
-                    Destroy(ui_enemies[i]._healthBar);
-                    ui_enemies[i].delete();
-                    continue;
+                    ui_enemies[i]._healthBar.transform.localScale = new Vector3(
+                        h_bar_initalScale.x * 0.65f, h_bar_initalScale.y * 0.65f, 1f
+                    );
                 }else
-                {   
-                    // Step 1: Convert the target object's world position to screen space
-                    Vector3 screen_pos = Camera.main.WorldToViewportPoint(
-                        (ui_enemies[i]._tr.position) +  (aimed_offset)
-                        + (ui_enemies[i]._healthBar_offset)
-                    );
-
-                    // Step 2: Convert the screen position to local position relative to the canvas
-                    Vector2 v2_pos = new Vector2(
-                        (screen_pos.x) * (_canvas_rectSize.x), 
-                        (screen_pos.y) * (_canvas_rectSize.y)
-                    );
-
-                    // Step 3: Apply the position to UI element && remove Z-axis
-                    ui_enemies[i]._rt.anchoredPosition = (v2_pos);
-                    ui_enemies[i]._healthBar.transform.localPosition = new Vector3(
-                        ui_enemies[i]._healthBar.transform.localPosition.x, ui_enemies[i]._healthBar.transform.localPosition.y, 0f
-                    );
-                   
+                {
+                    ui_enemies[i]._healthBar.transform.localScale = (h_bar_initalScale);
                 }
             }
+        }
     }
 
 
@@ -604,8 +611,8 @@ public class GameUI : MonoBehaviour
                     damage_hit.transform.parent
                 ); 
                 Vector3 off_set = new Vector3(
-                    UnityEngine.Random.Range(-1.5f, 1.5f),
-                    (0.25f) + UnityEngine.Random.Range(0f, 1.5f),
+                    UnityEngine.Random.Range(-0.2f, 0.2f),
+                    (0.15f),
                     0f
                 );
                 ui_damageHits[i] = new t_damage_ui(
@@ -615,22 +622,37 @@ public class GameUI : MonoBehaviour
                     (t_hit)
                 );
 
-                LeanTween.value(t_hit, ui_damageHits[i]._offset, ui_damageHits[i]._offset + new Vector3(0, 0.4f, 0f), 1.2f)
-                    .setOnUpdate( (Vector3 value) => {
+                if(damage_value > 0){
+                    LeanTween.value(t_hit, 
+                        ui_damageHits[i]._offset, 
+                        ui_damageHits[i]._offset + new Vector3(
+                            UnityEngine.Random.Range(-0.5f, 0.5f),
+                             UnityEngine.Random.Range(0.25f, 2.5f), 
+                            0f
+                        ), 
+                    1.2f).setOnUpdate((Vector3 value) => {
                         ui_damageHits[i]._offset = (value); 
-                });
+                    });
+                }
             
                 TextMeshProUGUI txt = t_hit.transform.GetChild(0).GetComponent<TextMeshProUGUI>();
-                if(is_crit_hit == null) 
-                    txt.text = "CRTICIAL";
-                else
-                    txt.text = damage_value.ToString();
+                if(damage_value < 0)
+                {
+                    txt.text = "MISS!";        
+                }else
+                {
+                    if(is_crit_hit == null) 
+                        txt.text = "CRTICIAL";
+                    else
+                        txt.text = damage_value.ToString();
+                }
 
-                LeanTween.scale(t_hit, t_hit.transform.localScale * 1.4f, 1f).setEasePunch();
+                LeanTween.scale(t_hit, t_hit.transform.localScale * 1.6f, 1.2f).setEasePunch();
                 StartCoroutine(fade_ui_obj(t_hit, 1f, true));
 
-                if((bool?)is_crit_hit == true)
-                    damage_ui(enemy, 0, null, hit_gap + new Vector3( UnityEngine.Random.Range(-1.5f, 1.5f), 0f, 0f));
+                if(damage_value > 0)
+                    if((bool?)is_crit_hit == true)
+                        damage_ui(enemy, 0, null, hit_gap + new Vector3( UnityEngine.Random.Range(-1.5f, 1.5f), 0f, 0f));
 
                 break;
             }
@@ -638,28 +660,31 @@ public class GameUI : MonoBehaviour
         
 
         // health bar
-        for(int j = 0; j < 25; j++)
+        if(enemy != null)
         {
-            if(ui_enemies[j]._tr == null)
-                continue;
-            if(GameObject.ReferenceEquals(ui_enemies[j]._tr.gameObject, (enemy.gameObject)))
+            for(int j = 0; j < 25; j++)
             {
-                AutoTurret a = ui_enemies[j]._auto_turret;
-                float x_health = (((float)(a.get_health) / (float)(a.get_maxHealth)) * 100f);
-                Transform t = ui_enemies[j]._healthBar.transform;
-
-                if(x_health == 0)
+                if(ui_enemies[j]._tr == null)
+                    continue;
+                if(GameObject.ReferenceEquals(ui_enemies[j]._tr.gameObject, (enemy.gameObject)))
                 {
-                    StartCoroutine(fade_ui_obj(ui_enemies[j]._healthBar, 0.6f, true));
-                }
+                    AutoTurret a = ui_enemies[j]._auto_turret;
+                    float x_health = (((float)(a.get_health) / (float)(a.get_maxHealth)) * 100f);
+                    Transform t = ui_enemies[j]._healthBar.transform;
 
-                LeanTween.scale(
-                    t.GetChild(1).gameObject, new Vector3( (float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1), 
-                0.3f).setEaseInOutCubic();
-                LeanTween.scale(
-                    t.GetChild(2).gameObject, new Vector3( (float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1), 
-                0.15f).setEaseInOutCubic();
-            } 
+                    if(x_health == 0)
+                    {
+                        StartCoroutine(fade_ui_obj(ui_enemies[j]._healthBar, 0.6f, true));
+                    }
+
+                    LeanTween.scale(
+                        t.GetChild(1).gameObject, new Vector3( (float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1), 
+                    0.3f).setEaseInOutCubic();
+                    LeanTween.scale(
+                        t.GetChild(2).gameObject, new Vector3( (float.IsNaN(x_health) ? 0 : x_health) / 100, 1, 1), 
+                    0.15f).setEaseInOutCubic();
+                } 
+            }
         }
     }
 

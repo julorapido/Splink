@@ -17,14 +17,14 @@ public class Weapon : MonoBehaviour
     private bool ammo_fixed  = true;
 
     [Header ("Weapon Stats")]
-    private const int damage = 4;
+    private const int damage = 50;
     private const int precision_ = 60;
-    private const float fireRate = 0.6f;
-    private const int criticalChance = 5; // /100
-    private const int range_ = 30; // max range 70-ish
-    private const int magSize = 12;
+    private const float fireRate = 0.4f;
+    private const int criticalChance = 5; // 5%
+    private const int range_ = 20; // max range 70-ish
+    private const int magSize = 50;
     private const float reloadTime = 1.30f;
-    private const float bullet_speed = 10f;
+    private const float bullet_speed = 15f;
 
     [Header ("Player Movement/Collision/UI/Camera Scripts")]
     private GameUI g_ui;
@@ -135,7 +135,13 @@ public class Weapon : MonoBehaviour
         pm = FindObjectOfType<PlayerMovement>();
 
         g_ui = FindObjectOfType<GameUI>();
+        pm_cls = FindObjectOfType<PlayerCollisions>();
         cm_movement = FindObjectOfType<CameraMovement>();
+
+        // set range
+        pm_cls.set_AttackRange = (range_);
+        g_ui.used_playerRange = (range_);
+
 
         // await first to get gun name from database
 
@@ -177,10 +183,6 @@ public class Weapon : MonoBehaviour
     // Start
     private void Start()
     {
-
-        pm_cls = FindObjectOfType<PlayerCollisions>();
-        pm_cls.set_AttackRange = range_;
-
         ps_shots = gameObject.GetComponentsInChildren<ParticleSystem>();
 
         equip_Weapon(null);
@@ -228,6 +230,7 @@ public class Weapon : MonoBehaviour
             weapon_bullets[0], fire_point[point_indx].position,
             Quaternion.LookRotation(pm.transform.forward) //fire_point[point_indx].rotation
         );
+        new_bullet.SetActive(false);
 
         float cr = UnityEngine.Random.Range(0, 100);
 
@@ -250,19 +253,23 @@ public class Weapon : MonoBehaviour
         proj_scrpt.player_bullet = true;
 
         float x_ = UnityEngine.Random.Range(
-            -1f * (100f - (float)(precision_)) / 1.5f, (100f - (float)(precision_)) / 1.5f
-        ) * 0.1f;
+            -1f * (100f - (float)(precision_)), (100f - (float)(precision_))
+        ) ;
         float y_ = UnityEngine.Random.Range(
-            -1f * (100f - (float)(precision_)) / 2.5f, (100f - (float)(precision_)) / 2.5f
-        ) * 0.1f;
+            -1f * ((100f - (float)(precision_)) / 2f), (100f - (float)(precision_)) / 2f
+        );
 
-        if( Vector3.Distance(target_transform.position, transform.position) < 16f)
+        x_ *= 0.03f;
+        y_ *= 0.03f;
+
+        if( Vector3.Distance(target_transform.position, transform.position) < 4f)
         {
             x_ /= 2f;
-            y_ /= 5f;
+            y_ /= 2f;
         }
 
         proj_scrpt.weapon_precision = new Vector3(x_, y_, 0);
+        new_bullet.SetActive(true);
 
         // LeanTween.scale( gameObject,
         //     new Vector3(gameObject.transform.localScale.x * 1.2f, gameObject.transform.localScale.y * 1.2f, gameObject.transform.localScale.z * 1.2f),

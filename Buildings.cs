@@ -184,10 +184,9 @@ public class Buildings : MonoBehaviour
                     ((135f * active_sections[i].transform.localScale.x) / 2)
                 ) - (player_trsf.position.z);
 
-
-
+                // Debug.Log("DISTANCE BETWEEN " + active_sections[i] + "  is  " + dst);
                 // [optimize [behind and below]]
-                if( dst >= (game_over ? 160f : 70f) || dst <= -100f) 
+                if( dst >= (game_over ? 100f : 45f) || dst <= -100f) 
                 {
                     if( !optmized_go_bfr.Contains(active_sections[i]) )
                     {
